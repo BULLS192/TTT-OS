@@ -93,19 +93,27 @@
         <form id="intakeForm">
           <div class="panel form-section">
             <div class="number">1</div><div class="form-copy"><h3>Customer</h3><p>Create or capture the customer record.</p></div>
-            <div class="form-grid">
-              <label>First name<input name="firstName" required placeholder="First name"></label>
-              <label>Middle name<input name="middleName" placeholder="Middle name"></label>
-              <label>Last name<input name="lastName" required placeholder="Last name"></label>
-              <label>Phone<input name="phone" required placeholder="(555) 555-5555"></label>
-              <label>Email<input type="email" name="email" placeholder="name@email.com"></label>
-              <label>Address line 1<input name="address1" placeholder="Street address"></label>
-              <label>Address line 2<input name="address2" placeholder="Apartment, suite, unit, etc."></label>
-              <label>City<input name="city" placeholder="Houston"></label>
-              <label>State / Province<input name="state" placeholder="TX"></label>
-              <label>ZIP / Postal code<input name="postalCode" placeholder="77000"></label>
-              <label>Country<select name="country"><option value="US">United States</option><option value="CA">Canada</option><option value="MX">Mexico</option><option value="Other">Other</option></select></label>
-              <label class="span-2">Customer notes<textarea name="customerNotes" placeholder="Preferred contact method, access instructions, dealer/company details, other notes..."></textarea></label>
+            <div class="customer-form">
+              <div class="field-group names">
+                <label>First name<input name="firstName" required placeholder="First"></label>
+                <label>Middle name<input name="middleName" placeholder="Middle"></label>
+                <label>Last name<input name="lastName" required placeholder="Last"></label>
+              </div>
+              <div class="field-group contact">
+                <label>Phone<input name="phone" required placeholder="(555) 555-5555"></label>
+                <label>Email<input type="email" name="email" placeholder="name@email.com"></label>
+              </div>
+              <div class="field-group address-lines">
+                <label>Address line 1<input name="address1" placeholder="Street address"></label>
+                <label>Address line 2<input name="address2" placeholder="Apt, suite, unit"></label>
+              </div>
+              <div class="field-group locality">
+                <label>City<input name="city" placeholder="Houston"></label>
+                <label>State<select name="state"><option value="">Select state</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option><option>DC</option></select></label>
+                <label>ZIP<input name="postalCode" placeholder="77000"></label>
+                <label>Country<select name="country"><option value="US">United States</option><option value="CA">Canada</option><option value="MX">Mexico</option><option value="Other">Other</option></select></label>
+              </div>
+              <label class="customer-notes">Customer notes<textarea name="customerNotes" placeholder="Preferred contact method, access instructions, dealer/company details, other notes..."></textarea></label>
             </div>
           </div>
 
@@ -143,11 +151,10 @@
 
           <div class="panel form-section">
             <div class="number">4</div><div class="form-copy"><h3>Scope of work</h3><p>Document exactly what TTT is being authorized to install or perform.</p></div>
-            <div class="service-grid" id="serviceGrid"></div>
             <div class="equipment-builder top-gap">
               <div class="subsection-title">
-                <div><strong>Equipment / product selection</strong><span>Starter catalog now; TTT vendor products and pricing can be loaded later.</span></div>
-                <button type="button" class="btn secondary compact" id="addEquipmentBtn">+ Add equipment</button>
+                <div><strong>Services & products</strong><span>Add each service, then select the applicable brand, model and quantity.</span></div>
+                <button type="button" class="btn secondary compact" id="addEquipmentBtn">+ Add service</button>
               </div>
               <div id="equipmentRows"></div>
             </div>
