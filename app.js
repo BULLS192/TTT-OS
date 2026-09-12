@@ -104,6 +104,122 @@ function renderWorkOrders(){
  }).join("");
 }
 
+
+// Vehicle lookup + VIN scan
+const yearSelect=document.getElementById("yearSelect");
+const makeSelect=document.getElementById("makeSelect");
+const modelSelect=document.getElementById("modelSelect");
+const yearOther=document.getElementById("yearOther");
+const makeOther=document.getElementById("makeOther");
+const modelOther=document.getElementById("modelOther");
+const vinInput=document.getElementById("vinInput");
+const vinPhotoInput=document.getElementById("vinPhotoInput");
+const vinStatus=document.getElementById("vinScanStatus");
+const vinPhotoPreview=document.getElementById("vinPhotoPreview");
+
+function normalizeVin(v){return String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/[IOQ]/g,"")}
+function isVin(v){return /^[A-HJ-NPR-Z0-9]{17}$/.test(v)}
+function setVinStatus(msg,type=""){vinStatus.textContent=msg;vinStatus.className="vin-status "+type}
+function selectOrOther(select,value,otherInput){
+ if(!value)return;
+ const wanted=String(value).trim();
+ let opt=[...select.options].find(o=>o.value.toLowerCase()===wanted.toLowerCase()||o.textContent.toLowerCase()===wanted.toLowerCase());
+ if(!opt){opt=document.createElement("option");opt.value=wanted;opt.textContent=wanted;select.insertBefore(opt,select.querySelector('option[value="__other"]'))}
+ select.value=opt.value; otherInput.classList.add("hidden"); otherInput.value="";
+}
+function resolvedVehicleField(name){
+ const s=document.querySelector('[name="'+name+'"]'),other=document.querySelector('[name="'+name+'Other"]');
+ return s.value==="__other"?(other?.value||""):s.value;
+}
+function bindOther(select,input){
+ select.addEventListener("change",()=>{input.classList.toggle("hidden",select.value!=="__other");if(select.value!=="__other")input.value=""});
+}
+bindOther(yearSelect,yearOther);bindOther(makeSelect,makeOther);bindOther(modelSelect,modelOther);
+
+(function fillYears(){
+ const now=new Date().getFullYear()+1;
+ yearSelect.innerHTML='<option value="">Select year</option>';
+ for(let y=now;y>=1981;y--)yearSelect.insertAdjacentHTML("beforeend",'<option>'+y+'</option>');
+ yearSelect.insertAdjacentHTML("beforeend",'<option value="__other">Other / Not listed</option>');
+})();
+
+async function loadMakes(){
+ try{
+  const r=await fetch("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json");
+  const j=await r.json();
+  const current=makeSelect.value;
+  makeSelect.innerHTML='<option value="">Select make</option>'+j.Results.map(x=>'<option>'+esc(x.Make_Name)+'</option>').join("")+'<option value="__other">Other / Not listed</option>';
+  if(current)selectOrOther(makeSelect,current,makeOther);
+ }catch{setVinStatus("Vehicle catalog is temporarily unavailable. Manual entry still works.","warn")}
+}
+async function loadModels(preferred=""){
+ const year=resolvedVehicleField("year"),make=resolvedVehicleField("make");
+ modelSelect.innerHTML='<option value="">Select model</option><option value="__other">Other / Not listed</option>';
+ if(!year||!make)return;
+ try{
+  const url="https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/"+encodeURIComponent(make)+"/modelyear/"+encodeURIComponent(year)+"?format=json";
+  const j=await (await fetch(url)).json();
+  const models=[...new Set(j.Results.map(x=>x.Model_Name).filter(Boolean))].sort();
+  modelSelect.innerHTML='<option value="">Select model</option>'+models.map(x=>'<option>'+esc(x)+'</option>').join("")+'<option value="__other">Other / Not listed</option>';
+  if(preferred)selectOrOther(modelSelect,preferred,modelOther);
+ }catch{}
+}
+yearSelect.addEventListener("change",()=>loadModels());
+makeSelect.addEventListener("change",()=>loadModels());
+
+async function decodeVin(vin){
+ vin=normalizeVin(vin);vinInput.value=vin;
+ if(!isVin(vin)){setVinStatus("VIN must contain 17 valid characters (I, O and Q are not used).","error");return}
+ setVinStatus("Decoding VIN…","working");
+ try{
+  const url="https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValuesExtended/"+encodeURIComponent(vin)+"?format=json";
+  const j=await (await fetch(url)).json(),d=j.Results?.[0]||{};
+  if(d.ErrorCode && !/^0($|,)/.test(d.ErrorCode)) setVinStatus("VIN decoded with some incomplete manufacturer data. Please verify the fields below.","warn");
+  else setVinStatus("✓ VIN recognized. Vehicle details were filled automatically—please verify before continuing.","success");
+  if(d.ModelYear)selectOrOther(yearSelect,d.ModelYear,yearOther);
+  if(d.Make)selectOrOther(makeSelect,d.Make,makeOther);
+  await loadModels(d.Model||"");
+  if(d.Trim||d.Series)document.getElementById("trimInput").value=d.Trim||d.Series;
+  const body=(d.BodyClass||"").toLowerCase();
+  const type=body.includes("pickup")?"Truck":body.includes("sport utility")||body.includes("utility")?"SUV":body.includes("coupe")?"Coupe":body.includes("sedan")?"Sedan":body.includes("van")?"Van":"";
+  if(type)document.getElementById("vehicleTypeSelect").value=type;
+ }catch(e){setVinStatus("Could not reach the VIN decoder. You can still enter vehicle information manually.","error")}
+}
+document.getElementById("decodeVinBtn").addEventListener("click",()=>decodeVin(vinInput.value));
+vinInput.addEventListener("input",()=>{vinInput.value=normalizeVin(vinInput.value).slice(0,17)});
+vinInput.addEventListener("blur",()=>{if(isVin(vinInput.value))decodeVin(vinInput.value)});
+
+function extractVinFromText(text){
+ const cleaned=String(text||"").toUpperCase().replace(/[^A-Z0-9\n ]/g," ");
+ const matches=cleaned.match(/[A-HJ-NPR-Z0-9]{17}/g)||[];
+ return matches.find(isVin)||"";
+}
+async function scanVinImage(file){
+ vinPhotoPreview.innerHTML="";
+ const img=document.createElement("img");img.src=URL.createObjectURL(file);vinPhotoPreview.appendChild(img);
+ setVinStatus("Scanning VIN image…","working");
+ try{
+  if("BarcodeDetector" in window){
+   try{
+    const detector=new BarcodeDetector({formats:["code_39","code_128","data_matrix","pdf417","qr_code"]});
+    const bitmap=await createImageBitmap(file),codes=await detector.detect(bitmap);
+    for(const code of codes){
+     const candidate=extractVinFromText(code.rawValue)||normalizeVin(code.rawValue);
+     if(isVin(candidate)){vinInput.value=candidate;setVinStatus("✓ VIN read from barcode. Decoding vehicle…","success");await decodeVin(candidate);return}
+    }
+   }catch{}
+  }
+  if(window.Tesseract){
+   const result=await Tesseract.recognize(file,"eng",{logger:m=>{if(m.status==="recognizing text")setVinStatus("Reading VIN text… "+Math.round((m.progress||0)*100)+"%","working")}});
+   const candidate=extractVinFromText(result.data.text);
+   if(candidate){vinInput.value=candidate;setVinStatus("✓ VIN read from photo. Decoding vehicle…","success");await decodeVin(candidate);return}
+  }
+  setVinStatus("I couldn't confidently read a 17-character VIN. Try a closer, glare-free photo or enter it manually.","warn");
+ }catch{setVinStatus("VIN scan failed. Try another photo or enter the VIN manually.","error")}
+}
+vinPhotoInput.addEventListener("change",()=>{const f=vinPhotoInput.files?.[0];if(f)scanVinImage(f)});
+loadMakes();
+
 const equipmentRows=document.getElementById("equipmentRows");
 function addEquipmentRow(values={}){
  const row=document.createElement("div");
@@ -153,7 +269,7 @@ document.getElementById("intakeForm").addEventListener("submit",e=>{
  let c=db.customers.find(x=>x.email&&x.email.toLowerCase()===(fd.get("email")||"").toLowerCase());
  if(!c){c={id:uid("cus"),firstName:fd.get("firstName"),middleName:fd.get("middleName"),lastName:fd.get("lastName"),name:fullName,phone:fd.get("phone"),email:fd.get("email"),address1:fd.get("address1"),address2:fd.get("address2"),city:fd.get("city"),state:fd.get("state"),postalCode:fd.get("postalCode"),country:fd.get("country"),notes:fd.get("customerNotes"),createdAt:now};db.customers.push(c)}
  let v=db.vehicles.find(x=>x.vin.toLowerCase()===String(fd.get("vin")).toLowerCase());
- if(!v){v={id:uid("veh"),customerId:c.id,vin:fd.get("vin"),year:fd.get("year"),make:fd.get("make"),model:fd.get("model"),trim:fd.get("trim"),color:fd.get("color"),wrap:fd.get("wrap"),type:fd.get("vehicleType"),fuelLevel:fd.get("fuelLevel"),keysReceived:fd.get("keysReceived"),odometer:fd.get("odometer"),notes:fd.get("vehicleNotes")};db.vehicles.push(v)}
+ if(!v){v={id:uid("veh"),customerId:c.id,vin:fd.get("vin"),year:resolvedVehicleField("year"),make:resolvedVehicleField("make"),model:resolvedVehicleField("model"),trim:fd.get("trim"),color:fd.get("color"),wrap:fd.get("wrap"),type:fd.get("vehicleType"),fuelLevel:fd.get("fuelLevel"),keysReceived:fd.get("keysReceived"),odometer:fd.get("odometer"),notes:fd.get("vehicleNotes")};db.vehicles.push(v)}
  const equipment=[...document.querySelectorAll(".equipment-row")].map(row=>({category:row.querySelector('[data-eq="category"]').value,brand:row.querySelector('[data-eq="brand"]').value,model:row.querySelector('[data-eq="model"]').value,qty:Number(row.querySelector('[data-eq="qty"]').value||1),note:row.querySelector('[data-eq="note"]').value})).filter(x=>x.category||x.brand||x.model||x.note);
  const parts=Number(fd.get("parts")||0),labor=Number(fd.get("labor")||0),fees=Number(fd.get("fees")||0);
  const wo={id:"WO-"+new Date().toISOString().slice(2,10).replaceAll("-","")+"-"+String(db.workOrders.length+1).padStart(3,"0"),customerId:c.id,vehicleId:v.id,services:[...new Set(equipment.map(x=>x.category).filter(Boolean))],equipment,equipmentNotes:fd.get("equipmentNotes"),workDetails:fd.get("workDetails"),damageNotes:fd.get("damageNotes"),keysReceived:fd.get("keysReceived"),vehicleNotes:fd.get("vehicleNotes"),fuelLevel:fd.get("fuelLevel"),estimate:{parts,labor,fees,deposit:Number(fd.get("deposit")||0),pricingMode:"manual"},estimateTotal:parts+labor+fees,estimatedCompletion:fd.get("estimatedCompletion"),handoff:fd.get("handoff"),status:"Authorized",assignedTo:"usr_derek",createdBy:"usr_derek",createdAt:now,updatedAt:now,termsVersion:"0.1",termsAccepted:true,signatures:[{role:"customer",name:fd.get("customerSignature"),signedAt:now},{role:"ttt",name:fd.get("staffSignature"),signedAt:now}]};
