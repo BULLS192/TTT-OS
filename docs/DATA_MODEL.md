@@ -30,10 +30,18 @@ A single person may eventually hold multiple permissions.
 
 ### customers
 - id
-- name
+- first_name
+- middle_name
+- last_name
+- display_name
 - phone
 - email
-- billing/service address
+- address_line_1
+- address_line_2
+- city
+- state/province
+- postal_code
+- country
 - notes
 - created_at
 - updated_at
@@ -46,10 +54,13 @@ A single person may eventually hold multiple permissions.
 - year
 - make
 - model
+- trim
 - color
+- wrap / PPF / exterior finish
 - vehicle_type
 - plate/state
 - mileage
+- fuel_or_charge_level
 - keys_received
 - customer_notes
 - created_at
@@ -105,6 +116,7 @@ Separate inspection records preserve check-in and delivery condition.
 - id
 - work_order_id
 - inspection_id
+- media_type (photo / video)
 - category/view
 - file/storage URL
 - captured_at
@@ -113,7 +125,7 @@ Separate inspection records preserve check-in and delivery condition.
 - caption
 - checksum (future)
 
-Multiple media records may use the same category, so multiple front/rear/side/interior/damage photos are supported.
+Multiple media records may use the same category, so multiple front/rear/side/interior/engine-bay/trunk/damage photos are supported. Video records are also supported for walkarounds, interior condition and functional/damage evidence.
 
 ### signatures
 - id
