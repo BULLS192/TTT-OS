@@ -105,3 +105,35 @@
     flex: 1;
   }
 }
+
+
+/* v0.1.2 intake expansion */
+.media-subsection,.equipment-builder,.pricing-banner{grid-column:3;min-width:0;width:100%}
+.media-subsection,.equipment-builder{margin-top:14px;border-top:1px solid #edf0f4;padding-top:14px}
+.subsection-title,.pricing-banner{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.subsection-title>div,.pricing-banner>div{display:grid;gap:3px}
+.subsection-title span,.pricing-banner span:not(.badge){font-size:12px;color:#7b899d}
+.btn.compact{padding:8px 11px;font-size:12px}
+.video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.video-slot{border:1px dashed #b8c4d2;border-radius:10px;padding:12px;background:#fafcff;display:grid;gap:5px;font-size:12px}
+.video-slot span{color:#8996a8;font-size:11px}
+.video-slot input{font-size:11px;padding:6px}
+.video-preview video{width:100%;max-height:150px;border-radius:8px;margin-top:6px;background:#0b1220}
+.equipment-row{display:grid;grid-template-columns:1.15fr 1fr 1.15fr 80px 1.4fr 38px;gap:9px;align-items:end;padding:10px 0;border-bottom:1px solid #edf0f4}
+.equipment-row:last-child{border-bottom:0}
+.equipment-row label{display:grid;gap:5px;color:#536176;font-size:11px;font-weight:700}
+.remove-equipment{height:39px;border:1px solid #e2e7ed;background:#fff;border-radius:8px;font-size:20px;color:#8b97a8;cursor:pointer}
+.remove-equipment:hover{background:#fff2f2;color:#b23a3a}
+.pricing-banner{background:#f5f8fd;border:1px solid #dee7f3;border-radius:10px;padding:12px 14px;margin-bottom:13px}
+@media(max-width:1000px){
+ .media-subsection,.equipment-builder,.pricing-banner{grid-column:1/-1}
+ .equipment-row{grid-template-columns:1fr 1fr}
+ .equipment-note{grid-column:1/-1}
+ .video-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:680px){
+ .video-grid,.equipment-row{grid-template-columns:1fr}
+ .subsection-title,.pricing-banner{align-items:flex-start;flex-direction:column}
+ .equipment-note{grid-column:auto}
+ .remove-equipment{width:100%}
+}
