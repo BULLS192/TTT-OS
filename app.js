@@ -1,6 +1,45 @@
 const DB_KEY="ttt-os-v0.1";
 const SERVICES=["Car stereo installation","Car alarms","Radar detectors","Dash cams","Paint protection","Marine audio","Window tint","GPS trackers","Interior lighting","Exterior lighting","Truck accessories","Other"];
 const STATUS=["Draft","Authorized","Checked In","In Progress","Waiting on Customer","Ready for Pickup","Completed"];
+const VEHICLE_CATALOG={
+"Acura":["Integra","TLX","RDX","MDX","ZDX"],
+"Alfa Romeo":["Giulia","Stelvio","Tonale"],
+"Audi":["A3","A4","A5","A6","A7","A8","Q3","Q4 e-tron","Q5","Q7","Q8","e-tron GT"],
+"BMW":["2 Series","3 Series","4 Series","5 Series","7 Series","8 Series","X1","X2","X3","X4","X5","X6","X7","XM","i4","i5","i7","iX"],
+"Buick":["Envista","Encore GX","Envision","Enclave"],
+"Cadillac":["CT4","CT5","XT4","XT5","XT6","Escalade","LYRIQ","OPTIQ","CELESTIQ"],
+"Chevrolet":["Malibu","Trax","Trailblazer","Equinox","Blazer","Traverse","Tahoe","Suburban","Colorado","Silverado 1500","Silverado HD","Corvette","Camaro"],
+"Chrysler":["Pacifica","Voyager","300"],
+"Dodge":["Charger","Challenger","Durango","Hornet"],
+"Ford":["Mustang","Escape","Bronco Sport","Bronco","Edge","Explorer","Expedition","Maverick","Ranger","F-150","F-150 Lightning","Super Duty","Transit"],
+"Genesis":["G70","G80","G90","GV60","GV70","GV80"],
+"GMC":["Terrain","Acadia","Yukon","Canyon","Sierra 1500","Sierra HD","Hummer EV"],
+"Honda":["Civic","Accord","HR-V","CR-V","Passport","Pilot","Ridgeline","Odyssey","Prologue"],
+"Hyundai":["Elantra","Sonata","Venue","Kona","Tucson","Santa Fe","Palisade","Santa Cruz","Ioniq 5","Ioniq 6"],
+"Infiniti":["Q50","QX50","QX55","QX60","QX80"],
+"Jaguar":["F-PACE","E-PACE","I-PACE","F-TYPE","XF"],
+"Jeep":["Compass","Cherokee","Grand Cherokee","Wrangler","Gladiator","Wagoneer","Grand Wagoneer"],
+"Kia":["Forte","K4","K5","Soul","Seltos","Sportage","Sorento","Telluride","Carnival","EV6","EV9"],
+"Land Rover":["Range Rover","Range Rover Sport","Range Rover Velar","Range Rover Evoque","Defender","Discovery","Discovery Sport"],
+"Lexus":["IS","ES","LS","UX","NX","RX","TX","GX","LX","RC","LC","RZ"],
+"Lincoln":["Corsair","Nautilus","Aviator","Navigator"],
+"Lucid":["Air","Gravity"],
+"Maserati":["Ghibli","Quattroporte","Grecale","Levante","GranTurismo","MC20"],
+"Mazda":["Mazda3","CX-30","CX-5","CX-50","CX-70","CX-90","MX-5 Miata"],
+"Mercedes-Benz":["A-Class","C-Class","E-Class","S-Class","CLA","CLE","GLA","GLB","GLC","GLE","GLS","G-Class","EQB","EQE","EQS"],
+"MINI":["Cooper","Countryman","Clubman"],
+"Mitsubishi":["Mirage","Outlander Sport","Eclipse Cross","Outlander"],
+"Nissan":["Versa","Sentra","Altima","Kicks","Rogue","Murano","Pathfinder","Armada","Frontier","Titan","Z","Leaf","Ariya"],
+"Polestar":["Polestar 2","Polestar 3","Polestar 4"],
+"Porsche":["718","911","Panamera","Macan","Cayenne","Taycan"],
+"Ram":["1500","2500","3500","ProMaster"],
+"Rivian":["R1T","R1S"],
+"Subaru":["Impreza","Legacy","WRX","BRZ","Crosstrek","Forester","Outback","Ascent","Solterra"],
+"Tesla":["Model 3","Model S","Model X","Model Y","Cybertruck"],
+"Toyota":["Corolla","Camry","Crown","Prius","GR86","GR Corolla","Supra","Corolla Cross","RAV4","Venza","Highlander","Grand Highlander","4Runner","Land Cruiser","Sequoia","Tacoma","Tundra","Sienna","bZ4X"],
+"Volkswagen":["Jetta","Golf GTI","Golf R","Taos","Tiguan","Atlas","Atlas Cross Sport","ID.4","ID. Buzz"],
+"Volvo":["S60","S90","V60","V90","XC40","XC60","XC90","EX30","EX40","EX90"]
+};
 const EQUIPMENT_CATALOG={
  "Alpine":["Custom / Other","iLX-F511 Halo11","iLX-507","R2-A60F"],
  "JL Audio":["Custom / Other","VX1000/5i","XD600/1v2","C3-650"],
@@ -143,28 +182,16 @@ bindOther(yearSelect,yearOther);bindOther(makeSelect,makeOther);bindOther(modelS
  yearSelect.insertAdjacentHTML("beforeend",'<option value="__other">Other / Not listed</option>');
 })();
 
-async function loadMakes(){
- try{
-  const r=await fetch("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json");
-  const j=await r.json();
-  const current=makeSelect.value;
-  makeSelect.innerHTML='<option value="">Select make</option>'+j.Results.map(x=>'<option>'+esc(x.Make_Name)+'</option>').join("")+'<option value="__other">Other / Not listed</option>';
-  if(current)selectOrOther(makeSelect,current,makeOther);
- }catch{setVinStatus("Vehicle catalog is temporarily unavailable. Manual entry still works.","warn")}
+function loadMakes(){
+ makeSelect.innerHTML='<option value="">Select make</option>'+Object.keys(VEHICLE_CATALOG).map(x=>'<option>'+esc(x)+'</option>').join("")+'<option value="__other">Other / Not listed</option>';
 }
-async function loadModels(preferred=""){
- const year=resolvedVehicleField("year"),make=resolvedVehicleField("make");
- modelSelect.innerHTML='<option value="">Select model</option><option value="__other">Other / Not listed</option>';
- if(!year||!make)return;
- try{
-  const url="https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/"+encodeURIComponent(make)+"/modelyear/"+encodeURIComponent(year)+"?format=json";
-  const j=await (await fetch(url)).json();
-  const models=[...new Set(j.Results.map(x=>x.Model_Name).filter(Boolean))].sort();
-  modelSelect.innerHTML='<option value="">Select model</option>'+models.map(x=>'<option>'+esc(x)+'</option>').join("")+'<option value="__other">Other / Not listed</option>';
-  if(preferred)selectOrOther(modelSelect,preferred,modelOther);
- }catch{}
+function loadModels(preferred=""){
+ const make=resolvedVehicleField("make");
+ const models=VEHICLE_CATALOG[make]||[];
+ modelSelect.innerHTML='<option value="">Select model</option>'+models.map(x=>'<option>'+esc(x)+'</option>').join("")+'<option value="__other">Other / Not listed</option>';
+ if(preferred)selectOrOther(modelSelect,preferred,modelOther);
 }
-yearSelect.addEventListener("change",()=>loadModels());
+yearSelect.addEventListener("change",()=>{});
 makeSelect.addEventListener("change",()=>loadModels());
 
 async function decodeVin(vin){
