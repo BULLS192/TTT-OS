@@ -7,6 +7,8 @@
 <title>TTT OS</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="checkin-v02.css">
+<link rel="stylesheet" href="workflow-v03.css">
+<link rel="stylesheet" href="document-preview-v04.css">
 </head>
 <body>
 <div class="app-shell">
@@ -32,14 +34,14 @@
 <section id="dashboard" class="view active">
   <div class="hero-card">
     <div><p class="eyebrow">SHOP OVERVIEW</p><h2>Good afternoon, Derek.</h2><p>Track every vehicle from first inquiry through delivery and warranty.</p></div>
-    <div class="hero-pill">Job → Estimate → Check-In → Work Order → QC → Delivery</div>
+    <div class="hero-pill">Job → Quote → Approval → Check-In → Work Order → QC → Delivery</div>
   </div>
   <div class="stats" id="stats"></div>
   <div class="pipeline" id="pipeline"></div>
   <div class="grid two">
     <article class="panel"><div class="panel-head"><h3>Needs attention</h3><button class="link-btn" data-go="jobs">View jobs</button></div><div id="attentionList"></div></article>
     <article class="panel"><div class="panel-head"><h3>Protection checkpoints</h3></div><div class="checklist">
-      <div>✓ Customer request & estimate history</div><div>✓ Vehicle custody begins at Check-In</div><div>✓ Before-condition photos & walkaround</div><div>✓ Final scope authorization before work</div><div>✓ Change orders preserve original approval</div><div>✓ QC + final condition + delivery sign-off</div>
+      <div>✓ Customer request & quote history</div><div>✓ Vehicle custody begins at Check-In</div><div>✓ Before-condition photos & walkaround</div><div>✓ Final scope authorization before work</div><div>✓ Change orders preserve original approval</div><div>✓ QC + final condition + delivery sign-off</div>
     </div></article>
   </div>
 </section>
@@ -62,7 +64,7 @@
 
 <section id="newjob" class="view">
   <div class="section-head"><div><p class="eyebrow">NEW CUSTOMER REQUEST</p><h2>New Job</h2></div><div class="step-chip">Creates a job, not a work order</div></div>
-  <div class="workflow-note"><strong>Why?</strong> At this point TTT is capturing the customer, vehicle, requested services and estimate. Physical condition documentation happens later when the vehicle is actually checked in.</div>
+  <div class="workflow-note"><strong>Why?</strong> At this point TTT is capturing the customer, vehicle, requested services and draft pricing. The formal quotation is generated from the Job page. Physical condition documentation happens later when the vehicle is actually checked in.</div>
   <form id="jobForm">
     <div class="panel form-section">
       <div class="number">1</div><div class="form-copy"><h3>Customer</h3><p>Who is requesting the work?</p></div>
@@ -98,7 +100,7 @@
     </div>
 
     <div class="panel form-section">
-      <div class="number">3</div><div class="form-copy"><h3>Requested work & estimate</h3><p>Build the customer's requested scope and preliminary estimate.</p></div>
+      <div class="number">3</div><div class="form-copy"><h3>Requested work & draft pricing</h3><p>Capture what the customer wants and prepare pricing before generating the formal quotation.</p></div>
       <div class="equipment-builder">
         <div class="subsection-title"><div><strong>Services & products</strong><span>Each row is a requested service/product line.</span></div><button type="button" class="btn secondary compact" id="addServiceBtn">+ Add service</button></div>
         <div id="serviceRows"></div>
@@ -106,25 +108,25 @@
       <div class="form-grid top-gap">
         <label class="span-2">Customer request / scope notes<textarea name="requestNotes" required placeholder="What does the customer want to accomplish? Include special requirements, installation preferences, known issues..."></textarea></label>
       </div>
-      <div class="pricing-banner"><div><strong>Preliminary estimate</strong><span>Manual now; structured for automated catalog/labor pricing later.</span></div><span class="badge">Estimate</span></div>
+      <div class="pricing-banner"><div><strong>Draft pricing</strong><span>Generate the formal quotation after reviewing this Job.</span></div><span class="badge">Draft</span></div>
       <div class="form-grid">
         <label>Estimated parts ($)<input type="number" step="0.01" name="parts" value="0"></label><label>Estimated labor ($)<input type="number" step="0.01" name="labor" value="0"></label>
         <label>Other / fees ($)<input type="number" step="0.01" name="fees" value="0"></label><label>Deposit requested ($)<input type="number" step="0.01" name="deposit" value="0"></label>
       </div>
-      <div class="estimate-total">Estimated total <strong id="estimateTotal">$0.00</strong></div>
+      <div class="estimate-total">Draft total <strong id="estimateTotal">$0.00</strong></div>
     </div>
 
     <div class="panel form-section">
-      <div class="number">4</div><div class="form-copy"><h3>Scheduling & parts</h3><p>Set expectations without assuming the vehicle is already in TTT custody.</p></div>
+      <div class="number">4</div><div class="form-copy"><h3>Scheduling & parts</h3><p>Capture initial preferences without assuming the job has been approved.</p></div>
       <div class="form-grid">
         <label>Preferred appointment<input type="datetime-local" name="appointment"></label>
         <label>Expected duration<select name="duration"><option>Same day</option><option>1 day</option><option>2–3 days</option><option>4–7 days</option><option>1–2 weeks</option><option>Custom / TBD</option></select></label>
         <label>Parts readiness<select name="partsStatus"><option>No special parts required</option><option>Need to confirm parts</option><option>Parts need ordering</option><option>Parts ordered</option><option>Parts received</option><option>Customer supplied</option></select></label>
-        <label>Initial job status<select name="initialStatus"><option>Lead</option><option selected>Estimate</option><option>Awaiting Approval</option><option>Scheduled</option><option>Awaiting Parts</option></select></label>
+        <label>Initial job status<select name="initialStatus"><option value="Lead" selected>Job Draft</option></select></label>
       </div>
     </div>
 
-    <div class="submit-bar"><div><strong>Create Job</strong><span>No work order is created until check-in and final authorization.</span></div><button class="btn primary large" type="submit">Create Job</button></div>
+    <div class="submit-bar"><div><strong>Create Job</strong><span>Creates a Job Draft. Quote, approval, check-in and work order follow as separate control points.</span></div><button class="btn primary large" type="submit">Create Job</button></div>
   </form>
 </section>
 
@@ -133,11 +135,14 @@
 </section>
 
 <section id="warranty" class="view"><div class="empty-state"><div>🛡️</div><h2>Warranty Records</h2><p>Completed work orders will feed equipment and workmanship warranties here.</p></div></section>
-<section id="settings" class="view"><div class="grid two"><article class="panel"><h3>Current operator</h3><p><strong>Derek Thompson</strong></p><p class="muted">Owner / Administrator / Technician</p></article><article class="panel"><h3>v0.2 workflow</h3><p class="muted">Single-operator first, but jobs, assignments and audit history are structured for additional staff later.</p></article></div></section>
+<section id="settings" class="view"><div class="grid two"><article class="panel"><h3>Current operator</h3><p><strong>Derek Thompson</strong></p><p class="muted">Owner / Administrator / Technician</p></article><article class="panel"><h3>v0.4 workflow</h3><p class="muted">TTT OS is the operator interface. Google Workspace synchronization runs automatically in the background once the one-time bridge connection is configured.</p></article></div></section>
 </main>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="app.js"></script>
 <script src="checkin-v02.js"></script>
+<script src="workflow-v03.js"></script>
+<script src="google-sync-v02.js"></script>
+<script src="document-preview-v04.js"></script>
 </body>
 </html>
