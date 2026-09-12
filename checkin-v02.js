@@ -223,3 +223,13 @@
     toast('Vehicle checked in · ' + photos.length + ' photos documented');
   };
 })();
+
+// Load v0.3 workflow modules after the v0.2 condition-capture overrides are ready.
+(function(){
+  if(!document.querySelector('link[href="workflow-v03.css"]')){
+    const link=document.createElement('link');link.rel='stylesheet';link.href='workflow-v03.css';document.head.appendChild(link);
+  }
+  const files=['workflow-v03.js','google-sync-v01.js'];
+  const loadNext=i=>{if(i>=files.length)return;const s=document.createElement('script');s.src=files[i];s.async=false;s.onload=()=>loadNext(i+1);document.body.appendChild(s)};
+  loadNext(0);
+})();
