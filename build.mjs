@@ -13,6 +13,21 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
   await cp(path.join(root, entry.name), path.join(dist, entry.name), { recursive: true });
 }
 
+const authEnabled = process.env.TTT_AUTH_ENABLED === 'true';
+const authConfig = {
+  enabled: authEnabled,
+  supabaseUrl: process.env.TTT_SUPABASE_URL || '',
+  publishableKey: process.env.TTT_SUPABASE_PUBLISHABLE_KEY || '',
+  redirectPath: '/',
+  appName: 'TTT OS',
+  supportText: 'Authorized Thompson Transportation Technologies personnel only.'
+};
+await writeFile(
+  path.join(dist, 'auth-config.js'),
+  `window.TTT_AUTH_CONFIG = Object.freeze(${JSON.stringify(authConfig)});\n`,
+  'utf8'
+);
+
 let html = await readFile(path.join(root, 'index.html'), 'utf8');
 html = html.replace(
   '</head>',
@@ -24,4 +39,4 @@ html = html.replace(
 );
 
 await writeFile(path.join(dist, 'index.html'), html, 'utf8');
-console.log('TTT OS production bundle generated in dist/ with authentication guard.');
+console.log(`TTT OS production bundle generated in dist/ (auth ${authEnabled ? 'enabled' : 'disabled'}).`);
