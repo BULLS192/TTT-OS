@@ -94,10 +94,18 @@
           <div class="panel form-section">
             <div class="number">1</div><div class="form-copy"><h3>Customer</h3><p>Create or capture the customer record.</p></div>
             <div class="form-grid">
-              <label>Full name<input name="customerName" required placeholder="Customer name"></label>
+              <label>First name<input name="firstName" required placeholder="First name"></label>
+              <label>Middle name<input name="middleName" placeholder="Middle name"></label>
+              <label>Last name<input name="lastName" required placeholder="Last name"></label>
               <label>Phone<input name="phone" required placeholder="(555) 555-5555"></label>
               <label>Email<input type="email" name="email" placeholder="name@email.com"></label>
-              <label>Address<input name="address" placeholder="Street, city, state, ZIP"></label>
+              <label>Address line 1<input name="address1" placeholder="Street address"></label>
+              <label>Address line 2<input name="address2" placeholder="Apartment, suite, unit, etc."></label>
+              <label>City<input name="city" placeholder="Houston"></label>
+              <label>State / Province<input name="state" placeholder="TX"></label>
+              <label>ZIP / Postal code<input name="postalCode" placeholder="77000"></label>
+              <label>Country<select name="country"><option value="US">United States</option><option value="CA">Canada</option><option value="MX">Mexico</option><option value="Other">Other</option></select></label>
+              <label class="span-2">Customer notes<textarea name="customerNotes" placeholder="Preferred contact method, access instructions, dealer/company details, other notes..."></textarea></label>
             </div>
           </div>
 
@@ -108,18 +116,27 @@
               <label>Year<input name="year" inputmode="numeric" placeholder="2026"></label>
               <label>Make<input name="make" placeholder="Ford"></label>
               <label>Model<input name="model" placeholder="F-150"></label>
+              <label>Trim<input name="trim" placeholder="Lariat, M4 Competition, etc."></label>
               <label>Color<input name="color" placeholder="Black"></label>
+              <label>Wrap / PPF / exterior finish<input name="wrap" placeholder="None, full wrap, satin PPF, partial wrap..."></label>
               <label>Vehicle type<select name="vehicleType"><option>Sedan</option><option>Coupe</option><option>SUV</option><option>Truck</option><option>Van</option><option>Marine</option><option>Other</option></select></label>
+              <label>Fuel / charge level<select name="fuelLevel"><option value="">Select level</option><option>Empty / 0%</option><option>1/8</option><option>1/4</option><option>3/8</option><option>1/2</option><option>5/8</option><option>3/4</option><option>7/8</option><option>Full / 100%</option></select></label>
               <label>Keys received<input name="keysReceived" placeholder="e.g. 2 keys, 1 remote"></label>
               <label>Odometer<input name="odometer" placeholder="Mileage"></label>
-              <label class="span-2">Personal items / customer notes<textarea name="vehicleNotes" placeholder="Items left in vehicle, pre-existing concerns, special instructions..."></textarea></label>
+              <label class="span-2">Personal items / vehicle notes<textarea name="vehicleNotes" placeholder="Items left in vehicle, pre-existing concerns, special instructions..."></textarea></label>
             </div>
           </div>
 
           <div class="panel form-section">
             <div class="number">3</div><div class="form-copy"><h3>Condition & photos</h3><p>Take multiple photos per view. Close-ups can document damage or noteworthy areas.</p></div>
             <div class="photo-grid">
-              <label class="photo-slot"><strong>Front</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Front"><div class="photo-preview" data-preview="Front"></div></label><label class="photo-slot"><strong>Rear</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Rear"><div class="photo-preview" data-preview="Rear"></div></label><label class="photo-slot"><strong>Left side</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Left side"><div class="photo-preview" data-preview="Left side"></div></label><label class="photo-slot"><strong>Right side</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Right side"><div class="photo-preview" data-preview="Right side"></div></label><label class="photo-slot"><strong>Interior</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Interior"><div class="photo-preview" data-preview="Interior"></div></label><label class="photo-slot"><strong>Dashboard / mileage</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Dashboard / mileage"><div class="photo-preview" data-preview="Dashboard / mileage"></div></label><label class="photo-slot"><strong>Roof / top</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Roof / top"><div class="photo-preview" data-preview="Roof / top"></div></label><label class="photo-slot"><strong>Damage close-ups</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Damage close-ups"><div class="photo-preview" data-preview="Damage close-ups"></div></label>
+              <label class="photo-slot"><strong>Front</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Front"><div class="photo-preview" data-preview="Front"></div></label><label class="photo-slot"><strong>Rear</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Rear"><div class="photo-preview" data-preview="Rear"></div></label><label class="photo-slot"><strong>Left side</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Left side"><div class="photo-preview" data-preview="Left side"></div></label><label class="photo-slot"><strong>Right side</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Right side"><div class="photo-preview" data-preview="Right side"></div></label><label class="photo-slot"><strong>Interior</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Interior"><div class="photo-preview" data-preview="Interior"></div></label><label class="photo-slot"><strong>Dashboard / mileage</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Dashboard / mileage"><div class="photo-preview" data-preview="Dashboard / mileage"></div></label><label class="photo-slot"><strong>Roof / top</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Roof / top"><div class="photo-preview" data-preview="Roof / top"></div></label><label class="photo-slot"><strong>Engine bay</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Engine bay"><div class="photo-preview" data-preview="Engine bay"></div></label><label class="photo-slot"><strong>Trunk / cargo area</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Trunk / cargo area"><div class="photo-preview" data-preview="Trunk / cargo area"></div></label><label class="photo-slot"><strong>Wheels / tires</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Wheels / tires"><div class="photo-preview" data-preview="Wheels / tires"></div></label><label class="photo-slot"><strong>Damage close-ups</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Damage close-ups"><div class="photo-preview" data-preview="Damage close-ups"></div></label><label class="photo-slot"><strong>Other areas</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Other areas"><div class="photo-preview" data-preview="Other areas"></div></label>
+            </div>
+            <div class="media-subsection">
+              <div class="subsection-title"><div><strong>Video documentation</strong><span>Optional, but useful for full walkarounds, interior condition and operational proof.</span></div><span class="badge">Recommended</span></div>
+              <div class="video-grid">
+                <label class="video-slot"><strong>Exterior walkaround</strong><span>Record or upload video</span><input type="file" accept="video/*" capture="environment" data-video="Exterior walkaround"><div class="video-preview" data-video-preview="Exterior walkaround"></div></label><label class="video-slot"><strong>Interior walkthrough</strong><span>Record or upload video</span><input type="file" accept="video/*" capture="environment" data-video="Interior walkthrough"><div class="video-preview" data-video-preview="Interior walkthrough"></div></label><label class="video-slot"><strong>Damage / functional evidence</strong><span>Record or upload video</span><input type="file" accept="video/*" capture="environment" data-video="Damage / functional evidence"><div class="video-preview" data-video-preview="Damage / functional evidence"></div></label>
+              </div>
             </div>
             <label class="block-label">Existing damage / condition notes<textarea name="damageNotes" placeholder="Scratch on LF bumper, wheel rash, cracked trim, stains, warning lights, etc."></textarea></label>
           </div>
@@ -127,14 +144,22 @@
           <div class="panel form-section">
             <div class="number">4</div><div class="form-copy"><h3>Scope of work</h3><p>Document exactly what TTT is being authorized to install or perform.</p></div>
             <div class="service-grid" id="serviceGrid"></div>
+            <div class="equipment-builder top-gap">
+              <div class="subsection-title">
+                <div><strong>Equipment / product selection</strong><span>Starter catalog now; TTT vendor products and pricing can be loaded later.</span></div>
+                <button type="button" class="btn secondary compact" id="addEquipmentBtn">+ Add equipment</button>
+              </div>
+              <div id="equipmentRows"></div>
+            </div>
             <div class="form-grid top-gap">
-              <label class="span-2">Equipment / make / model<textarea name="equipment" placeholder="Brand, model, serial/SKU if known, customer-supplied equipment..."></textarea></label>
-              <label class="span-2">Work details<textarea name="workDetails" required placeholder="Describe installation, location, requested outcome, exclusions..."></textarea></label>
+              <label class="span-2">Scope of work<textarea name="workDetails" required placeholder="Describe installation location, fabrication, wiring path, requested outcome, exclusions, customer-supplied items, special requirements..."></textarea></label>
+              <label class="span-2">Scope / equipment notes<textarea name="equipmentNotes" placeholder="Serial numbers, special-order details, compatibility notes, customer-supplied equipment, alternate options..."></textarea></label>
             </div>
           </div>
 
           <div class="panel form-section">
             <div class="number">5</div><div class="form-copy"><h3>Estimate & timing</h3><p>Capture expectations before work begins.</p></div>
+            <div class="pricing-banner"><div><strong>Pricing mode: Manual</strong><span>Structured for future product-catalog, labor-rate and package pricing automation.</span></div><span class="badge">Automation ready</span></div>
             <div class="form-grid">
               <label>Estimated parts ($)<input type="number" step="0.01" name="parts" value="0"></label>
               <label>Estimated labor ($)<input type="number" step="0.01" name="labor" value="0"></label>
