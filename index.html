@@ -119,19 +119,36 @@
 
           <div class="panel form-section">
             <div class="number">2</div><div class="form-copy"><h3>Vehicle</h3><p>Identify the exact vehicle and check-in details.</p></div>
-            <div class="form-grid">
-              <label>VIN<input name="vin" required maxlength="17" placeholder="17-character VIN"></label>
-              <label>Year<input name="year" inputmode="numeric" placeholder="2026"></label>
-              <label>Make<input name="make" placeholder="Ford"></label>
-              <label>Model<input name="model" placeholder="F-150"></label>
-              <label>Trim<input name="trim" placeholder="Lariat, M4 Competition, etc."></label>
-              <label>Color<input name="color" placeholder="Black"></label>
-              <label>Wrap / PPF / exterior finish<input name="wrap" placeholder="None, full wrap, satin PPF, partial wrap..."></label>
-              <label>Vehicle type<select name="vehicleType"><option>Sedan</option><option>Coupe</option><option>SUV</option><option>Truck</option><option>Van</option><option>Marine</option><option>Other</option></select></label>
-              <label>Fuel / charge level<select name="fuelLevel"><option value="">Select level</option><option>Empty / 0%</option><option>1/8</option><option>1/4</option><option>3/8</option><option>1/2</option><option>5/8</option><option>3/4</option><option>7/8</option><option>Full / 100%</option></select></label>
-              <label>Keys received<input name="keysReceived" placeholder="e.g. 2 keys, 1 remote"></label>
-              <label>Odometer<input name="odometer" placeholder="Mileage"></label>
-              <label class="span-2">Personal items / vehicle notes<textarea name="vehicleNotes" placeholder="Items left in vehicle, pre-existing concerns, special instructions..."></textarea></label>
+            <div class="vehicle-form">
+              <div class="vin-capture-card">
+                <div class="vin-capture-head">
+                  <div><strong>VIN</strong><span>Scan the windshield or door-jamb VIN, or enter it manually.</span></div>
+                  <label class="btn primary compact vin-scan-btn">📷 Scan VIN<input id="vinPhotoInput" type="file" accept="image/*" capture="environment" hidden></label>
+                </div>
+                <div class="vin-entry-row">
+                  <input name="vin" id="vinInput" required maxlength="17" autocomplete="off" placeholder="17-character VIN">
+                  <button type="button" class="btn secondary" id="decodeVinBtn">Decode VIN</button>
+                </div>
+                <div id="vinScanStatus" class="vin-status">VIN will be checked and decoded against NHTSA vehicle data.</div>
+                <div id="vinPhotoPreview" class="vin-photo-preview"></div>
+              </div>
+
+              <div class="vehicle-id-grid">
+                <label>Year<select name="year" id="yearSelect"></select><input class="other-field hidden" name="yearOther" id="yearOther" inputmode="numeric" placeholder="Enter year"></label>
+                <label>Make<select name="make" id="makeSelect"><option value="">Select make</option><option value="__other">Other / Not listed</option></select><input class="other-field hidden" name="makeOther" id="makeOther" placeholder="Enter make"></label>
+                <label>Model<select name="model" id="modelSelect"><option value="">Select model</option><option value="__other">Other / Not listed</option></select><input class="other-field hidden" name="modelOther" id="modelOther" placeholder="Enter model"></label>
+                <label>Trim<input name="trim" id="trimInput" placeholder="Lariat, M4 Competition, etc."></label>
+              </div>
+
+              <div class="form-grid vehicle-details-grid">
+                <label>Color<input name="color" placeholder="Black"></label>
+                <label>Wrap / PPF / exterior finish<input name="wrap" placeholder="None, full wrap, satin PPF, partial wrap..."></label>
+                <label>Vehicle type<select name="vehicleType" id="vehicleTypeSelect"><option value="">Select type</option><option>Sedan</option><option>Coupe</option><option>SUV</option><option>Truck</option><option>Van</option><option>Marine</option><option>Other</option></select></label>
+                <label>Fuel / charge level<select name="fuelLevel"><option value="">Select level</option><option>Empty / 0%</option><option>1/8</option><option>1/4</option><option>3/8</option><option>1/2</option><option>5/8</option><option>3/4</option><option>7/8</option><option>Full / 100%</option></select></label>
+                <label>Keys received<input name="keysReceived" placeholder="e.g. 2 keys, 1 remote"></label>
+                <label>Odometer<input name="odometer" placeholder="Mileage"></label>
+                <label class="span-2">Personal items / vehicle notes<textarea name="vehicleNotes" placeholder="Items left in vehicle, pre-existing concerns, special instructions..."></textarea></label>
+              </div>
             </div>
           </div>
 
@@ -219,6 +236,7 @@
       </section>
     </main>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
