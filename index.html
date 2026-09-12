@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>TTT OS</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">TTT</div>
+        <div><strong>TTT OS</strong><span>Operations</span></div>
+      </div>
+      <nav id="nav">
+        <button class="nav-item active" data-view="dashboard">Dashboard</button>
+        <button class="nav-item" data-view="customers">Customers</button>
+        <button class="nav-item" data-view="vehicles">Vehicles</button>
+        <button class="nav-item" data-view="workorders">Work Orders</button>
+        <button class="nav-item" data-view="intake">New Intake</button>
+        <button class="nav-item" data-view="warranty">Warranty</button>
+        <button class="nav-item" data-view="settings">Settings</button>
+      </nav>
+      <div class="sidebar-foot">
+        <span class="status-dot"></span>
+        <div><strong>Solo mode</strong><small>Ready for future staff</small></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">THOMPSON TRANSPORTATION TECHNOLOGIES</p>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="top-actions">
+          <button class="btn secondary" id="seedBtn">Reset demo</button>
+          <button class="btn primary" data-go="intake">+ New work order</button>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view active">
+        <div class="hero-card">
+          <div>
+            <p class="eyebrow">SHOP OVERVIEW</p>
+            <h2>Good afternoon, Derek.</h2>
+            <p>Everything needed to document, protect, complete and hand off each vehicle.</p>
+          </div>
+          <div class="hero-pill">Single operator · scalable roles enabled</div>
+        </div>
+
+        <div class="stats" id="stats"></div>
+
+        <div class="grid two">
+          <article class="panel">
+            <div class="panel-head"><h3>Active work</h3><button class="link-btn" data-go="workorders">View all</button></div>
+            <div id="activeWork"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><h3>Protection checklist</h3></div>
+            <div class="checklist">
+              <div>✓ Customer & contact record</div>
+              <div>✓ VIN / vehicle identity</div>
+              <div>✓ Pre-work photos & damage notes</div>
+              <div>✓ Authorized scope & estimate</div>
+              <div>✓ Terms version & signatures</div>
+              <div>✓ QC / delivery evidence</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="customers" class="view">
+        <div class="section-head"><div><p class="eyebrow">CRM</p><h2>Customers</h2></div></div>
+        <div class="panel"><div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Vehicles</th><th>Last activity</th></tr></thead><tbody id="customersBody"></tbody></table></div></div>
+      </section>
+
+      <section id="vehicles" class="view">
+        <div class="section-head"><div><p class="eyebrow">VEHICLE RECORDS</p><h2>Vehicles</h2></div></div>
+        <div class="panel"><div class="table-wrap"><table><thead><tr><th>Vehicle</th><th>Type</th><th>VIN</th><th>Owner</th><th>Work orders</th></tr></thead><tbody id="vehiclesBody"></tbody></table></div></div>
+      </section>
+
+      <section id="workorders" class="view">
+        <div class="section-head"><div><p class="eyebrow">OPERATIONS</p><h2>Work Orders</h2></div><button class="btn primary" data-go="intake">+ New work order</button></div>
+        <div class="status-filters" id="statusFilters"></div>
+        <div class="panel"><div class="table-wrap"><table><thead><tr><th>WO</th><th>Customer</th><th>Vehicle</th><th>Services</th><th>Status</th><th>Assigned</th><th>Estimate</th></tr></thead><tbody id="workordersBody"></tbody></table></div></div>
+      </section>
+
+      <section id="intake" class="view">
+        <div class="section-head"><div><p class="eyebrow">PROTECTED INTAKE</p><h2>New Work Order</h2></div><div class="step-chip">Draft saves locally</div></div>
+        <form id="intakeForm">
+          <div class="panel form-section">
+            <div class="number">1</div><div class="form-copy"><h3>Customer</h3><p>Create or capture the customer record.</p></div>
+            <div class="form-grid">
+              <label>Full name<input name="customerName" required placeholder="Customer name"></label>
+              <label>Phone<input name="phone" required placeholder="(555) 555-5555"></label>
+              <label>Email<input type="email" name="email" placeholder="name@email.com"></label>
+              <label>Address<input name="address" placeholder="Street, city, state, ZIP"></label>
+            </div>
+          </div>
+
+          <div class="panel form-section">
+            <div class="number">2</div><div class="form-copy"><h3>Vehicle</h3><p>Identify the exact vehicle and check-in details.</p></div>
+            <div class="form-grid">
+              <label>VIN<input name="vin" required maxlength="17" placeholder="17-character VIN"></label>
+              <label>Year<input name="year" inputmode="numeric" placeholder="2026"></label>
+              <label>Make<input name="make" placeholder="Ford"></label>
+              <label>Model<input name="model" placeholder="F-150"></label>
+              <label>Color<input name="color" placeholder="Black"></label>
+              <label>Vehicle type<select name="vehicleType"><option>Sedan</option><option>Coupe</option><option>SUV</option><option>Truck</option><option>Van</option><option>Marine</option><option>Other</option></select></label>
+              <label>Keys received<input name="keysReceived" placeholder="e.g. 2 keys, 1 remote"></label>
+              <label>Odometer<input name="odometer" placeholder="Mileage"></label>
+              <label class="span-2">Personal items / customer notes<textarea name="vehicleNotes" placeholder="Items left in vehicle, pre-existing concerns, special instructions..."></textarea></label>
+            </div>
+          </div>
+
+          <div class="panel form-section">
+            <div class="number">3</div><div class="form-copy"><h3>Condition & photos</h3><p>Take multiple photos per view. Close-ups can document damage or noteworthy areas.</p></div>
+            <div class="photo-grid">
+              <label class="photo-slot"><strong>Front</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Front"><div class="photo-preview" data-preview="Front"></div></label><label class="photo-slot"><strong>Rear</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Rear"><div class="photo-preview" data-preview="Rear"></div></label><label class="photo-slot"><strong>Left side</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Left side"><div class="photo-preview" data-preview="Left side"></div></label><label class="photo-slot"><strong>Right side</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Right side"><div class="photo-preview" data-preview="Right side"></div></label><label class="photo-slot"><strong>Interior</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Interior"><div class="photo-preview" data-preview="Interior"></div></label><label class="photo-slot"><strong>Dashboard / mileage</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Dashboard / mileage"><div class="photo-preview" data-preview="Dashboard / mileage"></div></label><label class="photo-slot"><strong>Roof / top</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Roof / top"><div class="photo-preview" data-preview="Roof / top"></div></label><label class="photo-slot"><strong>Damage close-ups</strong><span>Multiple images allowed</span><input type="file" accept="image/*" capture="environment" multiple data-photo="Damage close-ups"><div class="photo-preview" data-preview="Damage close-ups"></div></label>
+            </div>
+            <label class="block-label">Existing damage / condition notes<textarea name="damageNotes" placeholder="Scratch on LF bumper, wheel rash, cracked trim, stains, warning lights, etc."></textarea></label>
+          </div>
+
+          <div class="panel form-section">
+            <div class="number">4</div><div class="form-copy"><h3>Scope of work</h3><p>Document exactly what TTT is being authorized to install or perform.</p></div>
+            <div class="service-grid" id="serviceGrid"></div>
+            <div class="form-grid top-gap">
+              <label class="span-2">Equipment / make / model<textarea name="equipment" placeholder="Brand, model, serial/SKU if known, customer-supplied equipment..."></textarea></label>
+              <label class="span-2">Work details<textarea name="workDetails" required placeholder="Describe installation, location, requested outcome, exclusions..."></textarea></label>
+            </div>
+          </div>
+
+          <div class="panel form-section">
+            <div class="number">5</div><div class="form-copy"><h3>Estimate & timing</h3><p>Capture expectations before work begins.</p></div>
+            <div class="form-grid">
+              <label>Estimated parts ($)<input type="number" step="0.01" name="parts" value="0"></label>
+              <label>Estimated labor ($)<input type="number" step="0.01" name="labor" value="0"></label>
+              <label>Other / fees ($)<input type="number" step="0.01" name="fees" value="0"></label>
+              <label>Estimated completion<input type="datetime-local" name="estimatedCompletion"></label>
+              <label>Pickup / delivery<select name="handoff"><option>Customer pickup</option><option>TTT delivery</option><option>Dealer handoff</option><option>Other</option></select></label>
+              <label>Deposit ($)<input type="number" step="0.01" name="deposit" value="0"></label>
+            </div>
+            <div class="estimate-total">Estimated total <strong id="estimateTotal">$0.00</strong></div>
+          </div>
+
+          <div class="panel form-section">
+            <div class="number">6</div><div class="form-copy"><h3>Terms, warranty & authorization</h3><p>Terms are versioned so the signed wording can be preserved with the work order.</p></div>
+            <div class="terms-box">
+              <strong>TTT Standard Terms & Conditions · v0.1</strong>
+              <ol>
+                <li>Customer authorizes TTT to operate, move, inspect and perform the documented work on the vehicle as reasonably necessary.</li>
+                <li>Customer confirms disclosed pre-existing damage, personal property and vehicle condition to the best of their knowledge.</li>
+                <li>Estimates may change if concealed conditions, incompatible prior modifications or additional required work are discovered. Material changes require customer approval before proceeding.</li>
+                <li>TTT is not responsible for pre-existing defects, undisclosed aftermarket modifications, normal wear, failures unrelated to the performed work, or valuables left in the vehicle except to the extent required by applicable law.</li>
+                <li>Customer-supplied parts are installed at customer risk unless otherwise stated; manufacturer defects and fitment issues may not be covered by TTT workmanship warranty.</li>
+                <li>TTT workmanship is warranted for 12 months from delivery unless a different written warranty is stated on the work order. Product warranties are governed by the applicable manufacturer and may require manufacturer procedures.</li>
+                <li>Warranty does not cover misuse, collision, water intrusion not caused by TTT work, tampering, unauthorized modification, consumables, normal wear, or work altered by another party.</li>
+                <li>Vehicle pickup should occur promptly after completion notice. Storage, towing or other charges, if any, must be disclosed and permitted by applicable law.</li>
+                <li>Photos, timestamps, signatures, approvals and work-order history may be retained as part of the service record for quality, warranty and dispute documentation.</li>
+              </ol>
+              <p class="legal-note">Template operational terms only. TTT should have Texas counsel review these terms before production use.</p>
+            </div>
+            <label class="consent"><input type="checkbox" name="termsAccepted" required> Customer acknowledges the documented vehicle condition, authorized scope, estimate and Terms & Conditions above.</label>
+            <div class="signature-grid">
+              <label>Customer name / signature<input name="customerSignature" required placeholder="Type full name for prototype"></label>
+              <label>TTT representative<input name="staffSignature" value="Derek Thompson" required></label>
+            </div>
+          </div>
+
+          <div class="submit-bar">
+            <div><strong>Ready to create?</strong><span>The work order will be timestamped and assigned to Derek by default.</span></div>
+            <button class="btn primary large" type="submit">Create work order</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="warranty" class="view"><div class="empty-state"><div>🛡️</div><h2>Warranty records</h2><p>Warranty tracking is scaffolded for v0.1 and will attach to completed work orders.</p></div></section>
+      <section id="settings" class="view">
+        <div class="section-head"><div><p class="eyebrow">ADMIN</p><h2>Settings</h2></div></div>
+        <div class="grid two">
+          <article class="panel"><h3>Current operator</h3><p><strong>Derek Thompson</strong></p><p class="muted">Owner / Technician / Administrator</p><span class="badge">Default assignee</span></article>
+          <article class="panel"><h3>Scalability</h3><p class="muted">The data model already supports multiple users, roles and future technician assignments. Multi-user UI is intentionally hidden until needed.</p></article>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
