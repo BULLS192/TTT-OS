@@ -104,8 +104,6 @@ function renderWorkOrders(){
  }).join("");
 }
 
-document.getElementById("serviceGrid").innerHTML=SERVICES.map(s=>'<label class="service-option"><input type="checkbox" name="services" value="'+s+'"> '+s+'</label>').join("");
-
 const equipmentRows=document.getElementById("equipmentRows");
 function addEquipmentRow(values={}){
  const row=document.createElement("div");
@@ -158,7 +156,7 @@ document.getElementById("intakeForm").addEventListener("submit",e=>{
  if(!v){v={id:uid("veh"),customerId:c.id,vin:fd.get("vin"),year:fd.get("year"),make:fd.get("make"),model:fd.get("model"),trim:fd.get("trim"),color:fd.get("color"),wrap:fd.get("wrap"),type:fd.get("vehicleType"),fuelLevel:fd.get("fuelLevel"),keysReceived:fd.get("keysReceived"),odometer:fd.get("odometer"),notes:fd.get("vehicleNotes")};db.vehicles.push(v)}
  const equipment=[...document.querySelectorAll(".equipment-row")].map(row=>({category:row.querySelector('[data-eq="category"]').value,brand:row.querySelector('[data-eq="brand"]').value,model:row.querySelector('[data-eq="model"]').value,qty:Number(row.querySelector('[data-eq="qty"]').value||1),note:row.querySelector('[data-eq="note"]').value})).filter(x=>x.category||x.brand||x.model||x.note);
  const parts=Number(fd.get("parts")||0),labor=Number(fd.get("labor")||0),fees=Number(fd.get("fees")||0);
- const wo={id:"WO-"+new Date().toISOString().slice(2,10).replaceAll("-","")+"-"+String(db.workOrders.length+1).padStart(3,"0"),customerId:c.id,vehicleId:v.id,services:fd.getAll("services"),equipment,equipmentNotes:fd.get("equipmentNotes"),workDetails:fd.get("workDetails"),damageNotes:fd.get("damageNotes"),keysReceived:fd.get("keysReceived"),vehicleNotes:fd.get("vehicleNotes"),fuelLevel:fd.get("fuelLevel"),estimate:{parts,labor,fees,deposit:Number(fd.get("deposit")||0),pricingMode:"manual"},estimateTotal:parts+labor+fees,estimatedCompletion:fd.get("estimatedCompletion"),handoff:fd.get("handoff"),status:"Authorized",assignedTo:"usr_derek",createdBy:"usr_derek",createdAt:now,updatedAt:now,termsVersion:"0.1",termsAccepted:true,signatures:[{role:"customer",name:fd.get("customerSignature"),signedAt:now},{role:"ttt",name:fd.get("staffSignature"),signedAt:now}]};
+ const wo={id:"WO-"+new Date().toISOString().slice(2,10).replaceAll("-","")+"-"+String(db.workOrders.length+1).padStart(3,"0"),customerId:c.id,vehicleId:v.id,services:[...new Set(equipment.map(x=>x.category).filter(Boolean))],equipment,equipmentNotes:fd.get("equipmentNotes"),workDetails:fd.get("workDetails"),damageNotes:fd.get("damageNotes"),keysReceived:fd.get("keysReceived"),vehicleNotes:fd.get("vehicleNotes"),fuelLevel:fd.get("fuelLevel"),estimate:{parts,labor,fees,deposit:Number(fd.get("deposit")||0),pricingMode:"manual"},estimateTotal:parts+labor+fees,estimatedCompletion:fd.get("estimatedCompletion"),handoff:fd.get("handoff"),status:"Authorized",assignedTo:"usr_derek",createdBy:"usr_derek",createdAt:now,updatedAt:now,termsVersion:"0.1",termsAccepted:true,signatures:[{role:"customer",name:fd.get("customerSignature"),signedAt:now},{role:"ttt",name:fd.get("staffSignature"),signedAt:now}]};
  db.workOrders.push(wo);
  db.audit.push({id:uid("aud"),entityType:"work_order",entityId:wo.id,action:"created_and_authorized",actorId:"usr_derek",timestamp:now});
  [...document.querySelectorAll('input[type="file"][data-photo]')].forEach(input=>[...input.files].forEach(file=>db.media.push({id:uid("med"),workOrderId:wo.id,mediaType:"photo",category:input.dataset.photo,fileName:file.name,mime:file.type,capturedAt:now,createdBy:"usr_derek",storageStatus:"local-metadata-only"})));
