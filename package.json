@@ -1,0 +1,11 @@
+{
+  "name": "ttt-os",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
