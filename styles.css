@@ -154,3 +154,24 @@
 @media(max-width:680px){
  .field-group.names,.field-group.contact,.field-group.address-lines,.field-group.locality{grid-template-columns:1fr}
 }
+
+
+/* v0.1.4 VIN scanner + vehicle selectors */
+.vehicle-form{grid-column:3;display:grid;gap:14px;min-width:0}
+.vin-capture-card{border:1px solid #dce5f0;background:#f8fbff;border-radius:12px;padding:14px}
+.vin-capture-head,.vin-entry-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vin-capture-head>div{display:grid;gap:3px}
+.vin-capture-head span{font-size:12px;color:#718197}
+.vin-scan-btn{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.vin-entry-row{margin-top:12px}
+.vin-entry-row input{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;letter-spacing:.08em;text-transform:uppercase}
+.vin-entry-row .btn{white-space:nowrap}
+.vin-status{margin-top:8px;font-size:12px;color:#6e7d91}
+.vin-status.success{color:#18794e}.vin-status.warn{color:#946200}.vin-status.error{color:#b42318}.vin-status.working{color:#1557c0}
+.vin-photo-preview{margin-top:10px}
+.vin-photo-preview img{max-width:260px;max-height:120px;object-fit:cover;border-radius:8px;border:1px solid #d8e0ea}
+.vehicle-id-grid{display:grid;grid-template-columns:.7fr 1fr 1fr 1fr;gap:10px}
+.vehicle-id-grid label,.vehicle-details-grid label{display:grid;gap:6px;color:#536176;font-size:12px;font-weight:700}
+.other-field{margin-top:6px}.hidden{display:none!important}
+@media(max-width:1000px){.vehicle-form{grid-column:1/-1}.vehicle-id-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.vehicle-id-grid{grid-template-columns:1fr}.vin-capture-head,.vin-entry-row{align-items:stretch;flex-direction:column}.vin-scan-btn,.vin-entry-row .btn{width:100%}}
