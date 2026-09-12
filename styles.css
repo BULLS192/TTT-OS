@@ -137,3 +137,20 @@
  .equipment-note{grid-column:auto}
  .remove-equipment{width:100%}
 }
+
+
+/* v0.1.3 compact customer intake */
+.customer-form{grid-column:3;display:grid;gap:12px;min-width:0}
+.field-group{display:grid;gap:10px}
+.field-group.names{grid-template-columns:1fr .8fr 1fr}
+.field-group.contact{grid-template-columns:.8fr 1.2fr}
+.field-group.address-lines{grid-template-columns:1.35fr .65fr}
+.field-group.locality{grid-template-columns:1.25fr .65fr .65fr .85fr}
+.customer-form label,.customer-notes{display:grid;gap:6px;color:#536176;font-size:12px;font-weight:700}
+.customer-notes textarea{min-height:62px}
+@media(max-width:1000px){
+ .customer-form{grid-column:1/-1}
+}
+@media(max-width:680px){
+ .field-group.names,.field-group.contact,.field-group.address-lines,.field-group.locality{grid-template-columns:1fr}
+}
