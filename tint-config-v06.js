@@ -124,7 +124,7 @@
           <div><span>Estimated materials</span><strong data-tint-estimate="parts">$0.00</strong></div>
           <div><span>Estimated labor</span><strong data-tint-estimate="labor">$0.00</strong></div>
           <div><span>Suggested range</span><strong data-tint-estimate="range">$0.00 – $0.00</strong></div>
-          <button type="button" class="btn secondary compact" data-tint-apply>Use midpoint as draft</button>
+          <button type="button" class="btn secondary compact" data-tint-apply>Apply estimate to draft</button>
         </div>
         <p class="v06-tint-disclaimer">Starter estimator only. The rule table is intentionally isolated so TTT's validated film costs, labor standards, dealer tiers, vehicle complexity and market pricing can replace these seed values later.</p>
       </div>`;
@@ -246,8 +246,14 @@
   const previousSubmit=form.onsubmit;
   form.onsubmit=function(e){
     const rows=[...serviceRowsEl.querySelectorAll('.v06-smart-row')];
-    const configs=rows.map(readConfig);
     rows.forEach(updateTint); // keeps the human-readable line note in the existing quote snapshot.
+    const activeRows=rows.filter(r=>{
+      const category=r.querySelector('[data-eq="category"]')?.value;
+      const brand=r.querySelector('[data-eq="brand"]')?.value;
+      const model=r.querySelector('[data-eq="model"]')?.value;
+      return category||brand||model;
+    });
+    const configs=activeRows.map(readConfig);
     const before=new Set((db.jobs||[]).map(j=>j.id));
     const result=previousSubmit?previousSubmit.call(this,e):undefined;
     const created=(db.jobs||[]).find(j=>!before.has(j.id));
