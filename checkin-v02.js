@@ -229,7 +229,16 @@
   if(!document.querySelector('link[href="workflow-v03.css"]')){
     const link=document.createElement('link');link.rel='stylesheet';link.href='workflow-v03.css';document.head.appendChild(link);
   }
-  const files=['workflow-v03.js','google-sync-v01.js'];
-  const loadNext=i=>{if(i>=files.length)return;const s=document.createElement('script');s.src=files[i];s.async=false;s.onload=()=>loadNext(i+1);document.body.appendChild(s)};
-  loadNext(0);
+  function loadMissingModules(){
+    // Let the page's explicit scripts finish first. Loading the legacy sync
+    // client again would replace the current queueJob API and render hooks.
+    const sources=[...document.scripts].map(s=>new URL(s.src||location.href).pathname.split('/').pop());
+    const files=[];
+    if(!sources.includes('workflow-v03.js')) files.push('workflow-v03.js');
+    if(!sources.some(s=>/^google-sync-v\d+\.js$/.test(s))) files.push('google-sync-v01.js');
+    const loadNext=i=>{if(i>=files.length)return;const s=document.createElement('script');s.src=files[i];s.async=false;s.onload=()=>loadNext(i+1);document.body.appendChild(s)};
+    loadNext(0);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',loadMissingModules,{once:true});
+  else loadMissingModules();
 })();

@@ -44,7 +44,9 @@
     j.syncState='pending';
     j.audit=j.audit||[];
     j.audit.push({at,actor:'usr_derek',action,...extra});
-    save();
+    // Commit the complete local record before entering the replaceable sync path.
+    // A failed local write must throw before a Google job can be queued.
+    localStorage.setItem(DB_KEY,JSON.stringify(db));
     if(window.TTTSync?.queueJob) window.TTTSync.queueJob(j);
   }
 
