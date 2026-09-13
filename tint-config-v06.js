@@ -270,3 +270,9 @@
     return result;
   };
 })();
+
+// Load the v0.7 business controls without changing the existing document/script order.
+(function(){
+  if(document.querySelector('script[data-ttt-v07]'))return;
+  const s=document.createElement('script');s.src='business-data-v07.js';s.dataset.tttV07='1';document.body.appendChild(s);
+})();
