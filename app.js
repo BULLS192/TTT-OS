@@ -21,5 +21,5 @@
     brand.alt='Thompson Transportation Technologies';
     brand.style.objectFit='contain';
   }
-  document.write('<script src="/app-core.js?v='+v+'"><\\/script>');
+  document.write('<script src="/app-core.js?v='+v+'"></'+'script>');
 })();
