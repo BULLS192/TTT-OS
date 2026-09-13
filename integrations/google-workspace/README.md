@@ -44,6 +44,31 @@ This v0.3 bridge is appropriate for a small internal deployment, but the long-te
 
 ## Record model
 
+### Account Type mapping
+
+`Accounts.Account_Type` accepts `Retail`, `Dealer`, `Fleet`, `Business`, and
+`Consulting`. The bridge uses the first recognized value from customer
+`accountType`, customer `Account_Type`, job `accountType`, then job `Account_Type`.
+Matching ignores case and surrounding spaces. Missing, legacy `Individual`, or
+unrecognized values default to `Retail`. Sheet validation is unchanged.
+
+For an existing deployment, copy the updated `Main.gs` and `Helpers.gs` into the
+existing Apps Script project and update its web-app deployment to a new version.
+Keep the existing endpoint, token, Sheet, and validation settings. Pushing this
+repository alone does not update the deployed Apps Script bridge.
+
+### Local records on sync failure
+
+The browser loads `ttt-os-v0.2` on refresh. Sync sends a snapshot outward; a failed
+response changes only sync status/error metadata and saves the current local
+database. It does not restore that snapshot or load a record from Google.
+The browser regression test saves newer Work Order edits during an in-flight
+request, returns an Account Type validation error, and verifies the entire newer
+record and connection settings survive refresh.
+
+Run `node tests/google-bridge.cjs` for the bridge mapping regression and
+`node tests/workflow-v05.cjs` (requires Playwright) for browser persistence coverage.
+
 `Account → Contact → Vehicle → Job → Quote → Approval → Deposit / Parts / Schedule → Check-In → Final Authorization → Work Order → QC → Invoice / Payment → Delivery → Warranty`
 
 Approved records are not meant to be overwritten. A changed approved scope should become a new quote version or Change Order.

@@ -70,7 +70,39 @@ const root=path.join(__dirname,'..');
   });
   const payload=await page.evaluate(()=>window.sentPayload);assert.equal(payload.job.workExecution.lines[0].serialNumber,'SN-TEST');assert.deepEqual(payload.job.finalAuthorization,authorized.finalAuthorization);assert.deepEqual(payload.job.changeOrders[0],approved);assert.equal(payload.token,'synthetic-test-token');assert.equal((await get()).syncState,'queued');
   await refresh();assert.equal(await page.locator('#v05WorkNotes').inputValue(),'Saved during sync');
+  // Reproduce the reported job's validation failure after newer local edits.
+  // Include stale response data to prove it can never replace the local record.
+  await page.reload();
+  await page.evaluate(()=>openJob('J-260911-002'));
+  await page.locator('#v05SaveWork').waitFor();
+  const failedSync=await page.evaluate(async()=>{
+   const j=job(currentJobId),beforeSettings=Object.fromEntries(Object.keys(localStorage).filter(k=>k!==DB_KEY).map(k=>[k,localStorage.getItem(k)]));
+   let release;
+   window.fetch=async(url,options)=>{
+    const stale=JSON.parse(options.body).job;
+    await new Promise(r=>{release=r;});
+    return {ok:true,text:async()=>JSON.stringify({ok:false,error:'Account Type must be Retail, Dealer, Fleet, Business, Consulting',job:stale})};
+   };
+   const syncing=TTTSync.syncJob(j).then(()=>{throw new Error('Expected validation rejection');},e=>e.message);
+   document.querySelector('#v05WorkExecution [data-field="serialNumber"]').value='NEWER-LOCAL-SERIAL';
+   document.getElementById('v05WorkNotes').value='Newer local work after sync started';
+   document.getElementById('v05SaveWork').click();
+   const newer=JSON.parse(localStorage.getItem(DB_KEY));
+   release();const error=await syncing;
+   const after=JSON.parse(localStorage.getItem(DB_KEY));
+   // The failure may only update sync metadata, never business fields.
+   const normalize=database=>{database.jobs.forEach(x=>{delete x.syncState;delete x.syncError;});return JSON.stringify(database);};
+   if(normalize(newer)!==normalize(after))throw new Error('Failed sync overwrote newer local data');
+   return {error,record:JSON.parse(JSON.stringify(j)),settings:beforeSettings};
+  });
+  assert.match(failedSync.error,/Account Type/);
+  assert.equal(failedSync.record.syncState,'error');
+  await page.reload();await page.evaluate(()=>openJob('J-260911-002'));await page.locator('#v05SaveWork').waitFor();
+  assert.deepEqual(await get(),failedSync.record);
+  assert.equal(await page.locator('#v05WorkNotes').inputValue(),'Newer local work after sync started');
+  assert.equal(await page.locator('#v05WorkExecution [data-field="serialNumber"]').first().inputValue(),'NEWER-LOCAL-SERIAL');
+  assert.deepEqual(await page.evaluate(()=>Object.fromEntries(Object.keys(localStorage).filter(k=>k!==DB_KEY).map(k=>[k,localStorage.getItem(k)]))),failedSync.settings);
   assert.deepEqual(errors,['Synthetic queue failure','Synthetic storage failure']);
-  console.log('PASS: browser refresh; local-before-sync ordering; authorization; execution fields; draft/approved change orders; QC; data/settings retention; four previews; sync payload/in-flight edits; storage/queue failures.');
+  console.log('PASS: browser refresh; local-before-sync ordering; authorization; execution fields; draft/approved change orders; QC; data/settings retention; four previews; sync payload/in-flight edits; storage/queue failures; Account Type rejection preserves newer local record on reload.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

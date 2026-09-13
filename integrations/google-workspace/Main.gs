@@ -61,7 +61,7 @@ function syncJob_(p) {
 
   upsert_(ss, 'Accounts', 'Account_ID', ids.accountId, {
     Account_ID: ids.accountId,
-    Account_Type: 'Individual',
+    Account_Type: accountType_(c, j),
     Account_Name: c.name || [c.firstName,c.middleName,c.lastName].filter(Boolean).join(' '),
     Status: 'Active',
     Primary_Contact_ID: ids.contactId,

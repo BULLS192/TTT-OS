@@ -1,3 +1,18 @@
+// Match the Master Database validation without changing it. Customer values
+// take precedence; accept imported Sheet headers as well as application fields.
+function accountType_(customer, job) {
+  const c = customer || {}, j = job || {};
+  const allowed = ['Retail', 'Dealer', 'Fleet', 'Business', 'Consulting'];
+  const candidates = [c.accountType, c.Account_Type, j.accountType, j.Account_Type];
+  for (const value of candidates) {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    const match = allowed.find(function(type) {return type.toLowerCase() === normalized;});
+    if (match) return match;
+  }
+  // Missing, legacy "Individual", and unrecognized values are consumer accounts.
+  return 'Retail';
+}
+
 function upsert_(ss, sheetName, keyHeader, keyValue, obj) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) throw new Error('Missing sheet: ' + sheetName);
