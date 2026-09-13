@@ -9,8 +9,8 @@
   "theme_color": "#060d19",
   "icons": [
     {
-      "src": "/ttt-logo.png?v=20260913-2",
-      "sizes": "180x180",
+      "src": "/icon-192.png?v=20260913-approved-master",
+      "sizes": "64x64",
       "type": "image/png",
       "purpose": "any"
     }
