@@ -13,6 +13,28 @@ function accountType_(customer, job) {
   return 'Retail';
 }
 
+function workOrderType_(customer, job) {
+  const j = job || {};
+  const allowed = ['Retail','Dealer','Fleet','Mobile','Warranty','Diagnostic','Consulting'];
+  for (const value of [j.workOrderType, j.Work_Order_Type, accountType_(customer, j)]) {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    const match = allowed.find(function(type){return type.toLowerCase() === normalized;});
+    if (match) return match;
+  }
+  return 'Retail';
+}
+
+function workOrderStatus_(status) {
+  const aliases = {
+    Lead:'Draft', Estimate:'Draft', 'Awaiting Approval':'Draft',
+    'Awaiting Deposit':'Draft', 'Awaiting Parts':'Waiting Parts',
+    'Ready for Check-In':'Scheduled', 'Awaiting Final Authorization':'Checked In',
+    'Waiting on Customer':'In Progress', 'Waiting on Parts':'Waiting Parts',
+    QC:'QC Hold', Delivered:'Completed', Closed:'Completed', Declined:'Cancelled'
+  };
+  return aliases[status] || status || 'Draft';
+}
+
 function upsert_(ss, sheetName, keyHeader, keyValue, obj) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) throw new Error('Missing sheet: ' + sheetName);
@@ -64,7 +86,7 @@ function isoNow_(){return new Date().toISOString();}
 function dateText_(v){if(!v)return'';return Utilities.formatDate(new Date(v),TTT_CONFIG.TIMEZONE,'MMM d, yyyy');}
 function moneyText_(v){return '$'+number_(v).toFixed(2);}
 function vehicleStatus_(s){return ['Checked In','Awaiting Final Authorization','In Progress','Waiting on Customer','Waiting on Parts','QC','Ready for Pickup'].indexOf(s)>=0?'In Shop':'Active';}
-function appointmentStatus_(s){if(['Closed','Declined'].indexOf(s)>=0)return 'Closed';if(['Delivered'].indexOf(s)>=0)return 'Completed';return 'Scheduled';}
+function appointmentStatus_(s){if(s==='Declined')return 'Cancelled';if(['Delivered','Closed'].indexOf(s)>=0)return 'Completed';return 'Scheduled';}
 function workStart_(j){const a=(j.audit||[]).find(function(x){return x.action==='final_authorization_and_work_order_created';});return a && a.at || '';}
 function fileIdFromUrl_(url){const m=String(url||'').match(/[-\w]{25,}/);if(!m)throw new Error('Could not read Drive file ID.');return m[0];}
 function json_(obj){return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);}

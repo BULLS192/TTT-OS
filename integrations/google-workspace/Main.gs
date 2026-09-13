@@ -16,9 +16,16 @@ function doPost(e) {
     const p = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     verifyToken_(p.token);
     if (p.action === 'health') return json_({ok:true, database:'TTT OS — Master Database v1'});
-    if (p.action === 'syncJob') return json_(syncJob_(p));
-    if (p.action === 'sendQuote') return json_(sendQuote_(p));
-    throw new Error('Unknown action: ' + p.action);
+    if (p.action !== 'syncJob' && p.action !== 'sendQuote') throw new Error('Unknown action: ' + p.action);
+    // Manual sync and automatic retries can overlap. Serialize the complete
+    // upsert/line replacement so one request cannot interleave another's rows.
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      return json_(p.action === 'syncJob' ? syncJob_(p) : sendQuote_(p));
+    } finally {
+      lock.releaseLock();
+    }
   } catch (err) {
     return json_({ok:false, error:String(err && err.message || err)});
   }
@@ -155,15 +162,17 @@ function syncJob_(p) {
     ids.workOrderId = j.workOrderId;
     upsert_(ss, 'Work Orders', 'Work_Order_ID', j.workOrderId, {
       Work_Order_ID: j.workOrderId, Quote_ID: j.quote && j.quote.id || j.quoteId || '', Account_ID: ids.accountId,
-      Contact_ID: ids.contactId, Vehicle_ID: ids.vehicleId, Work_Order_Type: 'Installation / Service', Status: j.status || '',
+      Contact_ID: ids.contactId, Vehicle_ID: ids.vehicleId, Work_Order_Type: workOrderType_(c, j), Status: workOrderStatus_(j.status),
       Priority: j.priority || 'Normal', Scheduled_Start: j.appointment || '', Actual_Start: workStart_(j),
       Primary_Technician_ID: j.assignedTo || j.createdBy || 'usr_derek', Customer_Request: j.requestNotes || '',
-      Internal_Notes: j.equipmentNotes || '', Drive_Folder_URL: jobFolder.getUrl(),
+      Internal_Notes: j.workExecution && j.workExecution.notes || j.equipmentNotes || '', Drive_Folder_URL: jobFolder.getUrl(),
       Labor_Revenue: number_(j.estimate && j.estimate.labor), Parts_Revenue: number_(j.estimate && j.estimate.parts),
       QC_Status: j.status === 'QC' ? 'In QC' : (['Ready for Pickup','Delivered','Closed'].indexOf(j.status)>=0 ? 'Passed / Completed' : ''),
       Customer_Signoff: j.finalAuthorization ? 'Yes' : 'No', Created_Date: workStart_(j) || now,
       Closed_Date: ['Delivered','Closed'].indexOf(j.status)>=0 ? (j.updatedAt || now) : '',
-      Job_ID: ids.jobId, Final_Authorization_ID: j.finalAuthorization && j.finalAuthorization.id || ''
+      Job_ID: ids.jobId, Final_Authorization_ID: j.finalAuthorization && j.finalAuthorization.id || '',
+      Started_Date: j.workExecution && j.workExecution.startedAt || '',
+      Completed_Date: j.workExecution && j.workExecution.completedAt || ''
     });
     replaceWorkOrderLines_(ss, j);
   }

@@ -1,0 +1,9 @@
+{
+  "scriptId": "1uyHh7MH9w1Cd4YwkbALZLrDp1VSc7Y36KvLzpKUsL2KFnyxSN-blEKqC",
+  "deploymentId": "AKfycbzabX-1E6UARND0SNUtWtpY8AO5NHk546PwGkCYtgnUzWLI0Xg6z2Azu6Q9sK21yN4g",
+  "endpoint": "https://script.google.com/macros/s/AKfycbzabX-1E6UARND0SNUtWtpY8AO5NHk546PwGkCYtgnUzWLI0Xg6z2Azu6Q9sK21yN4g/exec",
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE_ANONYMOUS"
+  }
+}

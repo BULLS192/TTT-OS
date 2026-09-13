@@ -88,8 +88,21 @@ function replaceWorkOrderLines_(ss, j) {
   deleteRowsByValue_(ss, 'Work Order Lines', 'Work_Order_ID', j.workOrderId);
   const sheet = ss.getSheetByName('Work Order Lines');
   let n = 1;
-  (j.equipment || []).forEach(function(line){
-    appendObject_(sheet, {WO_Line_ID:j.workOrderId+'-L'+String(n).padStart(3,'0'),Work_Order_ID:j.workOrderId,Line_Number:n++,Line_Type:'Service / Product',Description:[line.category,line.brand,line.model].filter(Boolean).join(' · '),Qty:number_(line.qty)||1,Status:'Authorized',Notes:line.note || ''});
+  const execution = j.workExecution && j.workExecution.lines;
+  const lines = execution && execution.length ? execution : (j.equipment || []);
+  lines.forEach(function(line){
+    appendObject_(sheet, {
+      WO_Line_ID:j.workOrderId+'-L'+String(n).padStart(3,'0'), Work_Order_ID:j.workOrderId, Line_Number:n++,
+      Line_Type:'Service / Product', Description:[line.category,line.brand,line.model].filter(Boolean).join(' · '),
+      Qty:number_(line.qty)||1, Status:line.status || 'Authorized',
+      Category:line.category || '', Brand:line.brand || '', Model:line.model || '',
+      Installed_Location:line.installedLocation || '', Labor_Hours_Actual:line.laborHours === '' || line.laborHours == null ? '' : number_(line.laborHours),
+      Technician_Notes:line.technicianNotes || '', Completion_Notes:line.completionNotes || '',
+      Started_At:line.startedAt || '', Completed_At:line.completedAt || '', Change_Order_ID:line.changeOrderId || '',
+      Serial_ID:line.serialId || '',
+      // Serial_ID is a reference to the Serial Numbers sheet, not a raw serial.
+      Notes:[line.note || '', line.serialNumber ? 'Serial number: '+line.serialNumber : ''].filter(Boolean).join(' | ')
+    });
   });
 }
 
