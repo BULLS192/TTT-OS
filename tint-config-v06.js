@@ -31,7 +31,7 @@
       'XPEL':['Custom / Other','ULTIMATE PLUS','STEALTH'],'3M':['Custom / Other','Scotchgard PPF'],'LLumar':['Custom / Other','Platinum PPF'],'Other / Customer supplied':['Custom / Other']
     },
     'Window tint':{
-      'XPEL':['Custom / Other','PRIME XR PLUS'],'3M':['Custom / Other','Crystalline','Ceramic IR'],'LLumar':['Custom / Other','IRX','CTX'],'Other / Customer supplied':['Custom / Other']
+      'XPEL':['Custom / Other','PRIME CS','PRIME XR BLACK','PRIME XR PLUS'],'3M':['Custom / Other','Crystalline','Ceramic IR'],'LLumar':['Custom / Other','ATC','CTX','IRX','FormulaOne Pinnacle','FormulaOne Stratos'],'Other / Customer supplied':['Custom / Other']
     },
     'GPS trackers':{
       'Compustar':['Custom / Other','DroneMobile'],'Viper':['Custom / Other','SmartStart'],'Other / Customer supplied':['Custom / Other']
@@ -42,21 +42,33 @@
     'Other':{'Other / Customer supplied':['Custom / Other']}
   };
 
-  const PRODUCT_TECH={'PRIME XR PLUS':'IR Ceramic','Crystalline':'Multilayer Optical','Ceramic IR':'Ceramic','IRX':'IR Ceramic','CTX':'Ceramic'};
+  const PRODUCT_TECH={
+    'PRIME CS':'Dyed','PRIME XR BLACK':'IR Ceramic','PRIME XR PLUS':'IR Ceramic',
+    'Crystalline':'Multilayer Optical','Ceramic IR':'Ceramic',
+    'ATC':'Dyed','CTX':'Ceramic','IRX':'IR Ceramic',
+    'FormulaOne Pinnacle':'Ceramic','FormulaOne Stratos':'IR Ceramic'
+  };
+  // Film-series multipliers calibrate the technology estimate to Houston 2026 street pricing.
+  // They are deliberately isolated so TTT can later replace them with Derek's actual material cost/margin rules.
+  const SERIES_MULT={
+    'PRIME CS':.9,'PRIME XR BLACK':1.12,'PRIME XR PLUS':1.34,
+    'Ceramic IR':1.08,'Crystalline':1.28,
+    'ATC':.85,'CTX':1,'IRX':1.15,'FormulaOne Pinnacle':1.18,'FormulaOne Stratos':1.3
+  };
   const TECH_MULT={'Dyed':0.75,'Carbon':1,'Ceramic':1.35,'IR Ceramic':1.65,'Multilayer Optical':1.8,'Other':1};
   const VLTS=['5%','15%','20%','25%','30%','35%','40%','50%','55%','70%','80%','Custom'];
   const WINDOWS={
-    windshield:{label:'Windshield',material:85,labor:125},
-    brow:{label:'Windshield brow / strip',material:12,labor:33},
-    front_left:{label:'Driver front window',material:28,labor:52},
-    front_right:{label:'Passenger front window',material:28,labor:52},
-    rear_left:{label:'Left rear door',material:25,labor:45},
-    rear_right:{label:'Right rear door',material:25,labor:45},
-    quarter_left:{label:'Left quarter glass',material:12,labor:28},
-    quarter_right:{label:'Right quarter glass',material:12,labor:28},
-    rear_glass:{label:'Rear windshield',material:45,labor:75},
-    sunroof:{label:'Sunroof',material:35,labor:65},
-    panoramic:{label:'Panoramic roof',material:65,labor:105}
+    windshield:{label:'Windshield',material:85,labor:145,marketLow:189,marketHigh:400},
+    brow:{label:'Windshield brow / strip',material:12,labor:38,marketLow:50,marketHigh:75},
+    front_left:{label:'Driver front window',material:28,labor:52,marketLow:60,marketHigh:110},
+    front_right:{label:'Passenger front window',material:28,labor:52,marketLow:60,marketHigh:110},
+    rear_left:{label:'Left rear door',material:25,labor:45,marketLow:60,marketHigh:110},
+    rear_right:{label:'Right rear door',material:25,labor:45,marketLow:60,marketHigh:110},
+    quarter_left:{label:'Left quarter glass',material:12,labor:28,marketLow:30,marketHigh:60},
+    quarter_right:{label:'Right quarter glass',material:12,labor:28,marketLow:30,marketHigh:60},
+    rear_glass:{label:'Rear windshield',material:45,labor:95,marketLow:120,marketHigh:220},
+    sunroof:{label:'Sunroof',material:35,labor:75,marketLow:120,marketHigh:175},
+    panoramic:{label:'Panoramic roof',material:65,labor:145,marketLow:300,marketHigh:500}
   };
   const PRESETS={
     'Front 2':['front_left','front_right'],
@@ -84,7 +96,7 @@
       .v06-tint-window{display:grid!important;grid-template-columns:1fr 92px;align-items:center;gap:8px!important;border:1px solid #e1e8f1;background:#fff;border-radius:9px;padding:8px 9px;color:#405069!important}
       .v06-tint-window>span{display:flex;align-items:center;gap:7px;font-size:12px}.v06-tint-window input{width:auto}
       .v06-tint-window select{padding:7px 8px;font-size:12px}
-      .v06-tint-estimate{display:grid;grid-template-columns:1fr 1fr 1.2fr auto;gap:10px;align-items:end;background:#edf5ff;border:1px solid #d4e5fb;border-radius:10px;padding:11px}
+      .v06-tint-estimate{display:grid;grid-template-columns:1fr 1fr 1.2fr 1.2fr auto;gap:10px;align-items:end;background:#edf5ff;border:1px solid #d4e5fb;border-radius:10px;padding:11px}
       .v06-tint-estimate>div{display:grid;gap:3px}.v06-tint-estimate span{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#718197;font-weight:800}.v06-tint-estimate strong{font-size:15px;color:#193657}
       .v06-tint-disclaimer{margin:0;color:#7b899d;font-size:10px;line-height:1.45}
       .v06-tint-empty{font-size:12px;color:#7b899d;padding:8px 0}
@@ -123,10 +135,11 @@
         <div class="v06-tint-estimate">
           <div><span>Estimated materials</span><strong data-tint-estimate="parts">$0.00</strong></div>
           <div><span>Estimated labor</span><strong data-tint-estimate="labor">$0.00</strong></div>
-          <div><span>Suggested range</span><strong data-tint-estimate="range">$0.00 – $0.00</strong></div>
+          <div><span>Cost-based estimate</span><strong data-tint-estimate="range">$0.00 – $0.00</strong></div>
+          <div><span>Houston market range</span><strong data-tint-estimate="market">$0.00 – $0.00</strong></div>
           <button type="button" class="btn secondary compact" data-tint-apply>Apply estimate to draft</button>
         </div>
-        <p class="v06-tint-disclaimer">Starter estimator only. The rule table is intentionally isolated so TTT's validated film costs, labor standards, dealer tiers, vehicle complexity and market pricing can replace these seed values later.</p>
+        <p class="v06-tint-disclaimer">Estimator combines TTT seed material/labor assumptions with Houston 2026 competitive benchmarks. Market range is a sanity check, not a competitor quote. Final pricing should still reflect actual film cost, vehicle complexity, removal risk, warranty and target margin.</p>
       </div>`;
     serviceRowsEl.appendChild(row);
 
@@ -181,17 +194,33 @@
   function calculate(row){
     const tech=row.querySelector('[data-tint="technology"]')?.value||'Other';
     const techMult=TECH_MULT[tech]||1;
+    const series=row.querySelector('[data-eq="model"]')?.value||'';
+    const seriesMult=SERIES_MULT[series]||1;
     const type=document.getElementById('vehicleTypeSelect')?.value||'Sedan';
     const laborMult={Sedan:1,Coupe:1.05,SUV:1.12,Truck:1.08,Van:1.2,Marine:1.25,Other:1}[type]||1;
     const removal=row.querySelector('[data-tint="removal"]')?.value||'none';
     let parts=0,labor=0,count=0;
     row.querySelectorAll('[data-tint-window]:checked').forEach(cb=>{
       const w=WINDOWS[cb.dataset.tintWindow];if(!w)return;
-      count++;parts+=w.material*techMult;labor+=w.labor*laborMult;
+      count++;parts+=w.material*techMult*seriesMult;labor+=w.labor*laborMult;
     });
-    if(removal==='selected') labor+=count*25;
+    if(removal==='selected') labor+=count*35;
     const total=parts+labor;
-    return{parts:Math.round(parts),labor:Math.round(labor),total:Math.round(total),low:Math.round(total*.9),high:Math.round(total*1.1)};
+    let marketLow=0,marketHigh=0;
+    row.querySelectorAll('[data-tint-window]:checked').forEach(cb=>{
+      const w=WINDOWS[cb.dataset.tintWindow]; if(!w)return;
+      marketLow+=(w.marketLow||0); marketHigh+=(w.marketHigh||0);
+    });
+    // Calibrate generic glass ranges by selected film tier. Mid-market ceramic is the baseline.
+    const marketTier={Dyed:.72,Carbon:.85,Ceramic:1,'IR Ceramic':1.15,'Multilayer Optical':1.25,Other:1}[tech]||1;
+    marketLow*=marketTier; marketHigh*=marketTier;
+    if(seriesMult>1){marketLow*=Math.min(seriesMult,1.2);marketHigh*=seriesMult;}
+    if(removal==='selected'){marketLow+=count*25;marketHigh+=count*75;}
+    return{
+      parts:Math.round(parts),labor:Math.round(labor),total:Math.round(total),
+      low:Math.round(total*.9),high:Math.round(total*1.1),
+      marketLow:Math.round(marketLow),marketHigh:Math.round(marketHigh)
+    };
   }
 
   function readConfig(row){
@@ -227,6 +256,8 @@
     row.querySelector('[data-tint-estimate="parts"]').textContent=money(q.parts);
     row.querySelector('[data-tint-estimate="labor"]').textContent=money(q.labor);
     row.querySelector('[data-tint-estimate="range"]').textContent=`${money(q.low)} – ${money(q.high)}`;
+    const market=row.querySelector('[data-tint-estimate="market"]');
+    if(market) market.textContent=`${money(q.marketLow)} – ${money(q.marketHigh)}`;
     const note=row.querySelector('[data-eq="note"]');
     if(note&&cfg.windows.length){
       const film=[row.querySelector('[data-eq="brand"]').value,row.querySelector('[data-eq="model"]').value,cfg.technology].filter(Boolean).join(' · ');
