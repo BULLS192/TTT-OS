@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app synchronously.
 (function(){
-  const v='20260913-approved-master';
+  const v='20260914-vendors';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -22,4 +22,5 @@
     brand.style.objectFit='contain';
   }
   document.write('<script src="/app-core.js?v='+v+'"></'+'script>');
+  document.write('<script src="/vendors-v08.js?v='+v+'"></'+'script>');
 })();
