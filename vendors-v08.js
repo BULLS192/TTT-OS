@@ -1,4 +1,4 @@
-// TTT OS v0.8 — Vendor & Supplier directory bridge
+// TTT OS v0.8.1 — Vendor & Supplier directory bridge
 // Google Sheet remains the source of truth so TTT does not maintain duplicate vendor data.
 (function(){
   const DIRECTORY_URL='https://docs.google.com/spreadsheets/d/1crOoPQirn3TS1anibJN67lZN7CWf1uqCLEg6rxd4g5g/edit';
@@ -30,43 +30,47 @@
             <a class="btn primary" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open vendor directory</a>
           </div>
         </div>
-        <div class="workflow-note"><strong>Single source of truth:</strong> Vendor, rep, brand, product, pricing, document and evaluation data live in the TTT Vendor & Rep Directory on Google Sheets. TTT OS surfaces the operating workflow without creating a second vendor database.</div>
+        <div class="workflow-note"><strong>Relational source of truth:</strong> Create a company once. Contacts, brands/products, pricing, documents, evaluations, opportunities and interactions link back to that company instead of repeating company data. Vendor IDs and contact names are resolved automatically in the Google Sheet.</div>
         <div class="stats">
-          <div class="stat"><span>Companies</span><strong>Google Sheet</strong></div>
-          <div class="stat"><span>Sales reps</span><strong>Google Sheet</strong></div>
-          <div class="stat"><span>Pricing</span><strong>Linked</strong></div>
+          <div class="stat"><span>Company master</span><strong>1× entry</strong></div>
+          <div class="stat"><span>Contacts</span><strong>Linked</strong></div>
+          <div class="stat"><span>Products & pricing</span><strong>Linked</strong></div>
           <div class="stat"><span>Raw cards</span><strong>Drive</strong></div>
         </div>
         <div class="grid two">
           <article class="panel">
-            <div class="panel-head"><h3>Vendor workflow</h3></div>
+            <div class="panel-head"><h3>Linked data model</h3></div>
             <div class="checklist">
-              <div>1. Upload original business-card photos</div>
-              <div>2. Create or match the company record</div>
-              <div>3. Add the sales rep / contact</div>
-              <div>4. Link brands, products and service categories</div>
-              <div>5. Capture dealer pricing, terms and documents</div>
-              <div>6. Evaluate and approve the vendor</div>
+              <div><strong>Companies</strong> — master Vendor ID + company-level details</div>
+              <div>↳ <strong>Contacts</strong> — select company; Vendor ID fills automatically</div>
+              <div>↳ <strong>Brands & Products</strong> — linked to company</div>
+              <div>↳ <strong>Pricing & Documents</strong> — linked to company</div>
+              <div>↳ <strong>Evaluation & Opportunities</strong> — linked to company</div>
+              <div>↳ <strong>Interactions</strong> — linked to company + contact</div>
             </div>
           </article>
           <article class="panel">
-            <div class="panel-head"><h3>TTT integration</h3></div>
+            <div class="panel-head"><h3>Vendor workflow</h3></div>
             <div class="checklist">
-              <div>✓ Vendor status: Prospect → Active / Rejected</div>
-              <div>✓ Contacts and territory ownership</div>
-              <div>✓ Brands and product lines</div>
-              <div>✓ Pricing and margin inputs</div>
-              <div>✓ Vendor documents and catalogs</div>
-              <div>✓ Future links to Inventory, Pricing Configurator and Create Job</div>
+              <div>1. Upload original business-card photo</div>
+              <div>2. Create or match the company once</div>
+              <div>3. Add the rep and select the company from the dropdown</div>
+              <div>4. Add brands/products and commercial information</div>
+              <div>5. Capture pricing, terms, documents and follow-ups</div>
+              <div>6. Evaluate → approve → activate the vendor</div>
             </div>
           </article>
         </div>
         <div class="panel">
+          <div class="panel-head"><h3>Data-entry rule</h3></div>
+          <div class="workflow-note"><strong>Do not retype company data in child tabs.</strong> Use the Company Name dropdown. Gray “Auto” columns are lookup fields and should not be edited. Contacts have their own Contact ID so interactions and opportunities can reference the person without copying their phone/email details.</div>
+        </div>
+        <div class="panel">
           <div class="panel-head"><h3>Google Workspace resources</h3></div>
           <div class="table-wrap"><table><thead><tr><th>Resource</th><th>Purpose</th><th></th></tr></thead><tbody>
-            <tr><td><strong>TTT Vendor & Rep Directory</strong></td><td>Master companies, contacts, brands/products, pricing, documents, evaluation and opportunities.</td><td><a class="link-btn" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open</a></td></tr>
-            <tr><td><strong>Business Cards — Raw / 2026</strong></td><td>Original card photos supplied by Derek. Preserve the source files unchanged.</td><td><a class="link-btn" href="${RAW_CARDS_URL}" target="_blank" rel="noopener">Open</a></td></tr>
-            <tr><td><strong>Vendors & Suppliers Drive</strong></td><td>Vendor documents, brands/product lines, prospective vendors and source materials.</td><td><a class="link-btn" href="${VENDOR_ROOT_URL}" target="_blank" rel="noopener">Open</a></td></tr>
+            <tr><td><strong>TTT Vendor & Rep Directory</strong></td><td>Relational master for companies, contacts, brands/products, pricing, documents, evaluation, opportunities and interactions.</td><td><a class="link-btn" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open</a></td></tr>
+            <tr><td><strong>Business Cards — Raw / 2026</strong></td><td>Original business-card source images. Each contact record links back to its card.</td><td><a class="link-btn" href="${RAW_CARDS_URL}" target="_blank" rel="noopener">Open</a></td></tr>
+            <tr><td><strong>Vendors & Suppliers Drive</strong></td><td>Vendor documents, catalogs, product lines, pricing sources and prospective-vendor materials.</td><td><a class="link-btn" href="${VENDOR_ROOT_URL}" target="_blank" rel="noopener">Open</a></td></tr>
           </tbody></table></div>
         </div>`;
       const settings=document.getElementById('settings');
