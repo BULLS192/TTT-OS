@@ -1,6 +1,6 @@
-// TTT OS bootstrap: apply the approved master branding first, then load the original app synchronously.
+// TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260914-vendors';
+  const v='20260914-scheduling-v09';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -23,4 +23,6 @@
   }
   document.write('<script src="/app-core.js?v='+v+'"></'+'script>');
   document.write('<script src="/vendors-v08.js?v='+v+'"></'+'script>');
+  document.write('<script src="/scheduling-core-v09.js?v='+v+'"></'+'script>');
+  document.write('<script src="/scheduling-v09.js?v='+v+'"></'+'script>');
 })();
