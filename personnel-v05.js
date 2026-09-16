@@ -1,0 +1,258 @@
+(function(){
+  'use strict';
+
+  const VERSION='0.5';
+  const SEED_VERSION=1;
+  const RELATIONSHIPS=['Owner','Partner','Employee','Contractor','Advisor'];
+  const DEPARTMENTS=['Executive','Operations','Installation','Diagnostics','Sales','Administration','Marketing','Finance','Other'];
+  const STATUSES=['Active','Onboarding','Leave','Inactive'];
+  const ROLE_OPTIONS=[
+    ['owner_admin','Owner / Administrator'],
+    ['partner_admin','Partner / Administrator'],
+    ['manager','Manager'],
+    ['technician','Technician'],
+    ['service_advisor','Service Advisor'],
+    ['sales','Sales'],
+    ['office','Office / Administration'],
+    ['read_only','Read only']
+  ];
+  const SKILL_CATALOG=[
+    {name:'General technician',category:'Operations'},
+    {name:'Tint installer',category:'Installation'},
+    {name:'Audio technician',category:'Installation'},
+    {name:'Electronics',category:'Diagnostics'},
+    {name:'Film installer',category:'Installation'},
+    {name:'Vehicle diagnostics',category:'Diagnostics'},
+    {name:'12V wiring',category:'Diagnostics'},
+    {name:'Fabrication',category:'Fabrication'},
+    {name:'Additive manufacturing',category:'Fabrication'},
+    {name:'Customer service',category:'Customer'},
+    {name:'Sales',category:'Commercial'},
+    {name:'Business development',category:'Commercial'},
+    {name:'Project management',category:'Management'},
+    {name:'Inventory & purchasing',category:'Operations'},
+    {name:'Administration',category:'Administration'}
+  ];
+  const LEVELS={1:'Awareness',2:'Basic',3:'Working',4:'Advanced',5:'Expert'};
+  const SCHEDULING_LEVEL=3;
+
+  let selectedPersonId=null;
+  let peopleFilter='All';
+  let searchTerm='';
+  let dirty=false;
+
+  const clone=v=>JSON.parse(JSON.stringify(v));
+  const now=()=>new Date().toISOString();
+  const uid=p=>p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const e=(v='')=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const cssEscape=v=>window.CSS&&CSS.escape?CSS.escape(v):String(v).replace(/["\\]/g,'\\$&');
+
+  function ensureModel(){
+    if(!Array.isArray(db.users))db.users=[];
+    if(!Array.isArray(db.personnel))db.personnel=[];
+
+    if(Number(db.personnelSeedVersion||0)<SEED_VERSION){
+      let derek=db.personnel.find(p=>p.userId==='usr_derek'||String(p.displayName||'').toLowerCase()==='derek thompson');
+      if(!derek){
+        derek={id:'per_derek',userId:'usr_derek',displayName:'Derek Thompson',firstName:'Derek',lastName:'Thompson',relationship:'Owner',jobTitle:'Owner / Lead Technician',department:'Operations',status:'Active',email:'',phone:'',schedulingEligible:true,roles:['owner_admin','manager','technician'],skills:[{name:'General technician',level:5},{name:'Tint installer',level:5},{name:'Audio technician',level:5},{name:'Electronics',level:5},{name:'Film installer',level:4},{name:'Vehicle diagnostics',level:5},{name:'12V wiring',level:5}],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:50},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_derek'};
+        db.personnel.push(derek);
+      }
+
+      if(!db.personnel.some(p=>String(p.displayName||'').toLowerCase()==='kevin yap')){
+        const existingUser=db.users.find(u=>String(u.name||'').toLowerCase()==='kevin yap');
+        db.personnel.push({id:'per_kevin',userId:existingUser?.id||'usr_kevin',displayName:'Kevin Yap',firstName:'Kevin',lastName:'Yap',relationship:'Partner',jobTitle:'Partner',department:'Executive',status:'Active',email:'',phone:'',schedulingEligible:false,roles:['partner_admin'],skills:[{name:'Business development',level:5},{name:'Sales',level:5},{name:'Project management',level:4}],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:40},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_kevin'});
+      }
+
+      if(!db.personnel.some(p=>String(p.displayName||'').toLowerCase()==='amjad kharoof')){
+        const baseDerek=db.personnel.find(p=>String(p.displayName||'').toLowerCase()==='derek thompson');
+        db.personnel.push({id:'per_amjad',userId:'usr_amjad',displayName:'Amjad Kharoof',firstName:'Amjad',lastName:'Kharoof',relationship:'Partner',jobTitle:'Partner / Lead Technician',department:baseDerek?.department||'Operations',status:'Active',email:'',phone:'',schedulingEligible:true,roles:clone(baseDerek?.roles||['owner_admin','manager','technician']),skills:clone(baseDerek?.skills||[]),certifications:[],availability:clone(baseDerek?.availability||{start:'08:00',end:'18:00',maxWeeklyHours:50}),startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_amjad'});
+      }
+      db.personnelSeedVersion=SEED_VERSION;
+    }
+
+    db.personnel.forEach(p=>{
+      p.id=p.id||uid('per');
+      p.userId=p.userId||uid('usr');
+      p.displayName=p.displayName||[p.firstName,p.lastName].filter(Boolean).join(' ')||'Unnamed Person';
+      p.status=p.status||'Onboarding';
+      p.relationship=p.relationship||'Employee';
+      p.department=p.department||'Operations';
+      p.roles=Array.isArray(p.roles)?p.roles:[];
+      p.skills=Array.isArray(p.skills)?p.skills:[];
+      p.certifications=Array.isArray(p.certifications)?p.certifications:[];
+      p.availability=p.availability||{start:'08:00',end:'18:00',maxWeeklyHours:40};
+      if(typeof p.schedulingEligible!=='boolean')p.schedulingEligible=false;
+      let u=db.users.find(x=>x.id===p.userId);
+      if(!u){
+        u={id:p.userId,name:p.displayName,email:p.email||'',role:p.roles[0]||'read_only',roles:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};
+        db.users.push(u);
+      }else{
+        u.name=p.displayName;u.email=p.email||'';u.role=p.roles[0]||'read_only';u.roles=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;
+      }
+    });
+    syncScheduling(false);
+    save();
+  }
+
+  function syncScheduling(shouldSave=true){
+    if(!window.TTTSchedulingCore)return;
+    const scheduling=window.TTTSchedulingCore.ensureModel(db);
+    if(!Array.isArray(scheduling.technicians))scheduling.technicians=[];
+    db.personnel.forEach(p=>{
+      const id=p.schedulingId||('tech_'+String(p.id).replace(/^per_/,''));
+      p.schedulingId=id;
+      let tech=scheduling.technicians.find(t=>t.id===id||t.personId===p.id);
+      const payload={id,name:p.displayName,active:p.status==='Active'&&p.schedulingEligible,skills:(p.skills||[]).filter(s=>Number(s.level)>=SCHEDULING_LEVEL).map(s=>s.name),workingHours:{start:p.availability?.start||'08:00',end:p.availability?.end||'18:00'},personId:p.id};
+      if(tech)Object.assign(tech,payload);
+      else if(p.schedulingEligible)scheduling.technicians.push(payload);
+    });
+    scheduling.technicians.forEach(t=>{if(t.personId&&!db.personnel.some(p=>p.id===t.personId)){t.active=false;t.personId=null;}});
+    if(shouldSave)save();
+  }
+
+  function injectShell(){
+    if(!document.querySelector('link[data-ttt-personnel-v05]')){
+      const link=document.createElement('link');link.rel='stylesheet';link.href='/personnel-v05.css?v=20260916-personnel-v5';link.dataset.tttPersonnelV05='1';document.head.appendChild(link);
+    }
+    document.querySelectorAll('.nav-item[data-view="people"]').forEach(n=>n.remove());
+    document.getElementById('people')?.remove();
+
+    const nav=document.createElement('button');
+    nav.className='nav-item';nav.dataset.view='people';nav.textContent='People';
+    const warranty=document.querySelector('.nav-item[data-view="warranty"]');
+    (warranty?.parentNode||document.querySelector('.sidebar nav'))?.insertBefore(nav,warranty||null);
+
+    const section=document.createElement('section');section.id='people';section.className='view';
+    const settings=document.getElementById('settings');
+    (settings?.parentNode||document.querySelector('main.main'))?.insertBefore(section,settings||null);
+
+    nav.addEventListener('click',()=>{show('people');renderPeople();});
+  }
+
+  function activePeople(){return db.personnel.filter(p=>p.status==='Active');}
+  function initials(p){return (p.displayName||'?').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();}
+  function displayRole(p){return p.jobTitle||p.relationship||'Team member';}
+  function certExpiring(p,days=90){const max=Date.now()+days*86400000;return (p.certifications||[]).some(c=>c.expires&&new Date(c.expires).getTime()>=Date.now()&&new Date(c.expires).getTime()<=max);}
+  function coverageCount(){const s=new Set();activePeople().filter(p=>p.schedulingEligible).forEach(p=>(p.skills||[]).filter(x=>Number(x.level)>=SCHEDULING_LEVEL).forEach(x=>s.add(x.name)));return s.size;}
+  function filteredPeople(){return db.personnel.filter(p=>{if(peopleFilter!=='All'&&p.status!==peopleFilter)return false;const q=searchTerm.trim().toLowerCase();if(!q)return true;return [p.displayName,p.jobTitle,p.department,p.relationship,...(p.skills||[]).map(s=>s.name)].join(' ').toLowerCase().includes(q);});}
+
+  function renderPeople(){
+    const root=document.getElementById('people');if(!root)return;
+    dirty=false;
+    root.innerHTML=`
+      <div class="section-head people-head"><div><p class="eyebrow">TEAM & CAPABILITY</p><h2>People</h2><p class="muted">Personnel, roles, skills, certifications and scheduling eligibility.</p></div><button class="btn primary" id="addPersonBtn">+ Add person</button></div>
+      <div class="people-stats" id="peopleStats"></div>
+      <div class="people-toolbar panel"><div class="status-filters" id="peopleFilters">${['All',...STATUSES].map(x=>`<button class="filter ${peopleFilter===x?'active':''}" data-people-filter="${e(x)}">${e(x)}</button>`).join('')}</div><input id="peopleSearch" class="people-search" placeholder="Search people, roles or skills…" value="${e(searchTerm)}"></div>
+      <div class="people-layout"><article class="panel people-directory"><div class="panel-head"><div><h3>Directory</h3><p class="muted" id="peopleCount"></p></div><button class="link-btn" id="skillsMatrixBtn">Skills matrix</button></div><div id="peopleList"></div></article><aside id="personPanel"></aside></div>
+      <div id="skillsMatrix" class="panel skills-matrix-panel hidden"></div>`;
+    renderStats();renderDirectory();renderEditor();bindStaticEvents();
+  }
+
+  function renderStats(){
+    const el=document.getElementById('peopleStats');if(!el)return;
+    const active=activePeople();
+    el.innerHTML=`<div class="stat"><span>Active people</span><strong>${active.length}</strong></div><div class="stat"><span>Schedule eligible</span><strong>${active.filter(p=>p.schedulingEligible).length}</strong></div><div class="stat"><span>Operational skills covered</span><strong>${coverageCount()}</strong></div><div class="stat"><span>Certifications expiring ≤90d</span><strong>${db.personnel.filter(p=>certExpiring(p)).length}</strong></div>`;
+  }
+
+  function renderDirectory(){
+    const list=document.getElementById('peopleList'),count=document.getElementById('peopleCount');if(!list)return;
+    const rows=filteredPeople();if(count)count.textContent=`${rows.length} record${rows.length===1?'':'s'}`;
+    list.innerHTML=rows.length?rows.map(p=>`<button type="button" class="person-card ${selectedPersonId===p.id?'selected':''}" data-person-id="${e(p.id)}"><span class="person-avatar">${e(initials(p))}</span><span class="person-main"><strong>${e(p.displayName)}</strong><small>${e(displayRole(p))} · ${e(p.department||'Unassigned')}</small><span class="person-skills">${(p.skills||[]).filter(s=>Number(s.level)>=SCHEDULING_LEVEL).slice(0,4).map(s=>`<em>${e(s.name)}</em>`).join('')||'<em>No operational skills set</em>'}</span></span><span class="person-meta"><span class="badge ${p.status==='Active'?'person-active':''}">${e(p.status)}</span>${p.schedulingEligible?'<small>Scheduling ✓</small>':'<small>Not scheduled</small>'}</span></button>`).join(''):'<div class="people-empty">No personnel match this view.</div>';
+    list.querySelectorAll('[data-person-id]').forEach(b=>b.addEventListener('click',()=>selectPerson(b.dataset.personId)));
+  }
+
+  function renderEditor(){
+    const panel=document.getElementById('personPanel');if(!panel)return;
+    const p=db.personnel.find(x=>x.id===selectedPersonId);
+    if(!p){panel.innerHTML=`<article class="panel people-overview"><h3>Personnel system</h3><p class="muted">Select a person to edit their profile.</p><div class="people-rule"><strong>Stable editing</strong><span>The editor only refreshes on explicit actions such as Save, Add, Delete or selecting another person.</span></div><div class="people-rule"><strong>Skills drive scheduling</strong><span>Skills rated Working (3) or above become scheduling capabilities when Scheduling eligible is enabled.</span></div></article>`;return;}
+
+    panel.innerHTML=`<article class="panel person-editor"><div class="person-editor-head"><div class="person-avatar large">${e(initials(p))}</div><div><p class="eyebrow">PERSONNEL PROFILE</p><h3>${e(p.displayName)}</h3><span>${e(p.relationship)} · ${e(p.status)}</span></div></div>
+      <form id="personForm" data-person-id="${e(p.id)}" autocomplete="off">
+        <div class="person-form-grid">
+          <label>First name<input name="firstName" required value="${e(p.firstName||'')}"></label><label>Last name<input name="lastName" required value="${e(p.lastName||'')}"></label>
+          <label>Relationship<select name="relationship">${RELATIONSHIPS.map(x=>`<option value="${e(x)}" ${x===p.relationship?'selected':''}>${e(x)}</option>`).join('')}</select></label>
+          <label>Status<select name="status">${STATUSES.map(x=>`<option value="${e(x)}" ${x===p.status?'selected':''}>${e(x)}</option>`).join('')}</select></label>
+          <label class="span-2">Job title<input name="jobTitle" value="${e(p.jobTitle||'')}"></label>
+          <label>Department<select name="department">${DEPARTMENTS.map(x=>`<option value="${e(x)}" ${x===p.department?'selected':''}>${e(x)}</option>`).join('')}</select></label>
+          <label>Start date<input type="date" name="startDate" value="${e(p.startDate||'')}"></label>
+          <label>Email<input type="email" name="email" value="${e(p.email||'')}"></label><label>Phone<input name="phone" value="${e(p.phone||'')}"></label>
+        </div>
+        <div class="person-subsection"><div class="subsection-title"><div><strong>System roles</strong><span>Access model, independent of job title.</span></div></div><div class="role-checks">${ROLE_OPTIONS.map(([id,label])=>`<label><input type="checkbox" name="roles" value="${e(id)}" ${(p.roles||[]).includes(id)?'checked':''}> ${e(label)}</label>`).join('')}</div></div>
+        <div class="person-subsection"><div class="subsection-title"><div><strong>Operations & scheduling</strong><span>Controls whether this person can be assigned shop operations.</span></div></div><label class="schedule-toggle"><input type="checkbox" name="schedulingEligible" ${p.schedulingEligible?'checked':''}><span><strong>Scheduling eligible</strong><small>Only skills at Working (3) or above become scheduling capabilities.</small></span></label><div class="person-form-grid compact-grid"><label>Standard start<input type="time" name="workStart" value="${e(p.availability?.start||'08:00')}"></label><label>Standard end<input type="time" name="workEnd" value="${e(p.availability?.end||'18:00')}"></label><label>Max weekly hours<input type="number" min="0" max="100" name="maxWeeklyHours" value="${e(p.availability?.maxWeeklyHours??40)}"></label></div></div>
+        <div class="person-subsection"><div class="subsection-title"><div><strong>Skills</strong><span>Capability matrix used by Operations.</span></div><button type="button" class="btn secondary compact" id="addCustomSkillBtn">+ Custom skill</button></div><div class="skill-editor" id="skillEditor">${skillEditorHtml(p)}</div></div>
+        <div class="person-subsection"><div class="subsection-title"><div><strong>Certifications & licenses</strong><span>Track expirations before work is assigned.</span></div><button type="button" class="btn secondary compact" id="addCertBtn">+ Add</button></div><div id="certEditor">${certEditorHtml(p)}</div></div>
+        <label class="person-notes">Notes<textarea name="notes" placeholder="Responsibilities, onboarding notes, operating restrictions, etc.">${e(p.notes||'')}</textarea></label>
+        <div class="person-form-actions"><button type="button" class="btn secondary person-delete-btn" id="deletePersonBtn">Delete person</button><span class="form-spacer"></span><button type="button" class="btn secondary" id="closePersonBtn">Close</button><button type="submit" class="btn primary">Save profile</button></div>
+      </form></article>`;
+    bindEditorEvents();
+  }
+
+  function skillEditorHtml(p){
+    const byName=new Map((p.skills||[]).map(s=>[s.name,s]));
+    const names=[...SKILL_CATALOG.map(s=>s.name),...(p.skills||[]).map(s=>s.name).filter(n=>!SKILL_CATALOG.some(x=>x.name===n))];
+    return [...new Set(names)].map(name=>{const s=byName.get(name);return `<div class="skill-row"><label><input type="checkbox" data-skill-enabled="${e(name)}" ${s?'checked':''}><span>${e(name)}</span></label><select data-skill-level="${e(name)}" ${s?'':'disabled'}>${Object.entries(LEVELS).map(([v,l])=>`<option value="${v}" ${Number(s?.level||3)===Number(v)?'selected':''}>${v} · ${e(l)}</option>`).join('')}</select></div>`;}).join('');
+  }
+
+  function certEditorHtml(p){return (p.certifications||[]).length?(p.certifications||[]).map(certRowHtml).join(''):'<div class="mini-empty">No certifications recorded.</div>';}
+  function certRowHtml(c){return `<div class="cert-row" data-cert-id="${e(c.id)}"><input data-cert-name placeholder="Certification / license" value="${e(c.name||'')}"><input data-cert-issuer placeholder="Issuer" value="${e(c.issuer||'')}"><input data-cert-expires type="date" value="${e(c.expires||'')}"><button type="button" class="link-btn danger" data-remove-cert="${e(c.id)}">Remove</button></div>`;}
+
+  function bindStaticEvents(){
+    document.getElementById('addPersonBtn')?.addEventListener('click',addPerson);
+    document.querySelectorAll('[data-people-filter]').forEach(b=>b.addEventListener('click',()=>{peopleFilter=b.dataset.peopleFilter;document.querySelectorAll('[data-people-filter]').forEach(x=>x.classList.toggle('active',x===b));renderDirectory();}));
+    document.getElementById('peopleSearch')?.addEventListener('input',ev=>{searchTerm=ev.currentTarget.value;renderDirectory();});
+    document.getElementById('skillsMatrixBtn')?.addEventListener('click',showSkillsMatrix);
+  }
+
+  function bindEditorEvents(){
+    const form=document.getElementById('personForm');if(!form)return;
+    form.addEventListener('input',()=>{dirty=true;});
+    form.addEventListener('change',()=>{dirty=true;});
+    form.addEventListener('submit',savePersonForm);
+    document.getElementById('closePersonBtn')?.addEventListener('click',closeEditor);
+    document.getElementById('deletePersonBtn')?.addEventListener('click',deleteSelectedPerson);
+    document.querySelectorAll('[data-skill-enabled]').forEach(cb=>cb.addEventListener('change',()=>{const sel=form.querySelector(`[data-skill-level="${cssEscape(cb.dataset.skillEnabled)}"]`);if(sel)sel.disabled=!cb.checked;}));
+    document.getElementById('addCustomSkillBtn')?.addEventListener('click',addCustomSkill);
+    document.getElementById('addCertBtn')?.addEventListener('click',addCertificationRow);
+    bindCertRemoveButtons();
+  }
+
+  function bindCertRemoveButtons(){document.querySelectorAll('[data-remove-cert]').forEach(b=>{b.onclick=()=>{b.closest('[data-cert-id]')?.remove();const editor=document.getElementById('certEditor');if(editor&&!editor.querySelector('[data-cert-id]'))editor.innerHTML='<div class="mini-empty">No certifications recorded.</div>';dirty=true;};});}
+
+  function selectPerson(id){if(dirty&&!window.confirm('Discard unsaved changes to this profile?'))return;selectedPersonId=id;dirty=false;renderDirectory();renderEditor();}
+  function closeEditor(){if(dirty&&!window.confirm('Discard unsaved changes?'))return;selectedPersonId=null;dirty=false;renderDirectory();renderEditor();}
+  function addPerson(){if(dirty&&!window.confirm('Discard unsaved changes and create a new person?'))return;const p={id:uid('per'),userId:uid('usr'),displayName:'New Person',firstName:'',lastName:'',relationship:'Employee',jobTitle:'',department:'Operations',status:'Onboarding',email:'',phone:'',schedulingEligible:false,roles:[],skills:[],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:40},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:''};db.personnel.push(p);save();selectedPersonId=p.id;dirty=false;renderStats();renderDirectory();renderEditor();requestAnimationFrame(()=>document.querySelector('#personForm input[name="firstName"]')?.focus());}
+
+  function addCustomSkill(){const name=window.prompt('Custom skill name');if(!name?.trim())return;const n=name.trim();const editor=document.getElementById('skillEditor');if(!editor)return;if([...editor.querySelectorAll('[data-skill-enabled]')].some(x=>String(x.dataset.skillEnabled).toLowerCase()===n.toLowerCase())){window.alert('That skill is already listed.');return;}const row=document.createElement('div');row.className='skill-row';row.innerHTML=`<label><input type="checkbox" data-skill-enabled="${e(n)}" checked><span>${e(n)}</span></label><select data-skill-level="${e(n)}">${Object.entries(LEVELS).map(([v,l])=>`<option value="${v}" ${v==='3'?'selected':''}>${v} · ${e(l)}</option>`).join('')}</select>`;editor.appendChild(row);const cb=row.querySelector('[data-skill-enabled]'),sel=row.querySelector('select');cb.addEventListener('change',()=>{sel.disabled=!cb.checked;dirty=true;});row.querySelectorAll('select,input').forEach(x=>{x.addEventListener('change',()=>dirty=true);x.addEventListener('input',()=>dirty=true);});dirty=true;}
+  function addCertificationRow(){const editor=document.getElementById('certEditor');if(!editor)return;editor.querySelector('.mini-empty')?.remove();const wrap=document.createElement('div');wrap.innerHTML=certRowHtml({id:uid('cert'),name:'',issuer:'',expires:''});const row=wrap.firstElementChild;editor.appendChild(row);bindCertRemoveButtons();row.querySelector('[data-cert-name]')?.focus();dirty=true;}
+
+  function readFormIntoPerson(p){
+    const form=document.getElementById('personForm');if(!form||form.dataset.personId!==p.id)return false;
+    const fd=new FormData(form);
+    p.firstName=String(fd.get('firstName')||'').trim();p.lastName=String(fd.get('lastName')||'').trim();p.displayName=[p.firstName,p.lastName].filter(Boolean).join(' ')||'Unnamed Person';
+    p.relationship=String(fd.get('relationship')||'Employee');p.status=String(fd.get('status')||'Onboarding');p.jobTitle=String(fd.get('jobTitle')||'').trim();p.department=String(fd.get('department')||'Operations');p.startDate=String(fd.get('startDate')||'');p.email=String(fd.get('email')||'').trim();p.phone=String(fd.get('phone')||'').trim();p.roles=fd.getAll('roles').map(String);p.schedulingEligible=fd.get('schedulingEligible')==='on';p.availability={start:String(fd.get('workStart')||'08:00'),end:String(fd.get('workEnd')||'18:00'),maxWeeklyHours:Number(fd.get('maxWeeklyHours')||40)};p.notes=String(fd.get('notes')||'').trim();p.updatedAt=now();
+    p.skills=[];form.querySelectorAll('[data-skill-enabled]').forEach(cb=>{if(!cb.checked)return;const sel=form.querySelector(`[data-skill-level="${cssEscape(cb.dataset.skillEnabled)}"]`);p.skills.push({name:cb.dataset.skillEnabled,level:Number(sel?.value||3)});});
+    p.certifications=[...form.querySelectorAll('[data-cert-id]')].map(row=>({id:row.dataset.certId,name:row.querySelector('[data-cert-name]')?.value.trim()||'',issuer:row.querySelector('[data-cert-issuer]')?.value.trim()||'',expires:row.querySelector('[data-cert-expires]')?.value||''})).filter(c=>c.name||c.issuer||c.expires);
+    let u=db.users.find(x=>x.id===p.userId);if(!u){u={id:p.userId,name:p.displayName,email:p.email,role:p.roles[0]||'read_only',roles:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};db.users.push(u);}else{u.name=p.displayName;u.email=p.email;u.role=p.roles[0]||'read_only';u.roles=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;}
+    return true;
+  }
+
+  function savePersonForm(ev){ev.preventDefault();const p=db.personnel.find(x=>x.id===ev.currentTarget.dataset.personId);if(!p)return;if(!readFormIntoPerson(p))return;syncScheduling(false);save();dirty=false;renderStats();renderDirectory();renderEditor();if(typeof toast==='function')toast('Personnel profile saved');}
+
+  function referencesPerson(record,p){try{const text=JSON.stringify(record);return [p.id,p.userId,p.schedulingId].filter(Boolean).some(ref=>text.includes(String(ref)));}catch{return false;}}
+  function deleteSelectedPerson(){
+    const p=db.personnel.find(x=>x.id===selectedPersonId);if(!p)return;const linked=Array.isArray(db.jobs)?db.jobs.filter(j=>referencesPerson(j,p)).length:0;const name=p.displayName||'this person';const warning=linked?`${name} is referenced by ${linked} job record${linked===1?'':'s'}. Delete the personnel profile? Historical references will be preserved and the system identity disabled.`:`Delete ${name}? This removes the personnel profile and its unused system/scheduling identity. This cannot be undone.`;if(!window.confirm(warning))return;
+    db.personnel=db.personnel.filter(x=>x.id!==p.id);
+    const user=db.users.find(u=>u.id===p.userId||u.personId===p.id);if(linked&&user){user.active=false;user.personId=null;user.deletedPersonnelProfile=true;}else db.users=db.users.filter(u=>u.id!==p.userId&&u.personId!==p.id);
+    if(window.TTTSchedulingCore){const scheduling=window.TTTSchedulingCore.ensureModel(db);if(Array.isArray(scheduling.technicians)){const match=t=>t.id===p.schedulingId||t.personId===p.id;if(linked)scheduling.technicians.forEach(t=>{if(match(t)){t.active=false;t.personId=null;}});else scheduling.technicians=scheduling.technicians.filter(t=>!match(t));}}
+    save();selectedPersonId=null;dirty=false;renderStats();renderDirectory();renderEditor();if(typeof toast==='function')toast(`${name} deleted`);
+  }
+
+  function showSkillsMatrix(){const box=document.getElementById('skillsMatrix');if(!box)return;const people=activePeople();box.innerHTML=`<div class="panel-head"><div><h3>Skills matrix</h3><p class="muted">1 Awareness · 2 Basic · 3 Working · 4 Advanced · 5 Expert. Scheduling uses level 3+.</p></div><button class="link-btn" id="closeSkillsMatrixBtn">Close</button></div><div class="table-wrap"><table class="skills-table"><thead><tr><th>Skill</th>${people.map(p=>`<th>${e(p.displayName)}</th>`).join('')}</tr></thead><tbody>${SKILL_CATALOG.map(s=>`<tr><td><strong>${e(s.name)}</strong><small>${e(s.category)}</small></td>${people.map(p=>{const x=(p.skills||[]).find(k=>k.name===s.name);return `<td>${x?`<span class="skill-level level-${Number(x.level||0)}">${Number(x.level||0)}</span>`:'—'}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div>`;box.classList.remove('hidden');document.getElementById('closeSkillsMatrixBtn')?.addEventListener('click',()=>box.classList.add('hidden'));}
+
+  function install(){
+    if(typeof db==='undefined'||typeof save!=='function'||typeof show!=='function'){setTimeout(install,40);return;}
+    ensureModel();injectShell();
+    window.TTTPersonnel={VERSION,render:renderPeople,ensureModel,syncScheduling,get dirty(){return dirty;}};
+  }
+  install();
+})();
