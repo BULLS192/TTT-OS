@@ -1,7 +1,7 @@
-// TTT Personnel v0.2 — render select menus in a top-level layer so sticky/overflow containers cannot clip or dismiss them.
+// TTT Personnel v0.2.1 — stable top-level dropdowns that ignore their own internal scroll events.
 (function(){
   'use strict';
-  const VERSION='0.2';
+  const VERSION='0.2.1';
   let openState=null;
   let enhanceQueued=false;
 
@@ -9,7 +9,7 @@
     if(document.querySelector('link[data-ttt-personnel-v02]'))return;
     const link=document.createElement('link');
     link.rel='stylesheet';
-    link.href='/personnel-v02.css?v=20260916-personnel-v2';
+    link.href='/personnel-v02.css?v=20260916-personnel-v3';
     link.dataset.tttPersonnelV02='1';
     document.head.appendChild(link);
   }
@@ -35,7 +35,7 @@
     backdrop?.remove();
     if(trigger){
       trigger.setAttribute('aria-expanded','false');
-      if(options.restoreFocus!==false && trigger.isConnected)trigger.focus({preventScroll:true});
+      if(options.restoreFocus!==false&&trigger.isConnected)trigger.focus({preventScroll:true});
     }
     openState=null;
   }
@@ -62,6 +62,17 @@
     }
     menu.style.top=Math.max(10,top)+'px';
     menu.style.visibility='visible';
+  }
+
+  function revealSelected(menu){
+    const current=menu.querySelector('.selected');
+    if(!current)return;
+    const itemTop=current.offsetTop;
+    const itemBottom=itemTop+current.offsetHeight;
+    const viewTop=menu.scrollTop;
+    const viewBottom=viewTop+menu.clientHeight;
+    if(itemTop<viewTop)menu.scrollTop=itemTop;
+    else if(itemBottom>viewBottom)menu.scrollTop=Math.max(0,itemBottom-menu.clientHeight);
   }
 
   function openMenu(select,trigger){
@@ -105,8 +116,7 @@
     trigger.setAttribute('aria-expanded','true');
     openState={select,trigger,menu,backdrop};
     positionMenu(menu,trigger);
-    const current=menu.querySelector('.selected');
-    if(current)current.scrollIntoView({block:'nearest'});
+    revealSelected(menu);
   }
 
   function enhanceSelect(select){
@@ -157,11 +167,11 @@
     const root=document.getElementById('people');
     if(!root){setTimeout(installObserver,80);return;}
     const observer=new MutationObserver(mutations=>{
-      if(openState && !openState.select.isConnected)closeMenu({restoreFocus:false});
+      if(openState&&!openState.select.isConnected)closeMenu({restoreFocus:false});
       let needs=false;
       for(const m of mutations){
         if(m.type==='childList'&&m.addedNodes.length){needs=true;break;}
-        if(m.type==='attributes'&&m.target instanceof HTMLSelectElement){syncControl(m.target);}
+        if(m.type==='attributes'&&m.target instanceof HTMLSelectElement)syncControl(m.target);
       }
       if(needs)queueEnhance();
     });
@@ -173,7 +183,11 @@
     addStyles();
     installObserver();
     window.addEventListener('resize',()=>closeMenu({restoreFocus:false}));
-    window.addEventListener('scroll',()=>closeMenu({restoreFocus:false}),true);
+    window.addEventListener('scroll',ev=>{
+      if(!openState)return;
+      if(ev.target===openState.menu||openState.menu?.contains(ev.target))return;
+      closeMenu({restoreFocus:false});
+    },true);
     document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeMenu();});
     document.addEventListener('visibilitychange',()=>{if(document.hidden)closeMenu({restoreFocus:false});});
     window.TTTPersonnelDropdowns={VERSION,enhance,close:closeMenu};
