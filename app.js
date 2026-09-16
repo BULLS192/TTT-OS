@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260916-personnel-v3';
+  const v='20260916-personnel-v4';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -31,6 +31,6 @@
   document.write('<script src="/expenses-v02.js?v='+v+'"></'+'script>');
   document.write('<script src="/expenses-v03.js?v='+v+'"></'+'script>');
   document.write('<script src="/personnel-v01.js?v='+v+'"></'+'script>');
-  document.write('<script src="/personnel-v02.js?v='+v+'"></'+'script>');
   document.write('<script src="/personnel-v03.js?v='+v+'"></'+'script>');
+  document.write('<script src="/personnel-v04.js?v='+v+'"></'+'script>');
 })();
