@@ -9,24 +9,62 @@ Derek is the default operator in v0.1. Records still store user IDs for creators
 ## Entities
 
 ### users
+Authentication / system identity record. Personnel details are kept separately so job title, skills and HR data do not become the permissions model.
 - id
 - name
 - email
-- role
+- primary role
+- roles[]
 - active
+- person_id
 - created_at
 
-Initial user: Derek Thompson.
-
-Planned roles:
+Current role scaffolding:
 - owner_admin
+- partner_admin
 - manager
 - technician
 - service_advisor
+- sales
 - office
 - read_only
 
-A single person may eventually hold multiple permissions.
+A single person may hold multiple roles.
+
+### personnel
+People directory and operational capability profile for owners, partners, employees, contractors and advisors.
+- id
+- user_id
+- first_name
+- last_name
+- display_name
+- relationship (owner / partner / employee / contractor / advisor)
+- job_title
+- department
+- status (active / onboarding / leave / inactive)
+- email
+- phone
+- start_date
+- scheduling_eligible
+- roles[]
+- skills[] `{ name, level }`
+- certifications[] `{ id, name, issuer, expires }`
+- availability `{ start, end, maxWeeklyHours }`
+- scheduling_id
+- notes
+- created_at
+- updated_at
+
+Skill proficiency is currently 1–5:
+1. Awareness
+2. Basic
+3. Working
+4. Advanced
+5. Expert
+
+Operations/Scheduling treats level 3+ skills as assignable capabilities when `scheduling_eligible` is enabled. Personnel profiles synchronize into `scheduling.technicians` rather than maintaining a disconnected technician roster.
+
+Sensitive HR records such as SSNs, banking information, I-9 documents, payroll and private medical/benefits data are intentionally excluded from the browser/localStorage prototype. Add them only after authenticated storage, field-level permissions, encryption and retention controls are in production.
 
 ### customers
 - id
