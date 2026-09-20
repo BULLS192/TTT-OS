@@ -111,7 +111,23 @@
     return Object.entries(WINDOWS).map(([key,w])=>`<label class="v06-tint-window"><span><input type="checkbox" data-tint-window="${key}"> ${esc(w.label)}</span><select data-tint-vlt="${key}">${VLTS.map(v=>option(v,v==='35%')).join('')}</select></label>`).join('');
   }
 
-  function catalogFor(service){return CATALOG[service]||{'Other / Customer supplied':['Custom / Other']};}
+  function catalogFor(service){
+    const base=JSON.parse(JSON.stringify(CATALOG[service]||{'Other / Customer supplied':['Custom / Other']}));
+    const live=window.TTTProductCatalog?.products||[];
+    if(service==='Dash cams'){
+      const models=[...new Set(live.filter(p=>p.brand==='BlackVue'&&p.model).map(p=>p.model.trim()))].filter(Boolean).sort();
+      if(models.length) base['BlackVue']=['Custom / Other',...models];
+    }
+    if(service==='Car stereo installation'){
+      const models=[...new Set(live.filter(p=>p.brand==='JL Audio'&&!['Marine Audio','Powersports'].includes(p.category)&&p.model).map(p=>p.model.trim()))].filter(Boolean).sort();
+      if(models.length) base['JL Audio']=['Custom / Other',...models];
+    }
+    if(service==='Marine audio'){
+      const models=[...new Set(live.filter(p=>p.brand==='JL Audio'&&p.category==='Marine Audio'&&p.model).map(p=>p.model.trim()))].filter(Boolean).sort();
+      if(models.length) base['JL Audio']=['Custom / Other',...models];
+    }
+    return base;
+  }
 
   function smartAddServiceRow(values={}){
     const row=document.createElement('div');
