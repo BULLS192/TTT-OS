@@ -31,4 +31,5 @@
   document.write('<script src="/expenses-v02.js?v='+v+'"></'+'script>');
   document.write('<script src="/expenses-v03.js?v='+v+'"></'+'script>');
   document.write('<script src="/personnel-v05.js?v='+v+'"></'+'script>');
+  document.write('<script src="/product-catalog-v12.js?v='+v+'"></'+'script>');
 })();
