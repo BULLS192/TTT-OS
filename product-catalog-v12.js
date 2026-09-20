@@ -48,7 +48,7 @@
     const brand=document.getElementById('catalogBrand')?.value||'',category=document.getElementById('catalogCategory')?.value||'',query=document.getElementById('catalogSearch')?.value||'';
     const rows=TTTProductCatalog.find({brand,category,query});
     body.innerHTML=rows.slice(0,500).map(p=>{const gp=(Number.isFinite(p.dealerCost)&&Number.isFinite(p.sellingPrice)&&p.sellingPrice)?(p.sellingPrice-p.dealerCost)/p.sellingPrice:null;return '<tr><td>'+esc2(p.brand)+'</td><td><strong>'+esc2(p.model)+'</strong></td><td>'+esc2(p.variant)+'</td><td>'+esc2(p.sku)+'</td><td>'+money(p.dealerCost)+'</td><td>'+money(p.sellingPrice)+'</td><td>'+(gp==null?'—':(gp*100).toFixed(1)+'%')+'</td><td>'+esc2(p.sourceFile)+'</td></tr>'}).join('');
-    const st=document.getElementById('catalogStats'); if(st)st.innerHTML='<div class="stat"><span>Products</span><strong>'+rows.length+'</strong></div><div class="stat"><span>BlackVue</span><strong>'+rows.filter(p=>p.brand==='BlackVue').length+'</strong></div><div class="stat"><span>JL Audio</span><strong>'+rows.filter(p=>p.brand==='JL Audio').length+'</strong></div><div class="stat"><span>Drive Sync</span><strong>Connected</strong></div>';
+    const st=document.getElementById('catalogStats'); if(st)st.innerHTML='<div class="stat"><span>Products</span><strong>'+rows.length+'</strong></div><div class="stat"><span>BlackVue</span><strong>'+rows.filter(p=>p.brand==='BlackVue').length+'</strong></div><div class="stat"><span>JL Audio</span><strong>'+rows.filter(p=>p.brand==='JL Audio').length+'</strong></div><div class="stat"><span>Catalog Sync</span><strong>Snapshot 2026-09-20</strong></div>';
   }
   const baseRender=window.render;
   if(typeof baseRender==='function') window.render=function(){baseRender();ensureUI();};
