@@ -343,7 +343,29 @@
     realtimeChannel.subscribe();
   }
 
-  function start(){inject();if(window.TTTCloud&&window.TTTCloud.ready)load();}
+  function augmentJobOpportunityLink(){
+    if(!data.loaded)return;
+    var jobId=null;
+    try{if(typeof currentJobId!=='undefined')jobId=currentJobId;else jobId=window.currentJobId||null;}catch(e){jobId=window.currentJobId||null;}
+    if(!jobId)return;
+    var j=data.jobs.find(function(x){return x.id===jobId;});
+    if(!j||!j.opportunity_id)return;
+    var o=data.opportunities.find(function(x){return x.id===j.opportunity_id;});
+    var body=document.getElementById('jobDetailBody');
+    if(!body||body.querySelector('[data-crm-job-opportunity]'))return;
+    body.insertAdjacentHTML('afterbegin','<article class="panel detail-section" data-crm-job-opportunity><div class="panel-head"><div><p class="eyebrow">CRM OPPORTUNITY</p><h3>'+html(o?o.title:j.opportunity_id)+'</h3><p class="muted">'+html(o?(stageInfo(o.stage).label+' · '+cash(o.estimated_value)):'Linked opportunity')+'</p></div><button class="btn secondary" id="crmOpenJobOpportunity">Open Opportunity</button></div></article>');
+    document.getElementById('crmOpenJobOpportunity')?.addEventListener('click',function(){show('crm');activateTab('opportunities');if(!data.loaded){load(true).then(function(){openDetail('opportunity',j.opportunity_id);});}else openDetail('opportunity',j.opportunity_id);});
+  }
+
+  function installJobOpportunityBridge(){
+    if(typeof window.renderJobDetail!=='function'||window.renderJobDetail.__tttCrmV16Bridge)return;
+    var original=window.renderJobDetail;
+    var wrapped=function(){var result=original.apply(this,arguments);setTimeout(augmentJobOpportunityLink,0);return result;};
+    wrapped.__tttCrmV16Bridge=true;
+    window.renderJobDetail=wrapped;
+  }
+
+  function start(){inject();installJobOpportunityBridge();if(window.TTTCloud&&window.TTTCloud.ready)load().then(augmentJobOpportunityLink);}
   window.addEventListener('ttt:cloud-state-applied',function(){data.loaded=false;if(document.getElementById('crm')?.classList.contains('active'))load(true);});
   window.TTTCRM={load:function(){return load(true);},state:data,stages:STAGES,workbookUrl:WORKBOOK_URL,openLead:function(id){openDetail('lead',id);},openOpportunity:function(id){openDetail('opportunity',id);}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
