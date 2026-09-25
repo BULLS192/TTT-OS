@@ -134,6 +134,7 @@
   }
 
   function isAdmin(){return window.TTTCloud?.profile?.role==='owner_admin';}
+  function canEditPerson(p){return isAdmin()||window.TTTCloud?.profile?.person_id===p?.id;}
   function activePeople(){return db.personnel.filter(p=>p.status==='Active');}
   function initials(p){return (p.displayName||'?').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();}
   function displayRole(p){return p.jobTitle||p.relationship||'Team member';}
@@ -171,6 +172,7 @@
     const p=db.personnel.find(x=>x.id===selectedPersonId);
     if(!p){panel.innerHTML=`<article class="panel people-overview"><h3>Personnel system</h3><p class="muted">Select a person to edit their profile.</p><div class="people-rule"><strong>Stable editing</strong><span>The editor only refreshes on explicit actions such as Save, Add, Delete or selecting another person.</span></div><div class="people-rule"><strong>Skills drive scheduling</strong><span>Skills rated Working (3) or above become scheduling capabilities when Scheduling eligible is enabled.</span></div></article>`;return;}
 
+    const editable=canEditPerson(p);
     panel.innerHTML=`<article class="panel person-editor"><div class="person-editor-head"><div class="person-avatar large">${e(initials(p))}</div><div><p class="eyebrow">PERSONNEL PROFILE</p><h3>${e(p.displayName)}</h3><span>${e(p.relationship)} · ${e(p.status)}</span></div></div>
       <form id="personForm" data-person-id="${e(p.id)}" autocomplete="off">
         <div class="person-form-grid">
@@ -189,6 +191,14 @@
         <label class="person-notes">Notes<textarea name="notes" placeholder="Responsibilities, onboarding notes, operating restrictions, etc.">${e(p.notes||'')}</textarea></label>
         <div class="person-form-actions">${isAdmin()?'<button type="button" class="btn secondary person-delete-btn" id="deletePersonBtn">Delete person</button>':''}<span class="form-spacer"></span><button type="button" class="btn secondary" id="closePersonBtn">Close</button><button type="submit" class="btn primary">Save profile</button></div>
       </form></article>`;
+    const personForm=panel.querySelector('#personForm');
+    if(personForm&&!editable){
+      const note=document.createElement('div');
+      note.className='people-rule';
+      note.innerHTML='<strong>Read-only profile</strong><span>You can view this teammate’s skills and availability. Only that person or the TTT OS administrator can edit the profile.</span>';
+      personForm.prepend(note);
+      personForm.querySelectorAll('input,select,textarea,button').forEach(el=>{if(el.id!=='closePersonBtn')el.disabled=true;});
+    }
     bindEditorEvents();
   }
 
@@ -241,7 +251,7 @@
     return true;
   }
 
-  function savePersonForm(ev){ev.preventDefault();const p=db.personnel.find(x=>x.id===ev.currentTarget.dataset.personId);if(!p)return;if(!readFormIntoPerson(p))return;syncScheduling(false);save();dirty=false;renderStats();renderDirectory();renderEditor();if(typeof toast==='function')toast('Personnel profile saved');}
+  function savePersonForm(ev){ev.preventDefault();const p=db.personnel.find(x=>x.id===ev.currentTarget.dataset.personId);if(!p)return;if(!canEditPerson(p)){if(typeof toast==='function')toast('You can only edit your own profile');return;}if(!readFormIntoPerson(p))return;syncScheduling(false);save();dirty=false;renderStats();renderDirectory();renderEditor();if(typeof toast==='function')toast('Personnel profile saved');}
 
   function referencesPerson(record,p){try{const text=JSON.stringify(record);return [p.id,p.userId,p.schedulingId].filter(Boolean).some(ref=>text.includes(String(ref)));}catch{return false;}}
   function deleteSelectedPerson(){
