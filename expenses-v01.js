@@ -8,10 +8,10 @@
   const TEXAS='https://comptroller.texas.gov/taxes/sales/faq/records.php';
   let state=load();
   function load(){try{return JSON.parse(localStorage.getItem(KEY))||{expenses:[],policies:{alcoholPct:30,receiptThreshold:75}}}catch(e){return {expenses:[],policies:{alcoholPct:30,receiptThreshold:75}}}}
-  function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+  function save(){localStorage.setItem(KEY,JSON.stringify(state));window.TTTExpenseCloud?.queueSave(state)}
   function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
   function money(n){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0)}
-  function id(){return 'EXP-'+new Date().getFullYear()+'-'+String(state.expenses.length+1).padStart(4,'0')}
+  function id(){const d=new Date();return 'EXP-'+d.getFullYear()+'-'+d.toISOString().slice(5,10).replace('-','')+'-'+d.toTimeString().slice(0,8).replaceAll(':','')+'-'+Math.random().toString(36).slice(2,4).toUpperCase()}
   function osDB(){try{return JSON.parse(localStorage.getItem('ttt-os-v0.2'))||{jobs:[],customers:[],vehicles:[]}}catch(e){return {jobs:[],customers:[],vehicles:[]}}}
   function jobOptions(selected=''){const d=osDB();return (d.jobs||[]).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).map(j=>{const cu=(d.customers||[]).find(x=>x.id===j.customerId),v=(d.vehicles||[]).find(x=>x.id===j.vehicleId);const label=[j.id,cu?.name,[v?.year,v?.make,v?.model].filter(Boolean).join(' '),j.status].filter(Boolean).join(' · ');return '<option value="'+esc(j.id)+'" '+(selected===j.id?'selected':'')+'>'+esc(label)+'</option>'}).join('')}
   function parseReceiptText(text){
