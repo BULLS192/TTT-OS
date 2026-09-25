@@ -19,6 +19,8 @@
   let applyingRemote=false;
   let pushTimer=null;
   let channel=null;
+  let relationalCoreLoaded=false;
+  const CORE_KEYS=['customers','vehicles','jobs','personnel'];
 
   injectStyles();
 
@@ -30,6 +32,31 @@
   }
 
   function deepClone(value){return JSON.parse(JSON.stringify(value));}
+  function coreFromRows(rows){
+    const out={};
+    CORE_KEYS.forEach(key=>{
+      out[key]=(rows[key]||[])
+        .filter(row=>!row.archived_at)
+        .map(row=>Object.assign({},row.source_json||{},{id:row.id}));
+    });
+    return out;
+  }
+  async function loadRelationalCore(){
+    const requests=CORE_KEYS.map(key=>client.from(key)
+      .select('id,source_json,archived_at')
+      .eq('organization_id',organizationId)
+      .is('archived_at',null));
+    const results=await Promise.all(requests);
+    const bag={};
+    for(let i=0;i<results.length;i++){
+      if(results[i].error){
+        console.error('TTT Cloud relational core load error',CORE_KEYS[i],results[i].error);
+        return null;
+      }
+      bag[CORE_KEYS[i]]=results[i].data||[];
+    }
+    return coreFromRows(bag);
+  }
   function byId(id){return document.getElementById(id);}
   function setSyncStatus(label,state){
     const el=byId('tttCloudStatus');
@@ -169,21 +196,35 @@
       setSyncStatus('Cloud unavailable','error');
       return;
     }
-    applyRemote(state);
+    const core=await loadRelationalCore();
+    if(!core){
+      showCloudUnavailable();
+      setSyncStatus('Core database unavailable','error');
+      return;
+    }
+    applyRemote(state,core);
     ready=true;
     hideOverlay();
     subscribe();
   }
 
-  function applyRemote(row){
+  function applyRemote(row,coreOverride){
     if(!row||row.state===null)return;
     applyingRemote=true;
     try{
-      db=deepClone(row.state);
+      const preserved=relationalCoreLoaded?Object.fromEntries(CORE_KEYS.map(key=>[key,deepClone(db?.[key]||[])])):null;
+      const next=deepClone(row.state);
+      if(coreOverride){
+        CORE_KEYS.forEach(key=>{next[key]=deepClone(coreOverride[key]||[]);});
+        relationalCoreLoaded=true;
+      }else if(preserved){
+        CORE_KEYS.forEach(key=>{next[key]=preserved[key];});
+      }
+      db=next;
       revision=Number(row.revision||0);
       if(originalSave)originalSave();
       if(typeof render==='function')render();
-      window.dispatchEvent(new CustomEvent('ttt:cloud-state-applied',{detail:{revision}}));
+      window.dispatchEvent(new CustomEvent('ttt:cloud-state-applied',{detail:{revision,relationalCore:relationalCoreLoaded}}));
       setSyncStatus('Synced','ok');
     }finally{applyingRemote=false;}
   }
@@ -278,6 +319,9 @@
     get ready(){return ready;},
     get revision(){return revision;},
     get profile(){return profile;},
+    get organizationId(){return organizationId;},
+    get userId(){return currentUser?.id||null;},
+    get relationalCoreLoaded(){return relationalCoreLoaded;},
     syncNow:pushCloud,
     reload:reloadRemote,
     audit:writeAudit
