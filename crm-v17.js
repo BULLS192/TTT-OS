@@ -1,4 +1,4 @@
-// TTT OS CRM v1.7 — editable, filterable Supabase-native customer relationship management.
+// TTT OS CRM v1.7.1 — contact editing/deletion fix plus editable, filterable customer relationship management.
 (function(){
   'use strict';
 
@@ -27,7 +27,8 @@
   function when(v){if(!v)return '—';var d=new Date(v);return isNaN(d.getTime())?'—':d.toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}
   function dateOnly(v){if(!v)return '—';var d=new Date(String(v).length===10?v+'T12:00:00':v);return isNaN(d.getTime())?'—':d.toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'});}
   function contact(id){return data.contacts.find(function(x){return x.id===id;})||null;}
-  function contactName(id){var c=contact(id);return c?(c.display_name||[c.first_name,c.last_name].filter(Boolean).join(' ')):'—';}
+  function contactName(id){var c=contact(id);return c?(c.display_name||[c.first_name,c.middle_name,c.last_name].filter(Boolean).join(' ')):'—';}
+  function activeContacts(){return data.contacts.filter(function(x){return !x.archived_at;});}
   function company(id){return data.companies.find(function(x){return x.id===id;})||null;}
   function companyName(id){var c=company(id);return c?c.name:'—';}
   function stageInfo(stage){return STAGES[String(stage||'').toLowerCase()]||{label:String(stage||'Unspecified'),pct:0};}
@@ -124,7 +125,7 @@
     var org=cloud.organizationId;
     var specs=[
       ['companies','id,name,primary_type,status,website,main_phone,general_email,address1,address2,city,state,postal_code,country,territory,owner_person_id,source,notes,updated_at'],
-      ['contacts','id,company_id,display_name,first_name,middle_name,last_name,title,role_type,contact_type,mobile,office_phone,email,linkedin,preferred_contact_method,relationship_strength,source,last_interaction_at,next_action,next_action_at,notes,updated_at'],
+      ['contacts','id,company_id,display_name,first_name,middle_name,last_name,title,role_type,contact_type,territory,mobile,office_phone,email,linkedin,preferred_contact_method,relationship_strength,source,last_interaction_at,next_action,next_action_at,notes,updated_at,archived_at'],
       ['leads','id,company_id,contact_id,customer_id,source,source_detail,campaign,status,service_interest,description,estimated_value,priority,owner_person_id,first_contact_at,last_contact_at,next_action,next_action_at,converted_at,lost_reason,referral_contact_id,referral_company_id,referral_name,utm_source,utm_medium,utm_campaign,utm_content,utm_term,created_at,updated_at'],
       ['opportunities','id,lead_id,company_id,contact_id,customer_id,title,opportunity_type,category,stage,priority,estimated_value,probability_pct,expected_close_date,next_step,next_step_date,owner_person_id,source,source_evidence_url,related_service,won_job_id,lost_reason,notes,created_at,updated_at'],
       ['activities','id,activity_type,direction,status,subject,summary,company_id,contact_id,lead_id,opportunity_id,customer_id,job_id,owner_person_id,occurred_at,due_at,gmail_message_id,gmail_thread_id,calendar_event_id,source_url,metadata,updated_at'],
@@ -134,7 +135,10 @@
       ['documents','id,company_id,contact_id,customer_id,job_id,quote_id,invoice_id,document_type,title,document_date,drive_url,mime_type,confidentiality,notes,updated_at']
     ];
     try{
-      var results=await Promise.all(specs.map(function(spec){return cloud.client.from(spec[0]).select(spec[1]).eq('organization_id',org).is('archived_at',null);}));
+      var results=await Promise.all(specs.map(function(spec){
+        var q=cloud.client.from(spec[0]).select(spec[1]).eq('organization_id',org);
+        return spec[0]==='contacts'?q:q.is('archived_at',null);
+      }));
       for(var i=0;i<results.length;i++){if(results[i].error)throw new Error(specs[i][0]+': '+results[i].error.message);data[specs[i][0]]=results[i].data||[];}
       data.loaded=true;render();if(loading)loading.style.display='none';if(body)body.style.display='block';
     }catch(err){console.error('TTT CRM load failed',err);if(loading){loading.style.display='block';loading.textContent='CRM could not load: '+String(err.message||err);}if(body)body.style.display='none';}
@@ -189,9 +193,10 @@
   }
 
   function renderContacts(){
-    var list=data.contacts.filter(function(c){var q=filters.contactSearch.toLowerCase(),hay=[contactName(c.id),companyName(c.company_id),c.email,c.mobile,c.office_phone,c.title,c.role_type,c.contact_type].join(' ').toLowerCase();return (!q||hay.includes(q))&&(filters.contactType==='all'||String(c.contact_type||'other')===filters.contactType);});
+    var active=activeContacts();
+    var list=active.filter(function(c){var q=filters.contactSearch.toLowerCase(),hay=[contactName(c.id),companyName(c.company_id),c.email,c.mobile,c.office_phone,c.title,c.role_type,c.contact_type].join(' ').toLowerCase();return (!q||hay.includes(q))&&(filters.contactType==='all'||String(c.contact_type||'other')===filters.contactType);});
     var rows=list.slice().sort(function(a,b){return contactName(a.id).localeCompare(contactName(b.id));}).map(function(c){var leadCount=data.leads.filter(function(l){return l.contact_id===c.id;}).length,oppCount=data.opportunities.filter(function(o){return o.contact_id===c.id;}).length;return '<tr class="crm-row" data-crm-record="contact" data-crm-id="'+attr(c.id)+'"><td><strong>'+html(contactName(c.id))+'</strong><br><small>'+html(c.title||c.role_type||'')+'</small></td><td>'+html(companyName(c.company_id))+'</td><td><span class="badge">'+html(CONTACT_TYPES[c.contact_type]||c.contact_type||'Other')+'</span></td><td>'+html(c.email||'—')+'</td><td>'+html(c.mobile||c.office_phone||'—')+'</td><td>'+leadCount+'</td><td>'+oppCount+'</td><td>'+html(c.next_action||'—')+'</td></tr>';}).join('');
-    document.getElementById('crmContacts').innerHTML='<div class="crm-filters"><input id="crmContactSearch" placeholder="Search contacts…" value="'+attr(filters.contactSearch)+'"><select id="crmContactTypeFilter"><option value="all">All contact types</option>'+Object.keys(CONTACT_TYPES).map(function(k){return '<option value="'+k+'" '+(filters.contactType===k?'selected':'')+'>'+html(CONTACT_TYPES[k])+'</option>';}).join('')+'</select></div><div class="panel"><div class="panel-head"><div><h3>Contacts</h3><p class="muted">Contact type describes how this person relates to TTT; job title/role remains separate.</p></div><span class="badge">'+list.length+' of '+data.contacts.length+'</span></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Organization</th><th>Contact type</th><th>Email</th><th>Phone</th><th>Leads</th><th>Opportunities</th><th>Next action</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8" class="crm-empty">No contacts match these filters.</td></tr>')+'</tbody></table></div></div>';
+    document.getElementById('crmContacts').innerHTML='<div class="crm-filters"><input id="crmContactSearch" placeholder="Search contacts…" value="'+attr(filters.contactSearch)+'"><select id="crmContactTypeFilter"><option value="all">All contact types</option>'+Object.keys(CONTACT_TYPES).map(function(k){return '<option value="'+k+'" '+(filters.contactType===k?'selected':'')+'>'+html(CONTACT_TYPES[k])+'</option>';}).join('')+'</select></div><div class="panel"><div class="panel-head"><div><h3>Contacts</h3><p class="muted">Click a contact to edit their details, classification or next action.</p></div><span class="badge">'+list.length+' of '+active.length+'</span></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Organization</th><th>Contact type</th><th>Email</th><th>Phone</th><th>Leads</th><th>Opportunities</th><th>Next action</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8" class="crm-empty">No contacts match these filters.</td></tr>')+'</tbody></table></div></div>';
   }
 
   function renderOrganizations(){
@@ -218,9 +223,9 @@
   }
 
   function refreshLeadFormOptions(){
-    var sel=document.getElementById('crmReferralContact');if(!sel)return;var current=sel.value;
-    sel.innerHTML='<option value="">No linked referrer</option>'+data.contacts.slice().sort(function(a,b){return contactName(a.id).localeCompare(contactName(b.id));}).map(function(c){return '<option value="'+attr(c.id)+'">'+html(contactName(c.id))+(c.company_id?' — '+html(companyName(c.company_id)):'')+'</option>';}).join('');
-    if(current&&data.contacts.some(function(c){return c.id===current;}))sel.value=current;
+    var sel=document.getElementById('crmReferralContact');if(!sel)return;var current=sel.value,contacts=activeContacts();
+    sel.innerHTML='<option value="">No linked referrer</option>'+contacts.slice().sort(function(a,b){return contactName(a.id).localeCompare(contactName(b.id));}).map(function(c){return '<option value="'+attr(c.id)+'">'+html(contactName(c.id))+(c.company_id?' — '+html(companyName(c.company_id)):'')+'</option>';}).join('');
+    if(current&&contacts.some(function(c){return c.id===current;}))sel.value=current;
   }
 
   function closeDetail(){selected={type:null,id:null};document.getElementById('crmDetailDrawer')?.classList.remove('open');document.getElementById('crmDetailBackdrop')?.classList.remove('open');}
@@ -303,12 +308,35 @@
   function documentMini(d){return '<div class="crm-link-item"><div><strong>'+html(d.title)+'</strong><small>'+html(d.document_type||'Document')+' · '+dateOnly(d.document_date)+'</small></div>'+(d.drive_url?'<a class="crm-primary-link" target="_blank" rel="noopener" href="'+attr(d.drive_url)+'">Open</a>':'<span class="badge">Linked</span>')+'</div>';}
 
   function contactDetail(id){
-    var c=contact(id);if(!c)return detailHead('CONTACT','Contact not found','');var leads=data.leads.filter(function(l){return l.contact_id===id;}),opps=data.opportunities.filter(function(o){return o.contact_id===id;}),acts=data.activities.filter(function(a){return a.contact_id===id;}).sort(function(a,b){return new Date(b.occurred_at)-new Date(a.occurred_at);});
-    return detailHead('CONTACT',contactName(id),companyName(c.company_id))+'<div class="crm-detail-body"><article class="crm-detail-card"><h4>Contact classification</h4><div class="crm-detail-grid"><label>Contact type<select id="crmContactType">'+Object.keys(CONTACT_TYPES).map(function(k){return '<option value="'+k+'" '+(String(c.contact_type||'other')===k?'selected':'')+'>'+html(CONTACT_TYPES[k])+'</option>';}).join('')+'</select></label><label>Relationship strength (optional)<select id="crmContactStrength"><option value="">Not set</option>'+['New','Cold','Warm','Strong','Strategic'].map(function(x){return '<option '+(String(c.relationship_strength||'')===x?'selected':'')+'>'+x+'</option>';}).join('')+'</select></label></div><p class="muted top-gap">Contact type says what this person is to TTT. Relationship strength is optional and describes how established or warm the relationship is.</p><div class="crm-inline-actions top-gap"><button class="btn primary" id="crmSaveContact">Save contact</button></div></article><article class="crm-detail-card"><h4>Contact details</h4><div class="crm-detail-meta">'+meta('Email',c.email)+meta('Mobile',c.mobile)+meta('Office phone',c.office_phone)+meta('Job title / role',c.title||c.role_type)+meta('Preferred contact',c.preferred_contact_method)+meta('Last interaction',when(c.last_interaction_at))+meta('Next action',c.next_action)+meta('Organization',companyName(c.company_id))+'</div></article><article class="crm-detail-card"><h4>CRM activity</h4><div class="crm-detail-meta">'+meta('Leads',leads.length)+meta('Opportunities',opps.length)+meta('Activities',acts.length)+'</div></article><article class="crm-detail-card"><h4>Recent activity</h4><div class="crm-link-list">'+(acts.slice(0,20).map(activityMini).join('')||'<div class="crm-mini-empty">No activity yet.</div>')+'</div></article></div>';
+    var c=contact(id);if(!c)return detailHead('CONTACT','Contact not found','');
+    var leads=data.leads.filter(function(l){return l.contact_id===id;}),opps=data.opportunities.filter(function(o){return o.contact_id===id;}),acts=data.activities.filter(function(a){return a.contact_id===id;}).sort(function(a,b){return new Date(b.occurred_at)-new Date(a.occurred_at);});
+    var companies=data.companies.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''));});
+    var nextValue=c.next_action_at?new Date(c.next_action_at).toISOString().slice(0,16):'';
+    var companyOptions='<option value="">No organization</option>'+companies.map(function(co){return '<option value="'+attr(co.id)+'" '+(co.id===c.company_id?'selected':'')+'>'+html(co.name)+'</option>';}).join('');
+    var archived=!!c.archived_at;
+    return detailHead(archived?'ARCHIVED CONTACT':'CONTACT',contactName(id),companyName(c.company_id))+'<div class="crm-detail-body">'+
+      '<article class="crm-detail-card"><div class="panel-head"><h4>'+ (archived?'Archived contact':'Edit contact') +'</h4>'+(archived?'<span class="badge">Archived</span>':'')+'</div>'+
+      (archived?'<p class="muted">This contact is retained for historical Leads, Opportunities and Activities.</p>':
+      '<div class="crm-detail-grid">'+
+      '<label>First name<input id="crmContactFirst" value="'+attr(c.first_name||'')+'"></label><label>Middle name<input id="crmContactMiddle" value="'+attr(c.middle_name||'')+'"></label>'+
+      '<label>Last name<input id="crmContactLast" value="'+attr(c.last_name||'')+'"></label><label>Organization<select id="crmContactCompany">'+companyOptions+'</select></label>'+
+      '<label>Job title<input id="crmContactTitle" value="'+attr(c.title||'')+'"></label><label>Role / function<input id="crmContactRole" value="'+attr(c.role_type||'')+'"></label>'+
+      '<label>Contact type<select id="crmContactType">'+Object.keys(CONTACT_TYPES).map(function(k){return '<option value="'+k+'" '+(String(c.contact_type||'other')===k?'selected':'')+'>'+html(CONTACT_TYPES[k])+'</option>';}).join('')+'</select></label>'+
+      '<label>Relationship strength<select id="crmContactStrength"><option value="">Not set</option>'+['New','Cold','Warm','Strong','Strategic'].map(function(x){return '<option '+(String(c.relationship_strength||'')===x?'selected':'')+'>'+x+'</option>';}).join('')+'</select></label>'+
+      '<label>Email<input id="crmContactEmail" type="email" value="'+attr(c.email||'')+'"></label><label>Mobile<input id="crmContactMobile" value="'+attr(c.mobile||'')+'"></label>'+
+      '<label>Office phone<input id="crmContactOffice" value="'+attr(c.office_phone||'')+'"></label><label>LinkedIn<input id="crmContactLinkedIn" value="'+attr(c.linkedin||'')+'"></label>'+
+      '<label>Preferred contact<select id="crmContactPreferred"><option value="">Not set</option>'+['Email','Phone','Text','WhatsApp','In Person'].map(function(x){return '<option '+(String(c.preferred_contact_method||'').toLowerCase()===x.toLowerCase()?'selected':'')+'>'+x+'</option>';}).join('')+'</select></label>'+
+      '<label>Territory<input id="crmContactTerritory" value="'+attr(c.territory||'')+'"></label>'+
+      '<label>Source<input id="crmContactSource" value="'+attr(c.source||'')+'"></label><label>Next action<input id="crmContactNextAction" value="'+attr(c.next_action||'')+'"></label>'+
+      '<label>Next action date<input id="crmContactNextDate" type="datetime-local" value="'+attr(nextValue)+'"></label><label class="crm-span-2">Notes<textarea id="crmContactNotes">'+html(c.notes||'')+'</textarea></label>'+
+      '</div><div class="crm-inline-actions top-gap"><button class="btn primary" id="crmSaveContact">Save contact</button><button class="btn danger" id="crmDeleteContact">Delete contact</button></div><p class="muted top-gap">Delete removes the contact from the active Contacts list but keeps the record available to historical Leads, Opportunities and Activities.</p>')+
+      '</article>'+
+      '<article class="crm-detail-card"><h4>CRM relationships</h4><div class="crm-detail-meta">'+meta('Leads',leads.length)+meta('Opportunities',opps.length)+meta('Activities',acts.length)+meta('Last interaction',when(c.last_interaction_at))+'</div></article>'+
+      '<article class="crm-detail-card"><h4>Recent activity</h4><div class="crm-link-list">'+(acts.slice(0,20).map(activityMini).join('')||'<div class="crm-mini-empty">No activity yet.</div>')+'</div></article></div>';
   }
 
   function organizationDetail(id){
-    var c=company(id);if(!c)return detailHead('ORGANIZATION','Organization not found','');var contacts=data.contacts.filter(function(x){return x.company_id===id;}),leads=data.leads.filter(function(x){return x.company_id===id;}),opps=data.opportunities.filter(function(x){return x.company_id===id;});
+    var c=company(id);if(!c)return detailHead('ORGANIZATION','Organization not found','');var contacts=activeContacts().filter(function(x){return x.company_id===id;}),leads=data.leads.filter(function(x){return x.company_id===id;}),opps=data.opportunities.filter(function(x){return x.company_id===id;});
     return detailHead('ORGANIZATION',c.name,[c.city,c.state].filter(Boolean).join(', '))+'<div class="crm-detail-body"><article class="crm-detail-card"><h4>Organization details</h4><div class="crm-detail-meta">'+meta('Type',c.primary_type)+meta('Status',c.status)+meta('Phone',c.main_phone)+meta('Email',c.general_email)+meta('Website',c.website)+meta('Territory',c.territory)+meta('Source',c.source)+meta('Pipeline',cash(sum(opps,'estimated_value')))+'</div></article><article class="crm-detail-card"><div class="panel-head"><h4>Contacts</h4><span class="badge">'+contacts.length+'</span></div><div class="crm-link-list">'+(contacts.map(function(x){return '<div class="crm-link-item"><div><strong>'+html(contactName(x.id))+'</strong><small>'+html(x.title||x.email||'')+'</small></div><button class="btn secondary compact" data-open-contact="'+attr(x.id)+'">Open</button></div>';}).join('')||'<div class="crm-mini-empty">No contacts linked.</div>')+'</div></article><article class="crm-detail-card"><h4>CRM summary</h4><div class="crm-detail-meta">'+meta('Leads',leads.length)+meta('Opportunities',opps.length)+meta('Open pipeline',cash(sum(opps.filter(openOpp),'estimated_value')))+meta('Closed won',opps.filter(function(o){return o.stage==='closed_won';}).length)+'</div></article></div>';
   }
 
@@ -325,6 +353,7 @@
     document.getElementById('crmSaveContact')?.addEventListener('click',function(){saveContact(id);});
     document.getElementById('crmDeleteLead')?.addEventListener('click',function(){archiveRecord('lead',id);});
     document.getElementById('crmDeleteOpportunity')?.addEventListener('click',function(){archiveRecord('opportunity',id);});
+    document.getElementById('crmDeleteContact')?.addEventListener('click',function(){archiveRecord('contact',id);});
     document.getElementById('crmActivityForm')?.addEventListener('submit',function(e){logActivity(e,type,id);});
   }
 
@@ -357,15 +386,28 @@
   }
 
   async function saveContact(id){
-    var cloud=window.TTTCloud;if(!cloud?.ready)return;var patch={contact_type:document.getElementById('crmContactType')?.value||'other',relationship_strength:document.getElementById('crmContactStrength')?.value||null,updated_by:cloud.userId};
-    var out=await cloud.client.from('contacts').update(patch).eq('organization_id',cloud.organizationId).eq('id',id);if(out.error)return toastSafe('Contact update failed: '+out.error.message);await cloud.audit?.('contact',id,'contact_classification_updated',patch);data.loaded=false;await load(true);toastSafe('Contact updated.');
+    var cloud=window.TTTCloud;if(!cloud?.ready)return;
+    var first=document.getElementById('crmContactFirst')?.value.trim()||'',middle=document.getElementById('crmContactMiddle')?.value.trim()||'',last=document.getElementById('crmContactLast')?.value.trim()||'';
+    var nextRaw=document.getElementById('crmContactNextDate')?.value||'';
+    var patch={
+      first_name:first||null,middle_name:middle||null,last_name:last||null,display_name:[first,middle,last].filter(Boolean).join(' ')||contactName(id),
+      company_id:document.getElementById('crmContactCompany')?.value||null,title:document.getElementById('crmContactTitle')?.value.trim()||null,role_type:document.getElementById('crmContactRole')?.value.trim()||null,
+      contact_type:document.getElementById('crmContactType')?.value||'other',relationship_strength:document.getElementById('crmContactStrength')?.value||null,
+      email:document.getElementById('crmContactEmail')?.value.trim()||null,mobile:document.getElementById('crmContactMobile')?.value.trim()||null,office_phone:document.getElementById('crmContactOffice')?.value.trim()||null,
+      linkedin:document.getElementById('crmContactLinkedIn')?.value.trim()||null,preferred_contact_method:document.getElementById('crmContactPreferred')?.value||null,
+      territory:document.getElementById('crmContactTerritory')?.value.trim()||null,source:document.getElementById('crmContactSource')?.value.trim()||null,
+      next_action:document.getElementById('crmContactNextAction')?.value.trim()||null,next_action_at:nextRaw?new Date(nextRaw).toISOString():null,notes:document.getElementById('crmContactNotes')?.value.trim()||null,
+      updated_by:cloud.userId
+    };
+    var out=await cloud.client.from('contacts').update(patch).eq('organization_id',cloud.organizationId).eq('id',id);if(out.error)return toastSafe('Contact update failed: '+out.error.message);
+    await cloud.audit?.('contact',id,'contact_updated',{contact_type:patch.contact_type,company_id:patch.company_id});data.loaded=false;await load(true);toastSafe('Contact updated.');
   }
 
   async function archiveRecord(type,id){
-    var cloud=window.TTTCloud;if(!cloud?.ready)return;var table=type==='lead'?'leads':'opportunities',label=type==='lead'?'lead':'opportunity';
+    var cloud=window.TTTCloud;if(!cloud?.ready)return;var table=type==='lead'?'leads':type==='opportunity'?'opportunities':'contacts',label=type==='lead'?'lead':type==='opportunity'?'opportunity':'contact';
     if(!window.confirm('Delete this '+label+' from the active CRM? Its audit history and linked records will be preserved.'))return;
     var out=await cloud.client.from(table).update({archived_at:new Date().toISOString(),updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',id);
-    if(out.error)return toastSafe('Delete failed: '+out.error.message);await cloud.audit?.(label,id,label+'_archived',{});closeDetail();data.loaded=false;await load(true);toastSafe((type==='lead'?'Lead':'Opportunity')+' deleted from active CRM.');
+    if(out.error)return toastSafe('Delete failed: '+out.error.message);await cloud.audit?.(label,id,label+'_archived',{});closeDetail();data.loaded=false;await load(true);toastSafe((type==='lead'?'Lead':type==='opportunity'?'Opportunity':'Contact')+' deleted from active CRM.');
   }
 
   async function logActivity(ev,type,id){
@@ -390,7 +432,7 @@
     try{
       submit.disabled=true;submit.textContent='Creating…';var companyId=null;
       if(companyInput){var comp=data.companies.find(function(x){return String(x.name||'').trim().toLowerCase()===companyInput.toLowerCase();});if(!comp){var cr=await cloud.client.from('companies').insert({organization_id:org,name:companyInput,primary_type:'prospect',status:'active',owner_person_id:profile.person_id||null,source:'TTT-OS CRM',created_by:cloud.userId,updated_by:cloud.userId}).select('*').single();if(cr.error)throw cr.error;comp=cr.data;data.companies.push(comp);}companyId=comp.id;}
-      var con=email?data.contacts.find(function(x){return String(x.email||'').trim().toLowerCase()===email.toLowerCase();}):null;
+      var con=email?activeContacts().find(function(x){return String(x.email||'').trim().toLowerCase()===email.toLowerCase();}):null;
       if(!con){var first=String(fd.get('first_name')||'').trim(),last=String(fd.get('last_name')||'').trim();var co=await cloud.client.from('contacts').insert({organization_id:org,company_id:companyId,first_name:first,last_name:last,display_name:[first,last].filter(Boolean).join(' '),email:email||null,mobile:String(fd.get('mobile')||'').trim()||null,owner_person_id:profile.person_id||null,source:'TTT-OS CRM',contact_type:'prospect',relationship_strength:'New',created_by:cloud.userId,updated_by:cloud.userId}).select('*').single();if(co.error)throw co.error;con=co.data;data.contacts.push(con);}else if(companyId&&!con.company_id){var cu=await cloud.client.from('contacts').update({company_id:companyId,updated_by:cloud.userId}).eq('organization_id',org).eq('id',con.id).select('*').single();if(cu.error)throw cu.error;Object.assign(con,cu.data);}
       var ref=refId?contact(refId):null;
       var nextAt=String(fd.get('next_action_at')||'');
