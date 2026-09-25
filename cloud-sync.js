@@ -134,40 +134,15 @@
     byId('tttPendingLogout').addEventListener('click',async()=>{await client.auth.signOut();location.reload();});
   }
 
-  function showInitialize(){
-    const c=counts();
+  function showCloudUnavailable(){
+    ready=false;
     showOverlay(`
-      <h2>Initialize shared TTT data</h2>
-      <p>The Supabase database is ready but has not been initialized. Use the device that currently has the most complete TTT OS data.</p>
-      <div class="ttt-cloud-init"><strong>Data currently on this device</strong><div class="ttt-cloud-counts"><span><b>${c.jobs}</b>Jobs</span><span><b>${c.customers}</b>Customers</span><span><b>${c.vehicles}</b>Vehicles</span><span><b>${c.people}</b>People</span></div></div>
-      <p id="tttInitError" class="ttt-auth-error"></p>
-      <div class="ttt-auth-actions"><button class="btn primary" id="tttInitializeCloud" type="button">Use this device as the initial cloud database</button><button class="btn secondary" id="tttInitLogout" type="button">Log out</button></div>
-      <p class="ttt-auth-meta">After initialization, other signed-in devices download this same shared database.</p>
+      <h2>Shared database unavailable</h2>
+      <p>TTT OS could not load the shared Supabase database. Local browser data will not be used as a replacement.</p>
+      <p class="ttt-auth-meta">Please contact the TTT OS administrator before making changes.</p>
+      <div class="ttt-auth-actions"><button class="btn secondary" id="tttCloudUnavailableLogout" type="button">Log out</button></div>
     `);
-    byId('tttInitializeCloud').addEventListener('click',initializeCloud);
-    byId('tttInitLogout').addEventListener('click',async()=>{await client.auth.signOut();location.reload();});
-  }
-
-  async function initializeCloud(){
-    const btn=byId('tttInitializeCloud');
-    const errorEl=byId('tttInitError');
-    btn.disabled=true;btn.textContent='Initializing…';errorEl.style.display='none';
-    const snapshot=deepClone(db);
-    const now=new Date().toISOString();
-    const {data,error}=await client.from('app_state')
-      .update({state:snapshot,revision:1,initialized_at:now,updated_at:now,updated_by:currentUser.id})
-      .eq('organization_id',organizationId)
-      .is('state',null)
-      .select('*')
-      .maybeSingle();
-    if(error){
-      errorEl.textContent=error.message;errorEl.style.display='block';btn.disabled=false;btn.textContent='Use this device as the initial cloud database';return;
-    }
-    if(!data){await reloadRemote('Another device initialized the cloud first.');return;}
-    revision=Number(data.revision||1);
-    ready=true;hideOverlay();setSyncStatus('Synced','ok');
-    await writeAudit('system','ttt-os','cloud_initialized',{revision});
-    subscribe();
+    byId('tttCloudUnavailableLogout').addEventListener('click',async()=>{await client.auth.signOut();location.reload();});
   }
 
   async function bootstrap(user){
@@ -190,8 +165,8 @@
     if(stateError){console.error('TTT Cloud state error',stateError);setSyncStatus('Sync error','error');return;}
     if(!state||state.state===null){
       revision=Number(state?.revision||0);
-      showInitialize();
-      setSyncStatus('Needs initialization','busy');
+      showCloudUnavailable();
+      setSyncStatus('Cloud unavailable','error');
       return;
     }
     applyRemote(state);
