@@ -129,6 +129,7 @@
           '</section>' +
 
           '<div class="checkin-protection-note"><strong>Before completing check-in:</strong> make sure noteworthy damage is photographed closely and the general vehicle condition is represented from enough angles to establish a clear before-work record.</div>' +
+          '<div id="checkInUploadStatus" class="checkin-upload-status">Selected photos and videos will be stored in the private TTT Supabase media library. Current Free-plan limit: 50 MB per file.</div>' +
           '<button class="btn primary large" type="submit">Complete Check-In</button>' +
         '</form>' +
       '</article>';
@@ -140,6 +141,17 @@
       const count = photos.filter(p => p.group === group.id).length;
       return '<div class="condition-summary-item"><span>' + esc(group.title) + '</span><strong>' + count + '</strong><small>photo' + (count === 1 ? '' : 's') + '</small></div>';
     }).join('');
+    const allMedia = [...photos, ...videos];
+    const mediaList = allMedia.length
+      ? '<div class="checkin-stored-media"><h4>Stored evidence</h4><div class="checkin-media-actions">' +
+          allMedia.map(m => m.storagePath
+            ? '<button type="button" class="btn secondary compact" data-job-media-path="' + attr(m.storagePath) + '">' +
+                (m.mediaType === 'video' ? '▶ ' : '📷 ') + esc(m.area || m.category || m.fileName || 'Media') +
+              '</button>'
+            : '<span class="badge">' + esc(m.fileName || 'Legacy media') + ' · file not stored</span>'
+          ).join('') +
+        '</div></div>'
+      : '';
 
     return '<article class="panel detail-section">' +
       '<div class="panel-head"><div><h3>Check-In Record</h3><p class="muted">Vehicle condition documented before work authorization.</p></div><span class="badge">Recorded</span></div>' +
@@ -152,47 +164,34 @@
         '<dt>Condition notes</dt><dd>' + esc(ci.conditionNotes || 'None noted') + '</dd>' +
       '</dl>' +
       '<div class="condition-summary-grid">' + groupCounts + '<div class="condition-summary-item"><span>Videos</span><strong>' + videos.length + '</strong><small>recorded</small></div></div>' +
+      mediaList +
     '</article>';
   };
 
-  saveCheckIn = function(e,j){
+  saveCheckIn = async function(e,j){
     e.preventDefault();
     const form = e.currentTarget;
+    const submit = form.querySelector('button[type="submit"]');
+    const originalLabel = submit ? submit.textContent : '';
+    if(submit){submit.disabled=true;submit.textContent='Uploading evidence…';}
+
     const fd = new FormData(form);
     const now = new Date().toISOString();
+    let media;
+    try{
+      if(!window.TTTMedia)throw new Error('Cloud media storage is not available yet. Please wait a moment and try again.');
+      media = await window.TTTMedia.uploadCheckInFiles(j,form,now);
+    }catch(error){
+      if(submit){submit.disabled=false;submit.textContent=originalLabel||'Complete Check-In';}
+      if(typeof toast==='function')toast(error.message||'Check-in media upload failed');
+      return;
+    }
 
-    const photos = [];
-    form.querySelectorAll('[data-checkin-photo]').forEach(input => {
-      const [group, area] = input.dataset.checkinPhoto.split('::');
-      [...input.files].forEach(file => photos.push({
-        id: uid('med'),
-        mediaType: 'photo',
-        group,
-        area,
-        fileName: file.name,
-        mime: file.type,
-        size: file.size,
-        capturedAt: now,
-        storageStatus: 'local-metadata-only'
-      }));
-    });
-
-    const videos = [];
-    form.querySelectorAll('[data-checkin-video]').forEach(input => {
-      [...input.files].forEach(file => videos.push({
-        id: uid('med'),
-        mediaType: 'video',
-        category: input.dataset.checkinVideo,
-        fileName: file.name,
-        mime: file.type,
-        size: file.size,
-        capturedAt: now,
-        storageStatus: 'local-metadata-only'
-      }));
-    });
-
+    const photos = media.photos || [];
+    const videos = media.videos || [];
     const groupNotes = {};
     form.querySelectorAll('[data-checkin-note]').forEach(el => groupNotes[el.dataset.checkinNote] = el.value);
+    const actor = typeof currentActor==='function' ? currentActor() : (window.TTTCloud?.profile?.person_id || 'unknown');
 
     j.checkIn = {
       odometer: fd.get('odometer'),
@@ -207,20 +206,23 @@
       photoCount: photos.length,
       videoCount: videos.length,
       capturedAt: now,
-      capturedBy: 'usr_derek'
+      capturedBy: actor,
+      mediaStorage: 'supabase'
     };
 
     j.status = 'Checked In';
+    j.audit = j.audit || [];
     j.audit.push({
       at: now,
-      actor: 'usr_derek',
+      actor,
       action: 'vehicle_checked_in',
       photoCount: photos.length,
-      videoCount: videos.length
+      videoCount: videos.length,
+      mediaStorage: 'supabase'
     });
     save();
     render();
-    toast('Vehicle checked in · ' + photos.length + ' photos documented');
+    toast('Vehicle checked in · ' + photos.length + ' photos · ' + videos.length + ' videos stored');
   };
 })();
 
