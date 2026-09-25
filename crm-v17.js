@@ -214,7 +214,7 @@
       ['crmOppSearch','input','oppSearch',renderOpportunities],['crmOppStageFilter','change','oppStage',renderOpportunities],['crmOppServiceFilter','change','oppService',renderOpportunities],
       ['crmContactSearch','input','contactSearch',renderContacts],['crmContactTypeFilter','change','contactType',renderContacts]
     ];
-    pairs.forEach(function(p){var el=document.getElementById(p[0]);if(!el)return;el.addEventListener(p[1],function(){filters[p[2]]=el.value;p[3]();bindRows();bindFilters();});});
+    pairs.forEach(function(p){var el=document.getElementById(p[0]);if(!el)return;var handler=function(){filters[p[2]]=el.value;p[3]();bindRows();bindFilters();};if(p[1]==='input')el.oninput=handler;else el.onchange=handler;});
   }
 
   function refreshLeadFormOptions(){
