@@ -1,7 +1,7 @@
 // TTT OS ERP live cockpit v1.4 — Supabase-native catalog, inventory, vendors and purchasing.
 (function(){
   'use strict';
-  const state={loaded:false,loading:false,products:[],inventory:[],companies:[],vendors:[],purchaseOrders:[],poLines:[]};
+  const state={loaded:false,loading:false,products:[],inventory:[],inventoryTransactions:[],companies:[],vendors:[],purchaseOrders:[],poLines:[]};
   let client=null,orgId=null,profile=null,channel=null;
 
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -42,7 +42,7 @@
         <div class="erp-tabs"><button class="erp-tab active" data-erp-tab="inventory">Inventory</button><button class="erp-tab" data-erp-tab="purchase">Purchase Orders</button><button class="erp-tab" data-erp-tab="vendors">Vendors</button></div>
         <div id="erpLoading" class="panel erp-empty">Loading ERP data…</div>
         <div id="erpBody" style="display:none">
-          <div class="erp-pane active" data-erp-pane="inventory"><div class="panel"><div class="erp-filter"><input id="erpInvSearch" placeholder="Search brand, model, SKU"><select id="erpInvBrand"><option value="">All brands</option></select><select id="erpInvStatus"><option value="">All stock</option><option value="low">At / below reorder point</option><option value="out">Out of stock</option><option value="available">Available</option></select></div><div class="table-wrap"><table><thead><tr><th>Product</th><th>Dealer SKU</th><th>TTT SKU</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder</th><th>Cost</th><th>Sell</th><th>Margin</th><th></th></tr></thead><tbody id="erpInventoryBody"></tbody></table></div></div></div>
+          <div class="erp-pane active" data-erp-pane="inventory"><div class="panel"><div class="erp-filter"><input id="erpInvSearch" placeholder="Search brand, model, SKU"><select id="erpInvBrand"><option value="">All brands</option></select><select id="erpInvStatus"><option value="">All stock</option><option value="low">At / below reorder point</option><option value="out">Out of stock</option><option value="available">Available</option></select></div><div class="table-wrap"><table><thead><tr><th>Product</th><th>Dealer SKU</th><th>TTT SKU</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Reorder</th><th>Cost</th><th>Sell</th><th>Margin</th><th></th></tr></thead><tbody id="erpInventoryBody"></tbody></table></div></div><div id="erpInventoryTransactions" class="top-gap"></div></div>
           <div class="erp-pane" data-erp-pane="purchase"><div id="erpPurchaseBody"></div></div>
           <div class="erp-pane" data-erp-pane="vendors"><div id="erpVendorBody"></div></div>
         </div>
@@ -119,6 +119,7 @@
       const specs=[
         ['products','products_services','id,item_type,brand,category,subcategory,model,dealer_sku,ttt_sku,variant,name,description,dealer_cost,map_price,msrp,sell_price,moq,lead_time_days,serialized,warranty_summary,source_file,source_url,active,updated_at'],
         ['inventory','inventory_items','id,product_id,sku,location,quantity_on_hand,quantity_reserved,reorder_point,reorder_quantity,average_cost,last_counted_at,notes,updated_at'],
+        ['inventoryTransactions','inventory_transactions','id,inventory_item_id,product_id,transaction_type,quantity,unit_cost,job_id,purchase_order_id,reference,notes,occurred_at,created_by'],
         ['companies','companies','id,name,primary_type,status,main_phone,general_email,updated_at'],
         ['vendors','vendors','company_id,vendor_status,dealer_requirements,minimum_order,payment_terms,shipping_terms,warranty_returns,primary_categories,brands_represented,overall_score,last_reviewed_at,updated_at'],
         ['purchaseOrders','purchase_orders','id,vendor_company_id,job_id,status,order_date,expected_date,received_date,subtotal,shipping_total,tax_total,total,vendor_reference,notes,updated_at'],
@@ -144,7 +145,7 @@
       '<div class="stat"><span>Open POs</span><strong>'+openPO.length+'</strong><div class="erp-kpi-note">'+money(openPOValue)+'</div></div>';
     const brand=document.getElementById('erpInvBrand'),cur=brand.value;
     brand.innerHTML='<option value="">All brands</option>'+[...new Set(state.products.map(p=>p.brand).filter(Boolean))].sort().map(x=>'<option '+(x===cur?'selected':'')+'>'+esc(x)+'</option>').join('');
-    renderInventory();renderPOs();renderVendors();
+    renderInventory();renderInventoryTransactions();renderPOs();renderVendors();
   }
 
   function renderInventory(){
@@ -163,6 +164,15 @@
       const inv=invFor(p.id),av=available(inv),rp=inv?.reorder_point,m=margin(p),isLow=rp!=null&&av<=Number(rp||0);
       return '<tr><td><strong>'+esc([p.brand,p.model||p.name].filter(Boolean).join(' '))+'</strong><br><small>'+esc(p.variant||p.category||'')+'</small></td><td>'+esc(p.dealer_sku||'—')+'</td><td>'+esc(p.ttt_sku||'—')+'</td><td>'+esc(inv?.quantity_on_hand??0)+'</td><td>'+esc(inv?.quantity_reserved??0)+'</td><td class="'+(isLow?'erp-low':'')+'">'+av+'</td><td>'+esc(rp??'—')+'</td><td>'+money(p.dealer_cost)+'</td><td>'+money(p.sell_price)+'</td><td>'+(m==null?'—':m.toFixed(1)+'%')+'</td><td><div class="erp-table-actions"><button class="link-btn" data-edit-product="'+esc(p.id)+'">Edit</button><button class="link-btn" data-adjust-inventory="'+esc(p.id)+'">Stock</button></div></td></tr>';
     }).join('')||'<tr><td colspan="11" class="erp-empty">No matching inventory items.</td></tr>';
+  }
+
+  function renderInventoryTransactions(){
+    const root=document.getElementById('erpInventoryTransactions');if(!root)return;
+    const rows=state.inventoryTransactions.slice().sort((a,b)=>String(b.occurred_at||'').localeCompare(String(a.occurred_at||''))).slice(0,30).map(t=>{
+      const qty=Number(t.quantity||0);
+      return '<tr><td>'+esc(t.occurred_at?new Date(t.occurred_at).toLocaleString():'—')+'</td><td><span class="badge">'+esc(t.transaction_type||'movement')+'</span></td><td>'+esc(productName(t.product_id))+'</td><td>'+(qty>0?'+':'')+esc(qty)+'</td><td>'+money(t.unit_cost)+'</td><td>'+esc(t.purchase_order_id||t.job_id||t.reference||'—')+'</td></tr>';
+    }).join('');
+    root.innerHTML='<div class="panel"><div class="panel-head"><h3>Recent inventory movements</h3><span class="badge">'+state.inventoryTransactions.length+'</span></div><div class="table-wrap"><table><thead><tr><th>When</th><th>Type</th><th>Product</th><th>Qty</th><th>Unit cost</th><th>Reference</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="erp-empty">No stock movements yet.</td></tr>')+'</tbody></table></div></div>';
   }
 
   function renderPOs(){
@@ -282,7 +292,7 @@
   function subscribe(){
     if(channel||!client||!orgId)return;
     channel=client.channel('ttt-erp-'+orgId);
-    ['products_services','inventory_items','companies','vendors','purchase_orders','purchase_order_lines'].forEach(table=>{
+    ['products_services','inventory_items','inventory_transactions','companies','vendors','purchase_orders','purchase_order_lines'].forEach(table=>{
       channel.on('postgres_changes',{event:'*',schema:'public',table,filter:'organization_id=eq.'+orgId},()=>{state.loaded=false;load(true);});
     });
     channel.subscribe();
