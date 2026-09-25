@@ -59,6 +59,8 @@
       document.querySelectorAll('[data-crm-pane]').forEach(function(x){x.classList.toggle('active',x.dataset.crmPane===btn.dataset.crmTab);});
     });});
     document.getElementById('crmLeadForm').addEventListener('submit',createLead);
+    document.getElementById('crmLeads').addEventListener('click',function(e){var b=e.target.closest('[data-convert-lead]');if(b)convertLead(b.dataset.convertLead);});
+    document.getElementById('crmPipeline').addEventListener('change',function(e){var s=e.target.closest('[data-opp-stage]');if(s)updateOpportunityStage(s.dataset.oppStage,s.value);});
   }
 
   async function load(force){
@@ -102,13 +104,13 @@
 
   function renderPipeline(){
     var cards=STAGES.map(function(stage){var rows=data.opportunities.filter(function(x){return String(x.stage||'').toLowerCase()===stage;});var value=rows.reduce(function(s,x){return s+Number(x.estimated_value||0);},0);return '<div class="crm-stage"><span>'+html(stage)+'</span><strong>'+rows.length+'</strong><small>'+cash(value)+'</small></div>';}).join('');
-    var rows=data.opportunities.slice().sort(function(a,b){return new Date(b.updated_at)-new Date(a.updated_at);}).map(function(o){return '<tr><td><strong>'+html(o.title)+'</strong><br><small>'+html(o.id)+'</small></td><td>'+html(companyName(o.company_id))+'</td><td>'+html(contactName(o.contact_id))+'</td><td><span class="badge">'+html(o.stage)+'</span></td><td>'+cash(o.estimated_value)+'</td><td>'+(o.probability_pct==null?'—':html(o.probability_pct)+'%')+'</td><td>'+html(o.next_step||'—')+'</td></tr>';}).join('');
+    var rows=data.opportunities.slice().sort(function(a,b){return new Date(b.updated_at)-new Date(a.updated_at);}).map(function(o){return '<tr><td><strong>'+html(o.title)+'</strong><br><small>'+html(o.id)+'</small></td><td>'+html(companyName(o.company_id))+'</td><td>'+html(contactName(o.contact_id))+'</td><td><select class="crm-tab" data-opp-stage="'+html(o.id)+'">'+STAGES.map(function(s){return '<option '+(s===String(o.stage||'').toLowerCase()?'selected':'')+'>'+html(s)+'</option>';}).join('')+'</select></td><td>'+cash(o.estimated_value)+'</td><td>'+(o.probability_pct==null?'—':html(o.probability_pct)+'%')+'</td><td>'+html(o.next_step||'—')+'</td></tr>';}).join('');
     document.getElementById('crmPipeline').innerHTML='<div class="crm-stage-grid">'+cards+'</div><div class="panel"><div class="panel-head"><h3>Opportunities</h3><span class="badge">'+data.opportunities.length+'</span></div><div class="table-wrap"><table><thead><tr><th>Opportunity</th><th>Company</th><th>Contact</th><th>Stage</th><th>Value</th><th>Probability</th><th>Next step</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" class="crm-empty">No opportunities yet.</td></tr>')+'</tbody></table></div></div>';
   }
 
   function renderLeads(){
-    var rows=data.leads.slice().sort(function(a,b){return new Date(b.updated_at)-new Date(a.updated_at);}).map(function(l){return '<tr><td><strong>'+html(contactName(l.contact_id))+'</strong><br><small>'+html(l.id)+'</small></td><td>'+html(companyName(l.company_id))+'</td><td>'+html(l.service_interest||'—')+'</td><td><span class="badge">'+html(l.status)+'</span></td><td>'+html(l.priority||'—')+'</td><td>'+cash(l.estimated_value)+'</td><td>'+html(l.source||'—')+'</td><td>'+html(l.next_action||'—')+'</td></tr>';}).join('');
-    document.getElementById('crmLeads').innerHTML='<div class="panel"><div class="panel-head"><h3>Lead register</h3><span class="badge">'+data.leads.length+'</span></div><div class="table-wrap"><table><thead><tr><th>Contact</th><th>Company</th><th>Interest</th><th>Status</th><th>Priority</th><th>Value</th><th>Source</th><th>Next action</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8" class="crm-empty">No leads yet. Create the first lead above.</td></tr>')+'</tbody></table></div></div>';
+    var rows=data.leads.slice().sort(function(a,b){return new Date(b.updated_at)-new Date(a.updated_at);}).map(function(l){return '<tr><td><strong>'+html(contactName(l.contact_id))+'</strong><br><small>'+html(l.id)+'</small></td><td>'+html(companyName(l.company_id))+'</td><td>'+html(l.service_interest||'—')+'</td><td><span class="badge">'+html(l.status)+'</span></td><td>'+html(l.priority||'—')+'</td><td>'+cash(l.estimated_value)+'</td><td>'+html(l.source||'—')+'</td><td>'+html(l.next_action||'—')+'</td><td>'+(!['converted','lost'].includes(String(l.status||'').toLowerCase())?'<button class="link-btn" data-convert-lead="'+html(l.id)+'">Convert</button>':'—')+'</td></tr>';}).join('');
+    document.getElementById('crmLeads').innerHTML='<div class="panel"><div class="panel-head"><h3>Lead register</h3><span class="badge">'+data.leads.length+'</span></div><div class="table-wrap"><table><thead><tr><th>Contact</th><th>Company</th><th>Interest</th><th>Status</th><th>Priority</th><th>Value</th><th>Source</th><th>Next action</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="9" class="crm-empty">No leads yet. Create the first lead above.</td></tr>')+'</tbody></table></div></div>';
   }
 
   function renderCompanies(){
@@ -128,6 +130,34 @@
   function renderActivity(){
     var rows=data.activities.slice().sort(function(a,b){return new Date(b.occurred_at)-new Date(a.occurred_at);}).slice(0,30).map(function(a){return '<tr><td>'+when(a.occurred_at)+'</td><td><span class="badge">'+html(a.activity_type)+'</span></td><td>'+html(a.direction||'—')+'</td><td><strong>'+html(a.subject||'—')+'</strong><br><small>'+html(a.summary||'')+'</small></td><td>'+html(contactName(a.contact_id))+'</td></tr>';}).join('');
     document.getElementById('crmActivity').innerHTML='<div class="panel"><div class="panel-head"><h3>Activity timeline</h3><span class="badge">'+data.activities.length+'</span></div><div class="table-wrap"><table><thead><tr><th>When</th><th>Type</th><th>Direction</th><th>Activity</th><th>Contact</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="crm-empty">No activity logged yet.</td></tr>')+'</tbody></table></div></div>';
+  }
+
+  async function convertLead(id){
+    var cloud=window.TTTCloud,lead=data.leads.find(function(x){return x.id===id;});
+    if(!cloud?.ready||!lead)return;
+    var title=[lead.service_interest||'Opportunity',contactName(lead.contact_id)].filter(Boolean).join(' — ');
+    var result=await cloud.client.from('opportunities').insert({
+      organization_id:cloud.organizationId,lead_id:lead.id,company_id:lead.company_id||null,contact_id:lead.contact_id||null,
+      title:title,stage:'identified',priority:lead.priority||'medium',estimated_value:lead.estimated_value||null,
+      probability_pct:10,next_step:'Qualify need and scope',owner_person_id:cloud.profile?.person_id||null,
+      created_by:cloud.userId,updated_by:cloud.userId
+    }).select('*').single();
+    if(result.error)return toast('Lead conversion failed: '+result.error.message);
+    var upd=await cloud.client.from('leads').update({status:'converted',updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',lead.id);
+    if(upd.error)return toast('Opportunity created, but lead status update failed: '+upd.error.message);
+    if(cloud.audit)await cloud.audit('opportunity',result.data.id,'lead_converted',{lead_id:lead.id});
+    data.loaded=false;await load(true);toast('Lead converted to '+result.data.id);
+  }
+
+  async function updateOpportunityStage(id,stage){
+    var cloud=window.TTTCloud;if(!cloud?.ready)return;
+    var patch={stage:stage,updated_by:cloud.userId};
+    if(stage==='won')patch.probability_pct=100;
+    if(stage==='lost')patch.probability_pct=0;
+    var result=await cloud.client.from('opportunities').update(patch).eq('organization_id',cloud.organizationId).eq('id',id);
+    if(result.error)return toast('Stage update failed: '+result.error.message);
+    if(cloud.audit)await cloud.audit('opportunity',id,'opportunity_stage_changed',{stage:stage});
+    var opp=data.opportunities.find(function(x){return x.id===id;});if(opp)Object.assign(opp,patch);render();
   }
 
   async function createLead(ev){
