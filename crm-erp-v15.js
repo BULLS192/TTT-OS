@@ -3,6 +3,7 @@
   'use strict';
   var WORKBOOK_URL='https://docs.google.com/spreadsheets/d/1N67KaF8q-0FnVaYN41zI5lTVlUoj06pHNAuF1TQrJ8I/edit';
   var data={loaded:false,loading:false,companies:[],contacts:[],leads:[],opportunities:[],activities:[],quotes:[],invoices:[],vendors:[],appointments:[]};
+  var realtimeChannel=null;
   var STAGES=['identified','researching','contacted','evaluating','quoted','negotiating','won','lost'];
 
   function html(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
@@ -97,7 +98,7 @@
     var receivables=data.invoices.filter(function(x){return !['paid','void'].includes(String(x.status||'').toLowerCase());}).reduce(function(s,x){return s+Number(x.balance_due==null?(Number(x.total||0)-Number(x.amount_paid||0)):x.balance_due);},0);
     var upcoming=data.appointments.filter(function(x){return ['scheduled','confirmed'].includes(String(x.status||'').toLowerCase())&&new Date(x.starts_at)>=new Date();});
     document.getElementById('crmStats').innerHTML=[['Open leads',openLeads.length],['Pipeline',cash(pipeline)],['Open quotes',openQuotes.length],['Receivables',cash(receivables)],['Upcoming appointments',upcoming.length]].map(function(x){return '<div class="stat"><span>'+html(x[0])+'</span><strong>'+html(x[1])+'</strong></div>';}).join('');
-    renderPipeline();renderLeads();renderCompanies();renderOperations(upcoming);renderActivity();
+    renderPipeline();renderLeads();renderCompanies();renderOperations(upcoming);renderActivity();bindRowActions();subscribeRealtime();
   }
 
   function renderPipeline(){
@@ -108,7 +109,7 @@
 
   function renderLeads(){
     var rows=data.leads.slice().sort(function(a,b){return new Date(b.updated_at)-new Date(a.updated_at);}).map(function(l){return '<tr><td><strong>'+html(contactName(l.contact_id))+'</strong><br><small>'+html(l.id)+'</small></td><td>'+html(companyName(l.company_id))+'</td><td>'+html(l.service_interest||'—')+'</td><td><span class="badge">'+html(l.status)+'</span></td><td>'+html(l.priority||'—')+'</td><td>'+cash(l.estimated_value)+'</td><td>'+html(l.source||'—')+'</td><td>'+html(l.next_action||'—')+'</td></tr>';}).join('');
-    document.getElementById('crmLeads').innerHTML='<div class="panel"><div class="panel-head"><h3>Lead register</h3><span class="badge">'+data.leads.length+'</span></div><div class="table-wrap"><table><thead><tr><th>Contact</th><th>Company</th><th>Interest</th><th>Status</th><th>Priority</th><th>Value</th><th>Source</th><th>Next action</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8" class="crm-empty">No leads yet. Create the first lead above.</td></tr>')+'</tbody></table></div></div>';
+    document.getElementById('crmLeads').innerHTML='<div class="panel"><div class="panel-head"><h3>Lead register</h3><span class="badge">'+data.leads.length+'</span></div><div class="table-wrap"><table><thead><tr><th>Contact</th><th>Company</th><th>Interest</th><th>Status</th><th>Priority</th><th>Value</th><th>Source</th><th>Next action</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="9" class="crm-empty">No leads yet. Create the first lead above.</td></tr>')+'</tbody></table></div></div>';
   }
 
   function renderCompanies(){
@@ -128,6 +129,51 @@
   function renderActivity(){
     var rows=data.activities.slice().sort(function(a,b){return new Date(b.occurred_at)-new Date(a.occurred_at);}).slice(0,30).map(function(a){return '<tr><td>'+when(a.occurred_at)+'</td><td><span class="badge">'+html(a.activity_type)+'</span></td><td>'+html(a.direction||'—')+'</td><td><strong>'+html(a.subject||'—')+'</strong><br><small>'+html(a.summary||'')+'</small></td><td>'+html(contactName(a.contact_id))+'</td></tr>';}).join('');
     document.getElementById('crmActivity').innerHTML='<div class="panel"><div class="panel-head"><h3>Activity timeline</h3><span class="badge">'+data.activities.length+'</span></div><div class="table-wrap"><table><thead><tr><th>When</th><th>Type</th><th>Direction</th><th>Activity</th><th>Contact</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="crm-empty">No activity logged yet.</td></tr>')+'</tbody></table></div></div>';
+  }
+
+  function bindRowActions(){
+    document.querySelectorAll('[data-convert-lead]').forEach(function(btn){btn.onclick=function(){convertLead(btn.dataset.convertLead);};});
+    document.querySelectorAll('[data-opp-stage]').forEach(function(sel){sel.onchange=function(){updateOpportunityStage(sel.dataset.oppStage,sel.value);};});
+  }
+
+  async function convertLead(id){
+    var cloud=window.TTTCloud,lead=data.leads.find(function(x){return x.id===id;});if(!cloud?.ready||!lead)return;
+    try{
+      var title=[contactName(lead.contact_id),lead.service_interest].filter(function(x){return x&&x!=='—';}).join(' · ')||('Opportunity '+lead.id);
+      var out=await cloud.client.from('opportunities').insert({
+        organization_id:cloud.organizationId,lead_id:lead.id,company_id:lead.company_id,contact_id:lead.contact_id,
+        title:title,stage:'identified',priority:lead.priority||'medium',estimated_value:lead.estimated_value||null,
+        probability_pct:10,related_service:lead.service_interest||null,owner_person_id:cloud.profile?.person_id||null,
+        source:lead.source||'TTT-OS CRM',created_by:cloud.userId,updated_by:cloud.userId
+      }).select('*').single();
+      if(out.error)throw out.error;
+      var upd=await cloud.client.from('leads').update({status:'converted',converted_at:new Date().toISOString(),updated_by:cloud.userId})
+        .eq('organization_id',cloud.organizationId).eq('id',lead.id);
+      if(upd.error)throw upd.error;
+      await cloud.audit?.('lead',lead.id,'lead_converted',{opportunity_id:out.data.id});
+      data.loaded=false;await load(true);toast('Lead converted to '+out.data.id);
+    }catch(err){console.error(err);toast('Lead conversion failed: '+String(err.message||err));}
+  }
+
+  async function updateOpportunityStage(id,stage){
+    var cloud=window.TTTCloud;if(!cloud?.ready)return;
+    var pct={identified:10,researching:20,contacted:30,evaluating:45,quoted:60,negotiating:80,won:100,lost:0}[stage];
+    var patch={stage:stage,updated_by:cloud.userId};if(pct!=null)patch.probability_pct=pct;
+    var out=await cloud.client.from('opportunities').update(patch).eq('organization_id',cloud.organizationId).eq('id',id);
+    if(out.error){toast('Stage update failed: '+out.error.message);return;}
+    await cloud.audit?.('opportunity',id,'stage_changed',{stage:stage});
+    data.loaded=false;await load(true);
+  }
+
+  function subscribeRealtime(){
+    var cloud=window.TTTCloud;if(realtimeChannel||!cloud?.client||!cloud.organizationId)return;
+    realtimeChannel=cloud.client.channel('ttt-crm-'+cloud.organizationId);
+    ['companies','contacts','leads','opportunities','activities','quotes','invoices','vendors','appointments'].forEach(function(table){
+      realtimeChannel.on('postgres_changes',{event:'*',schema:'public',table:table,filter:'organization_id=eq.'+cloud.organizationId},function(){
+        data.loaded=false;if(document.getElementById('crm')?.classList.contains('active'))load(true);
+      });
+    });
+    realtimeChannel.subscribe();
   }
 
   async function createLead(ev){
