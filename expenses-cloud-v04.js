@@ -20,7 +20,7 @@
     catch{return {expenses:[],policies:clone(DEFAULT_POLICIES)}}
   }
   function writeLocal(state){localStorage.setItem(KEY,JSON.stringify(state));}
-  function stable(v){return JSON.stringify(v,Object.keys(v||{}).sort());}
+  function stable(v){return JSON.stringify(v);}
   function sameExpense(a,b){
     if(!a||!b)return false;
     return String(a.merchant||'')===String(b.merchant||'')
@@ -191,13 +191,15 @@
       else missing.forEach(id=>cloudIds.delete(id));
     }
 
-    const {error:settingsError}=await client.from('expense_settings').upsert({
-      organization_id:orgId,
-      policies:Object.assign({},DEFAULT_POLICIES,state.policies||{}),
-      updated_at:new Date().toISOString(),
-      updated_by:profile.user_id
-    },{onConflict:'organization_id'});
-    if(settingsError)console.warn('TTT Expenses: settings save failed',settingsError);
+    if(profile?.role==='owner_admin'){
+      const {error:settingsError}=await client.from('expense_settings').upsert({
+        organization_id:orgId,
+        policies:Object.assign({},DEFAULT_POLICIES,state.policies||{}),
+        updated_at:new Date().toISOString(),
+        updated_by:profile.user_id
+      },{onConflict:'organization_id'});
+      if(settingsError)console.warn('TTT Expenses: settings save failed',settingsError);
+    }
 
     state.expenses.forEach(e=>delete e.receiptData);
     writeLocal(state);
