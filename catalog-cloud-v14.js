@@ -44,7 +44,7 @@
       const {count,error:countError}=await client.from('products_services')
         .select('id',{count:'exact',head:true})
         .eq('organization_id',orgId)
-        .eq('metadata->>catalog_seed',SEED)
+        .contains('metadata',{catalog_seed:SEED})
         .is('archived_at',null);
       if(countError)throw countError;
       if(Number(count||0)<rows.length){
@@ -55,7 +55,7 @@
       }
       const {data:seeded,error:seedError}=await client.from('products_services')
         .select('id,ttt_sku,dealer_cost,item_type')
-        .eq('organization_id',orgId).eq('metadata->>catalog_seed',SEED).is('archived_at',null).limit(2000);
+        .eq('organization_id',orgId).contains('metadata',{catalog_seed:SEED}).is('archived_at',null).limit(2000);
       if(seedError)throw seedError;
       const {data:existing,error:invError}=await client.from('inventory_items')
         .select('product_id').eq('organization_id',orgId).eq('metadata->>catalog_seed',SEED).is('archived_at',null).limit(2000);
@@ -149,7 +149,16 @@
     window.addEventListener('beforeunload',()=>client.removeChannel(ch),{once:true});
   }
 
+  function wrapGlobalRender(){
+    const prior=window.render;
+    if(typeof prior!=='function'||prior.__tttCatalogCloudWrapped)return;
+    const wrapped=function(){const out=prior.apply(this,arguments);if(ready)setTimeout(renderCatalog,0);return out;};
+    wrapped.__tttCatalogCloudWrapped=true;
+    window.render=wrapped;
+  }
+
   async function init(){
+    wrapGlobalRender();
     let tries=0;
     while(tries++<160){
       const cloud=window.TTTCloud;
