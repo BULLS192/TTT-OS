@@ -133,7 +133,7 @@
     nav.addEventListener('click',()=>{show('people');renderPeople();});
   }
 
-  function isAdmin(){return window.TTTCloud?.isAdmin===true;}
+  function isAdmin(){return window.TTTCloud?.profile?.role==='owner_admin';}
   function activePeople(){return db.personnel.filter(p=>p.status==='Active');}
   function initials(p){return (p.displayName||'?').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();}
   function displayRole(p){return p.jobTitle||p.relationship||'Team member';}
