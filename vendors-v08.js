@@ -1,7 +1,7 @@
 // TTT OS v0.8.1 — Vendor & Supplier directory bridge
 // Supabase is the live vendor/CRM source of truth; Google Workspace is retained for document/reference workflows.
 (function(){
-  const DIRECTORY_URL='https://docs.google.com/spreadsheets/d/1crOoPQirn3TS1anibJN67lZN7CWf1uqCLEg6rxd4g5g/edit';
+  const DIRECTORY_URL='https://docs.google.com/spreadsheets/d/1N67KaF8q-0FnVaYN41zI5lTVlUoj06pHNAuF1TQrJ8I/edit';
   const RAW_CARDS_URL='https://drive.google.com/drive/folders/1K9O7TE0rDePXSaokwwfGGxnvLqL0NPcc';
   const VENDOR_ROOT_URL='https://drive.google.com/drive/folders/1QOnSrSiK-3AwPPnBPcxe6FYHVBJjsccW';
 
@@ -27,7 +27,7 @@
           <div><p class="eyebrow">SUPPLIER INTELLIGENCE</p><h2>Vendors & Sales Reps</h2></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <a class="btn secondary" href="${RAW_CARDS_URL}" target="_blank" rel="noopener">Upload business cards</a>
-            <a class="btn primary" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open vendor directory</a>
+            <a class="btn primary" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open CRM / ERP workbook</a>
           </div>
         </div>
         <div class="workflow-note"><strong>Relational operating model:</strong> Create a company once. Contacts, brands/products, pricing, documents, evaluations, opportunities and interactions link back to that company instead of repeating company data. Vendor IDs and contact names are resolved automatically in the Google Sheet.</div>
@@ -68,7 +68,7 @@
         <div class="panel">
           <div class="panel-head"><h3>Google Workspace resources</h3></div>
           <div class="table-wrap"><table><thead><tr><th>Resource</th><th>Purpose</th><th></th></tr></thead><tbody>
-            <tr><td><strong>TTT Vendor & Rep Directory</strong></td><td>Relational master for companies, contacts, brands/products, pricing, documents, evaluation, opportunities and interactions.</td><td><a class="link-btn" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open</a></td></tr>
+            <tr><td><strong>TTT Business Operations — CRM & ERP</strong></td><td>Relational master for companies, contacts, brands/products, pricing, documents, evaluation, opportunities and interactions.</td><td><a class="link-btn" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open</a></td></tr>
             <tr><td><strong>Business Cards — Raw / 2026</strong></td><td>Original business-card source images. Each contact record links back to its card.</td><td><a class="link-btn" href="${RAW_CARDS_URL}" target="_blank" rel="noopener">Open</a></td></tr>
             <tr><td><strong>Vendors & Suppliers Drive</strong></td><td>Vendor documents, catalogs, product lines, pricing sources and prospective-vendor materials.</td><td><a class="link-btn" href="${VENDOR_ROOT_URL}" target="_blank" rel="noopener">Open</a></td></tr>
           </tbody></table></div>
