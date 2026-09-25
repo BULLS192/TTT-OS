@@ -64,11 +64,11 @@ grant select,insert,update on public.expense_settings,public.expenses to authent
 
 create policy expense_settings_member_select on public.expense_settings for select to authenticated
 using (exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.organization_id=expense_settings.organization_id and p.active=true));
-create policy expense_settings_member_insert on public.expense_settings for insert to authenticated
-with check (exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.organization_id=expense_settings.organization_id and p.active=true));
-create policy expense_settings_member_update on public.expense_settings for update to authenticated
-using (exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.organization_id=expense_settings.organization_id and p.active=true))
-with check (exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.organization_id=expense_settings.organization_id and p.active=true));
+create policy expense_settings_admin_insert on public.expense_settings for insert to authenticated
+with check (private.is_ttt_admin(organization_id));
+create policy expense_settings_admin_update on public.expense_settings for update to authenticated
+using (private.is_ttt_admin(organization_id))
+with check (private.is_ttt_admin(organization_id));
 
 create policy expenses_member_select on public.expenses for select to authenticated
 using (exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.organization_id=expenses.organization_id and p.active=true));
@@ -85,7 +85,7 @@ on conflict (organization_id) do nothing;
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
 values(
   'expense-receipts','expense-receipts',false,20971520,
-  array['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf']
+  array['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf','application/octet-stream']
 )
 on conflict (id) do update set
   public=excluded.public,
@@ -144,5 +144,23 @@ using (
       and p.organization_id::text=(storage.foldername(name))[1]
   )
 );
+
+create or replace function private.preserve_expense_created_by()
+returns trigger
+language plpgsql
+set search_path=''
+as $
+begin
+  if tg_op='UPDATE' and old.created_by is not null then
+    new.created_by=old.created_by;
+  end if;
+  return new;
+end;
+$;
+revoke all on function private.preserve_expense_created_by() from public,anon,authenticated;
+
+create trigger trg_preserve_expense_created_by
+before update on public.expenses
+for each row execute function private.preserve_expense_created_by();
 
 alter publication supabase_realtime add table public.expenses;
