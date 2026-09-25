@@ -62,3 +62,25 @@ The existing 940-row BlackVue/JL catalog snapshot is reference/staging data. It 
 
 ## Coordination rule
 New CRM/ERP work should extend these shared canonical entities instead of creating parallel product, vendor, inventory, quote, purchasing, customer or job databases.
+
+
+## Google Workspace implementation v1 — 2026-09-25
+
+The existing Google workbook `TTT OS — Master Database v1` remains in service, but legacy tabs are preserved rather than treated as the new canonical schema.
+
+A new Supabase-aligned mirror layer has been added using `DB_*` tabs. These tabs use the exact Supabase column names and are intended for controlled reporting, bulk edit/import/export and Workspace workflows.
+
+Initial live mirrors have been seeded for companies, contacts, customers, vehicles, jobs, vendors, personnel, email templates and Workspace links. The Apps Script bridge performs repeatable full-table synchronization, including the larger product catalog.
+
+Workspace bridge source is version-controlled under `apps-script/` and supports:
+- Supabase -> Google Sheets full/table synchronization
+- controlled Sheets -> Supabase entity upsert
+- Gmail sends with CRM activity logging
+- Google Calendar appointment upsert
+- Google Drive entity-folder creation and link persistence
+- sync audit logging
+- backward compatibility with the current TTT-OS `syncJob` and `sendQuote` actions
+
+Secrets rule: the Supabase service-role key is allowed only in Apps Script Script Properties. It must never be stored in the workbook, TTT-OS browser code, GitHub, or a public environment variable.
+
+Cutover rule: do not delete the legacy Sheets tabs until the new bridge has been deployed, authorized and verified against live TTT-OS workflows.
