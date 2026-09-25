@@ -18,7 +18,7 @@
   [merchant,form.elements.date,form.elements.total,job].filter(Boolean).forEach(x=>x.addEventListener('input',review));
   merchant?.addEventListener('change',()=>{const a=suggest(merchant.value);if(a[0]&&type.value==='Business expense'){type.value=a[0];type.dispatchEvent(new Event('change'))}if(a[1]&&!cat.value)cat.value=a[1]});
   ['subtotal','tax','tip'].forEach(n=>form.elements[n]?.addEventListener('input',()=>{const sub=+form.elements.subtotal.value||0,tax=+form.elements.tax.value||0,tip=+form.elements.tip.value||0;if(sub)form.elements.total.value=(sub+tax+tip).toFixed(2)}));
-  form.addEventListener('submit',()=>{const st=read(KEY,{expenses:[]});setTimeout(()=>{const latest=st.expenses[st.expenses.length-1];const x=ctx(job?.value);if(latest&&x){latest.customerId=x.j.customerId;latest.vehicleId=x.j.vehicleId;latest.workOrderId=x.j.workOrderId||'';latest.jobSnapshot={jobId:x.j.id,customer:x.c?.name||'',vehicle:[x.v?.year,x.v?.make,x.v?.model].filter(Boolean).join(' '),status:x.j.status};localStorage.setItem(KEY,JSON.stringify(st))}},0)},true);
+  form.addEventListener('submit',()=>{const st=read(KEY,{expenses:[]});setTimeout(()=>{const latest=st.expenses[st.expenses.length-1];const x=ctx(job?.value);if(latest&&x){latest.customerId=x.j.customerId;latest.vehicleId=x.j.vehicleId;latest.workOrderId=x.j.workOrderId||'';latest.jobSnapshot={jobId:x.j.id,customer:x.c?.name||'',vehicle:[x.v?.year,x.v?.make,x.v?.model].filter(Boolean).join(' '),status:x.j.status};localStorage.setItem(KEY,JSON.stringify(st));window.TTTExpenseCloud?.queueFromLocal()}},0)},true);
   review();
  }
  const obs=new MutationObserver(()=>enhance());obs.observe(document.documentElement,{childList:true,subtree:true});enhance();
