@@ -2,13 +2,14 @@
   'use strict';
 
   const VERSION='0.5';
-  const SEED_VERSION=1;
+  const SEED_VERSION=2;
   const RELATIONSHIPS=['Owner','Partner','Employee','Contractor','Advisor'];
   const DEPARTMENTS=['Executive','Operations','Installation','Diagnostics','Sales','Administration','Marketing','Finance','Other'];
   const STATUSES=['Active','Onboarding','Leave','Inactive'];
   const ROLE_OPTIONS=[
-    ['owner_admin','Owner / Administrator'],
-    ['partner_admin','Partner / Administrator'],
+    ['owner_admin','Administrator'],
+    ['partner','Partner'],
+    ['partner_admin','Partner / Administrator (legacy)'],
     ['manager','Manager'],
     ['technician','Technician'],
     ['service_advisor','Service Advisor'],
@@ -54,19 +55,22 @@
     if(Number(db.personnelSeedVersion||0)<SEED_VERSION){
       let derek=db.personnel.find(p=>p.userId==='usr_derek'||String(p.displayName||'').toLowerCase()==='derek thompson');
       if(!derek){
-        derek={id:'per_derek',userId:'usr_derek',displayName:'Derek Thompson',firstName:'Derek',lastName:'Thompson',relationship:'Owner',jobTitle:'Owner / Lead Technician',department:'Operations',status:'Active',email:'',phone:'',schedulingEligible:true,roles:['owner_admin','manager','technician'],skills:[{name:'General technician',level:5},{name:'Tint installer',level:5},{name:'Audio technician',level:5},{name:'Electronics',level:5},{name:'Film installer',level:4},{name:'Vehicle diagnostics',level:5},{name:'12V wiring',level:5}],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:50},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_derek'};
+        derek={id:'per_derek',userId:'usr_derek',displayName:'Derek Thompson',firstName:'Derek',lastName:'Thompson',relationship:'Owner',jobTitle:'Owner / Lead Technician',department:'Operations',status:'Active',email:'',phone:'',schedulingEligible:true,roles:['partner','manager','technician'],skills:[{name:'General technician',level:5},{name:'Tint installer',level:5},{name:'Audio technician',level:5},{name:'Electronics',level:5},{name:'Film installer',level:4},{name:'Vehicle diagnostics',level:5},{name:'12V wiring',level:5}],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:50},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_derek'};
         db.personnel.push(derek);
       }
 
       if(!db.personnel.some(p=>String(p.displayName||'').toLowerCase()==='kevin yap')){
         const existingUser=db.users.find(u=>String(u.name||'').toLowerCase()==='kevin yap');
-        db.personnel.push({id:'per_kevin',userId:existingUser?.id||'usr_kevin',displayName:'Kevin Yap',firstName:'Kevin',lastName:'Yap',relationship:'Partner',jobTitle:'Partner',department:'Executive',status:'Active',email:'',phone:'',schedulingEligible:false,roles:['partner_admin'],skills:[{name:'Business development',level:5},{name:'Sales',level:5},{name:'Project management',level:4}],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:40},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_kevin'});
+        db.personnel.push({id:'per_kevin',userId:existingUser?.id||'usr_kevin',displayName:'Kevin Yap',firstName:'Kevin',lastName:'Yap',relationship:'Partner',jobTitle:'Partner',department:'Executive',status:'Active',email:'',phone:'',schedulingEligible:false,roles:['owner_admin'],skills:[{name:'Business development',level:5},{name:'Sales',level:5},{name:'Project management',level:4}],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:40},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_kevin'});
       }
 
       if(!db.personnel.some(p=>String(p.displayName||'').toLowerCase()==='amjad kharoof')){
         const baseDerek=db.personnel.find(p=>String(p.displayName||'').toLowerCase()==='derek thompson');
-        db.personnel.push({id:'per_amjad',userId:'usr_amjad',displayName:'Amjad Kharoof',firstName:'Amjad',lastName:'Kharoof',relationship:'Partner',jobTitle:'Partner / Lead Technician',department:baseDerek?.department||'Operations',status:'Active',email:'',phone:'',schedulingEligible:true,roles:clone(baseDerek?.roles||['owner_admin','manager','technician']),skills:clone(baseDerek?.skills||[]),certifications:[],availability:clone(baseDerek?.availability||{start:'08:00',end:'18:00',maxWeeklyHours:50}),startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_amjad'});
+        db.personnel.push({id:'per_amjad',userId:'usr_amjad',displayName:'Amjad Kharoof',firstName:'Amjad',lastName:'Kharoof',relationship:'Partner',jobTitle:'Partner / Lead Technician',department:baseDerek?.department||'Operations',status:'Active',email:'',phone:'',schedulingEligible:true,roles:['partner','manager','technician'],skills:clone(baseDerek?.skills||[]),certifications:[],availability:clone(baseDerek?.availability||{start:'08:00',end:'18:00',maxWeeklyHours:50}),startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:'tech_amjad'});
       }
+      const canonicalDerek=db.personnel.find(p=>String(p.displayName||'').toLowerCase()==='derek thompson');if(canonicalDerek)canonicalDerek.roles=['partner','manager','technician'];
+      const canonicalKevin=db.personnel.find(p=>String(p.displayName||'').toLowerCase()==='kevin yap');if(canonicalKevin)canonicalKevin.roles=['owner_admin'];
+      const canonicalAmjad=db.personnel.find(p=>String(p.displayName||'').toLowerCase()==='amjad kharoof');if(canonicalAmjad)canonicalAmjad.roles=['partner','manager','technician'];
       db.personnelSeedVersion=SEED_VERSION;
     }
 
@@ -129,6 +133,7 @@
     nav.addEventListener('click',()=>{show('people');renderPeople();});
   }
 
+  function isAdmin(){return window.TTTCloud?.isAdmin===true;}
   function activePeople(){return db.personnel.filter(p=>p.status==='Active');}
   function initials(p){return (p.displayName||'?').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();}
   function displayRole(p){return p.jobTitle||p.relationship||'Team member';}
@@ -140,7 +145,7 @@
     const root=document.getElementById('people');if(!root)return;
     dirty=false;
     root.innerHTML=`
-      <div class="section-head people-head"><div><p class="eyebrow">TEAM & CAPABILITY</p><h2>People</h2><p class="muted">Personnel, roles, skills, certifications and scheduling eligibility.</p></div><button class="btn primary" id="addPersonBtn">+ Add person</button></div>
+      <div class="section-head people-head"><div><p class="eyebrow">TEAM & CAPABILITY</p><h2>People</h2><p class="muted">Personnel, roles, skills, certifications and scheduling eligibility.</p></div>${isAdmin()?'<button class="btn primary" id="addPersonBtn">+ Add person</button>':''}</div>
       <div class="people-stats" id="peopleStats"></div>
       <div class="people-toolbar panel"><div class="status-filters" id="peopleFilters">${['All',...STATUSES].map(x=>`<button class="filter ${peopleFilter===x?'active':''}" data-people-filter="${e(x)}">${e(x)}</button>`).join('')}</div><input id="peopleSearch" class="people-search" placeholder="Search people, roles or skills…" value="${e(searchTerm)}"></div>
       <div class="people-layout"><article class="panel people-directory"><div class="panel-head"><div><h3>Directory</h3><p class="muted" id="peopleCount"></p></div><button class="link-btn" id="skillsMatrixBtn">Skills matrix</button></div><div id="peopleList"></div></article><aside id="personPanel"></aside></div>
@@ -177,12 +182,12 @@
           <label>Start date<input type="date" name="startDate" value="${e(p.startDate||'')}"></label>
           <label>Email<input type="email" name="email" value="${e(p.email||'')}"></label><label>Phone<input name="phone" value="${e(p.phone||'')}"></label>
         </div>
-        <div class="person-subsection"><div class="subsection-title"><div><strong>System roles</strong><span>Access model, independent of job title.</span></div></div><div class="role-checks">${ROLE_OPTIONS.map(([id,label])=>`<label><input type="checkbox" name="roles" value="${e(id)}" ${(p.roles||[]).includes(id)?'checked':''}> ${e(label)}</label>`).join('')}</div></div>
+        <div class="person-subsection"><div class="subsection-title"><div><strong>System roles</strong><span>${isAdmin()?'Access model, independent of job title.':'Only the TTT OS administrator can change access roles.'}</span></div></div><div class="role-checks">${ROLE_OPTIONS.map(([id,label])=>`<label><input type="checkbox" name="roles" value="${e(id)}" ${(p.roles||[]).includes(id)?'checked':''} ${isAdmin()?'':'disabled'}> ${e(label)}</label>`).join('')}</div></div>
         <div class="person-subsection"><div class="subsection-title"><div><strong>Operations & scheduling</strong><span>Controls whether this person can be assigned shop operations.</span></div></div><label class="schedule-toggle"><input type="checkbox" name="schedulingEligible" ${p.schedulingEligible?'checked':''}><span><strong>Scheduling eligible</strong><small>Only skills at Working (3) or above become scheduling capabilities.</small></span></label><div class="person-form-grid compact-grid"><label>Standard start<input type="time" name="workStart" value="${e(p.availability?.start||'08:00')}"></label><label>Standard end<input type="time" name="workEnd" value="${e(p.availability?.end||'18:00')}"></label><label>Max weekly hours<input type="number" min="0" max="100" name="maxWeeklyHours" value="${e(p.availability?.maxWeeklyHours??40)}"></label></div></div>
         <div class="person-subsection"><div class="subsection-title"><div><strong>Skills</strong><span>Capability matrix used by Operations.</span></div><button type="button" class="btn secondary compact" id="addCustomSkillBtn">+ Custom skill</button></div><div class="skill-editor" id="skillEditor">${skillEditorHtml(p)}</div></div>
         <div class="person-subsection"><div class="subsection-title"><div><strong>Certifications & licenses</strong><span>Track expirations before work is assigned.</span></div><button type="button" class="btn secondary compact" id="addCertBtn">+ Add</button></div><div id="certEditor">${certEditorHtml(p)}</div></div>
         <label class="person-notes">Notes<textarea name="notes" placeholder="Responsibilities, onboarding notes, operating restrictions, etc.">${e(p.notes||'')}</textarea></label>
-        <div class="person-form-actions"><button type="button" class="btn secondary person-delete-btn" id="deletePersonBtn">Delete person</button><span class="form-spacer"></span><button type="button" class="btn secondary" id="closePersonBtn">Close</button><button type="submit" class="btn primary">Save profile</button></div>
+        <div class="person-form-actions">${isAdmin()?'<button type="button" class="btn secondary person-delete-btn" id="deletePersonBtn">Delete person</button>':''}<span class="form-spacer"></span><button type="button" class="btn secondary" id="closePersonBtn">Close</button><button type="submit" class="btn primary">Save profile</button></div>
       </form></article>`;
     bindEditorEvents();
   }
@@ -220,7 +225,7 @@
 
   function selectPerson(id){if(dirty&&!window.confirm('Discard unsaved changes to this profile?'))return;selectedPersonId=id;dirty=false;renderDirectory();renderEditor();}
   function closeEditor(){if(dirty&&!window.confirm('Discard unsaved changes?'))return;selectedPersonId=null;dirty=false;renderDirectory();renderEditor();}
-  function addPerson(){if(dirty&&!window.confirm('Discard unsaved changes and create a new person?'))return;const p={id:uid('per'),userId:uid('usr'),displayName:'New Person',firstName:'',lastName:'',relationship:'Employee',jobTitle:'',department:'Operations',status:'Onboarding',email:'',phone:'',schedulingEligible:false,roles:[],skills:[],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:40},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:''};db.personnel.push(p);save();selectedPersonId=p.id;dirty=false;renderStats();renderDirectory();renderEditor();requestAnimationFrame(()=>document.querySelector('#personForm input[name="firstName"]')?.focus());}
+  function addPerson(){if(!isAdmin()){if(typeof toast==='function')toast('Administrator access required');return;}if(dirty&&!window.confirm('Discard unsaved changes and create a new person?'))return;const p={id:uid('per'),userId:uid('usr'),displayName:'New Person',firstName:'',lastName:'',relationship:'Employee',jobTitle:'',department:'Operations',status:'Onboarding',email:'',phone:'',schedulingEligible:false,roles:[],skills:[],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:40},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:''};db.personnel.push(p);save();selectedPersonId=p.id;dirty=false;renderStats();renderDirectory();renderEditor();requestAnimationFrame(()=>document.querySelector('#personForm input[name="firstName"]')?.focus());}
 
   function addCustomSkill(){const name=window.prompt('Custom skill name');if(!name?.trim())return;const n=name.trim();const editor=document.getElementById('skillEditor');if(!editor)return;if([...editor.querySelectorAll('[data-skill-enabled]')].some(x=>String(x.dataset.skillEnabled).toLowerCase()===n.toLowerCase())){window.alert('That skill is already listed.');return;}const row=document.createElement('div');row.className='skill-row';row.innerHTML=`<label><input type="checkbox" data-skill-enabled="${e(n)}" checked><span>${e(n)}</span></label><select data-skill-level="${e(n)}">${Object.entries(LEVELS).map(([v,l])=>`<option value="${v}" ${v==='3'?'selected':''}>${v} · ${e(l)}</option>`).join('')}</select>`;editor.appendChild(row);const cb=row.querySelector('[data-skill-enabled]'),sel=row.querySelector('select');cb.addEventListener('change',()=>{sel.disabled=!cb.checked;dirty=true;});row.querySelectorAll('select,input').forEach(x=>{x.addEventListener('change',()=>dirty=true);x.addEventListener('input',()=>dirty=true);});dirty=true;}
   function addCertificationRow(){const editor=document.getElementById('certEditor');if(!editor)return;editor.querySelector('.mini-empty')?.remove();const wrap=document.createElement('div');wrap.innerHTML=certRowHtml({id:uid('cert'),name:'',issuer:'',expires:''});const row=wrap.firstElementChild;editor.appendChild(row);bindCertRemoveButtons();row.querySelector('[data-cert-name]')?.focus();dirty=true;}
@@ -229,7 +234,7 @@
     const form=document.getElementById('personForm');if(!form||form.dataset.personId!==p.id)return false;
     const fd=new FormData(form);
     p.firstName=String(fd.get('firstName')||'').trim();p.lastName=String(fd.get('lastName')||'').trim();p.displayName=[p.firstName,p.lastName].filter(Boolean).join(' ')||'Unnamed Person';
-    p.relationship=String(fd.get('relationship')||'Employee');p.status=String(fd.get('status')||'Onboarding');p.jobTitle=String(fd.get('jobTitle')||'').trim();p.department=String(fd.get('department')||'Operations');p.startDate=String(fd.get('startDate')||'');p.email=String(fd.get('email')||'').trim();p.phone=String(fd.get('phone')||'').trim();p.roles=fd.getAll('roles').map(String);p.schedulingEligible=fd.get('schedulingEligible')==='on';p.availability={start:String(fd.get('workStart')||'08:00'),end:String(fd.get('workEnd')||'18:00'),maxWeeklyHours:Number(fd.get('maxWeeklyHours')||40)};p.notes=String(fd.get('notes')||'').trim();p.updatedAt=now();
+    p.relationship=String(fd.get('relationship')||'Employee');p.status=String(fd.get('status')||'Onboarding');p.jobTitle=String(fd.get('jobTitle')||'').trim();p.department=String(fd.get('department')||'Operations');p.startDate=String(fd.get('startDate')||'');p.email=String(fd.get('email')||'').trim();p.phone=String(fd.get('phone')||'').trim();if(isAdmin())p.roles=fd.getAll('roles').map(String);p.schedulingEligible=fd.get('schedulingEligible')==='on';p.availability={start:String(fd.get('workStart')||'08:00'),end:String(fd.get('workEnd')||'18:00'),maxWeeklyHours:Number(fd.get('maxWeeklyHours')||40)};p.notes=String(fd.get('notes')||'').trim();p.updatedAt=now();
     p.skills=[];form.querySelectorAll('[data-skill-enabled]').forEach(cb=>{if(!cb.checked)return;const sel=form.querySelector(`[data-skill-level="${cssEscape(cb.dataset.skillEnabled)}"]`);p.skills.push({name:cb.dataset.skillEnabled,level:Number(sel?.value||3)});});
     p.certifications=[...form.querySelectorAll('[data-cert-id]')].map(row=>({id:row.dataset.certId,name:row.querySelector('[data-cert-name]')?.value.trim()||'',issuer:row.querySelector('[data-cert-issuer]')?.value.trim()||'',expires:row.querySelector('[data-cert-expires]')?.value||''})).filter(c=>c.name||c.issuer||c.expires);
     let u=db.users.find(x=>x.id===p.userId);if(!u){u={id:p.userId,name:p.displayName,email:p.email,role:p.roles[0]||'read_only',roles:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};db.users.push(u);}else{u.name=p.displayName;u.email=p.email;u.role=p.roles[0]||'read_only';u.roles=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;}
@@ -240,6 +245,7 @@
 
   function referencesPerson(record,p){try{const text=JSON.stringify(record);return [p.id,p.userId,p.schedulingId].filter(Boolean).some(ref=>text.includes(String(ref)));}catch{return false;}}
   function deleteSelectedPerson(){
+    if(!isAdmin()){if(typeof toast==='function')toast('Administrator access required');return;}
     const p=db.personnel.find(x=>x.id===selectedPersonId);if(!p)return;const linked=Array.isArray(db.jobs)?db.jobs.filter(j=>referencesPerson(j,p)).length:0;const name=p.displayName||'this person';const warning=linked?`${name} is referenced by ${linked} job record${linked===1?'':'s'}. Delete the personnel profile? Historical references will be preserved and the system identity disabled.`:`Delete ${name}? This removes the personnel profile and its unused system/scheduling identity. This cannot be undone.`;if(!window.confirm(warning))return;
     db.personnel=db.personnel.filter(x=>x.id!==p.id);
     const user=db.users.find(u=>u.id===p.userId||u.personId===p.id);if(linked&&user){user.active=false;user.personId=null;user.deletedPersonnelProfile=true;}else db.users=db.users.filter(u=>u.id!==p.userId&&u.personId!==p.id);
