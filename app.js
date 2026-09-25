@@ -27,7 +27,8 @@
   document.write('<script src="/cloud-sync.js?v='+v+'"></'+'script>');
   document.write('<script src="/core-relational-v05.js?v='+v+'"></'+'script>');
   document.write('<script src="/media-cloud-v06.js?v='+v+'"></'+'script>');
-  document.write('<script src="/operator-ui.js?v='+v+'"></'+'script>');\n  document.write('<script src="/crm-erp-v13.js?v='+v+'"></'+'script>');
+  document.write('<script src="/operator-ui.js?v='+v+'"></'+'script>');
+  document.write('<script src="/crm-erp-v13.js?v='+v+'"></'+'script>');
   document.write('<script src="/vendors-v08.js?v='+v+'"></'+'script>');
   document.write('<script src="/scheduling-core-v09.js?v='+v+'"></'+'script>');
   document.write('<script src="/scheduling-v09.js?v='+v+'"></'+'script>');
