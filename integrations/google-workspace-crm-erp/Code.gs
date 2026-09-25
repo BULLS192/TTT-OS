@@ -1,7 +1,7 @@
 /**
  * TTT CRM/ERP Google Workspace Bridge
  * Workbook: TTT Business Operations — CRM & ERP
- * Supabase is canonical. No service-role/secret key is used in this client script.
+ * Supabase is canonical. The script uses the current Google OAuth identity; no TTT password or Supabase secret key is stored here.
  */
 const TTT_CRM = {
   WORKBOOK_ID: '1N67KaF8q-0FnVaYN41zI5lTVlUoj06pHNAuF1TQrJ8I',
@@ -36,7 +36,7 @@ const TTT_CRM = {
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('TTT Workspace')
-    .addItem('Connect to TTT-OS','showTTTConnectDialog')
+    .addItem('Verify TTT access','verifyTTTWorkspaceAccess')
     .addSeparator()
     .addItem('Pull all from TTT-OS','pullTTTAll')
     .addItem('Pull active sheet','pullTTTActiveSheet')
@@ -48,36 +48,17 @@ function onOpen() {
     .addItem('Create Drive folder','createTTTDriveFolder')
     .addSeparator()
     .addItem('Install hourly pull trigger','installTTTHourlyPull')
-    .addItem('Disconnect','disconnectTTT')
     .addToUi();
 }
 
-function showTTTConnectDialog() {
-  SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutputFromFile('Auth').setWidth(420).setHeight(360),
-    'Connect to TTT-OS'
+function verifyTTTWorkspaceAccess() {
+  const result = tttEdge_({action:'profile'});
+  const p = result.profile || {};
+  SpreadsheetApp.getUi().alert(
+    'TTT access verified',
+    (p.display_name || p.email || 'User') + (p.role ? ' — ' + p.role : ''),
+    SpreadsheetApp.getUi().ButtonSet.OK
   );
-}
-
-function connectTTT(email,password) {
-  const settings = tttSettings_();
-  const key = tttPublishableKey_();
-  const res = UrlFetchApp.fetch(settings.supabase_url + '/auth/v1/token?grant_type=password',{
-    method:'post', contentType:'application/json', headers:{apikey:key},
-    payload:JSON.stringify({email:String(email||'').trim(),password:String(password||'')}),
-    muteHttpExceptions:true
-  });
-  const body = tttJson_(res.getContentText());
-  if(res.getResponseCode()>=300 || !body || !body.access_token)
-    throw new Error((body&&(body.error_description||body.msg||body.message))||'TTT-OS sign-in failed.');
-  tttSaveSession_(body);
-  const profile = tttProfile_();
-  return {name:profile.display_name||email,role:profile.role||'',organization_id:profile.organization_id};
-}
-
-function disconnectTTT() {
-  PropertiesService.getUserProperties().deleteAllProperties();
-  tttToast_('TTT-OS session removed for your Google account.');
 }
 
 function pullTTTAll() {
@@ -108,12 +89,13 @@ function pullTTTSheet_(name){
   const cfg=TTT_CRM.SHEETS[name]; if(!cfg)return 0;
   const sheet=tttWorkbook_().getSheetByName(name);
   const headers=tttHeaders_(sheet);
-  const org=tttSettings_().organization_id;
-  const rows=tttApi_('/rest/v1/'+cfg[0]+'?organization_id=eq.'+encodeURIComponent(org)+'&archived_at=is.null&select=*',{method:'get'})||[];
+  const response=tttEdge_({action:'pull',table:cfg[0]});
+  const rows=response.data||[];
   const bodyRows=Math.max(1,sheet.getMaxRows()-1);
   sheet.getRange(2,1,bodyRows,Math.max(1,sheet.getLastColumn())).clearContent();
   if(rows.length){
-    sheet.getRange(2,1,rows.length,headers.length).setValues(rows.map(r=>headers.map(h=>h==='_sync_status'?'Synced':tttCell_(r[h]))));
+    sheet.getRange(2,1,rows.length,headers.length)
+      .setValues(rows.map(r=>headers.map(h=>h==='_sync_status'?'Synced':tttCell_(r[h]))));
   }
   return rows.length;
 }
@@ -131,25 +113,19 @@ function pushTTTActiveSheet(){
 }
 
 function pushTTTRow_(sheet,rowNum){
-  const cfg=TTT_CRM.SHEETS[sheet.getName()], table=cfg[0], pk=cfg[1], org=tttSettings_().organization_id;
-  const headers=tttHeaders_(sheet), vals=sheet.getRange(rowNum,1,1,headers.length).getValues()[0], row={};
-  headers.forEach((h,i)=>row[h]=vals[i]);
-  let id=String(row[pk]||'').trim();
-  if(!id && pk==='id'){
-    id=tttNewId_(table); row[pk]=id; sheet.getRange(rowNum,headers.indexOf(pk)+1).setValue(id);
-  }
-  if(!id)throw new Error(pk+' is required.');
-  let payload=tttPayload_(row); payload.organization_id=org;
-  if(TTT_CRM.CORE.has(table)) payload=tttCorePayload_(table,id,payload);
-  const q='?organization_id=eq.'+encodeURIComponent(org)+'&'+pk+'=eq.'+encodeURIComponent(id);
-  const exists=tttApi_('/rest/v1/'+table+q+'&select='+pk,{method:'get'})||[];
-  const result=exists.length
-    ? tttApi_('/rest/v1/'+table+q,{method:'patch',payload,prefer:'return=representation'})
-    : tttApi_('/rest/v1/'+table,{method:'post',payload,prefer:'return=representation'});
-  const returned=Array.isArray(result)?result[0]:result||{};
-  ['id','company_id','created_at','updated_at'].forEach(k=>{if(returned[k]!==undefined&&headers.includes(k))tttSet_(sheet,rowNum,k,tttCell_(returned[k]));});
+  const cfg=TTT_CRM.SHEETS[sheet.getName()];
+  const headers=tttHeaders_(sheet);
+  const vals=sheet.getRange(rowNum,1,1,headers.length).getValues()[0];
+  const row={};headers.forEach((h,i)=>row[h]=vals[i]);
+  const payload=tttPayload_(row);
+  const response=tttEdge_({action:'upsert',table:cfg[0],record:payload});
+  const returned=response.data||{};
+  const id=String(returned[cfg[1]]||payload[cfg[1]]||'');
+  ['id','company_id','created_at','updated_at'].forEach(k=>{
+    if(returned[k]!==undefined&&headers.includes(k))tttSet_(sheet,rowNum,k,tttCell_(returned[k]));
+  });
   if(headers.includes('_sync_status'))tttSet_(sheet,rowNum,'_sync_status','Synced');
-  return {action:exists.length?'Updated':'Created',id};
+  return {action:response.action||'saved',id:id};
 }
 
 function tttPayload_(row){
@@ -166,30 +142,6 @@ function tttPayload_(row){
     out[k]=v;
   });
   return out;
-}
-
-function tttCorePayload_(table,id,payload){
-  const org=tttSettings_().organization_id;
-  const current=tttApi_('/rest/v1/'+table+'?organization_id=eq.'+encodeURIComponent(org)+'&id=eq.'+encodeURIComponent(id)+'&select=source_json',{method:'get'})||[];
-  const src=current[0]&&current[0].source_json?current[0].source_json:{}; src.id=id;
-  if(table==='customers')Object.assign(src,{
-    firstName:payload.first_name||'',middleName:payload.middle_name||'',lastName:payload.last_name||'',
-    name:payload.display_name||[payload.first_name,payload.middle_name,payload.last_name].filter(Boolean).join(' '),
-    phone:payload.phone||'',email:payload.email||'',address1:payload.address1||'',address2:payload.address2||'',
-    city:payload.city||'',state:payload.state||'',postalCode:payload.postal_code||'',country:payload.country||'',notes:payload.notes||''
-  });
-  if(table==='vehicles')Object.assign(src,{
-    customerId:payload.customer_id||'',vin:payload.vin||'',year:payload.year||'',make:payload.make||'',
-    model:payload.model||'',trim:payload.trim||'',color:payload.color||'',wrap:payload.exterior_finish||'',
-    type:payload.vehicle_type||'',plate:payload.plate||''
-  });
-  if(table==='jobs')Object.assign(src,{
-    estimateId:payload.estimate_id||'',workOrderId:payload.work_order_id||'',customerId:payload.customer_id||'',
-    vehicleId:payload.vehicle_id||'',status:payload.status||'',appointment:payload.appointment_local||'',
-    partsStatus:payload.parts_status||'',duration:payload.duration||'',requestNotes:payload.request_notes||'',
-    estimateTotal:payload.estimate_total==null?0:payload.estimate_total
-  });
-  payload.source_json=src; return payload;
 }
 
 function sendTTTTemplatedEmail(){
@@ -250,37 +202,34 @@ function tttActivityRefs_(sheetName,row){
   const out={}; const direct={Companies:'company_id',Contacts:'contact_id',Leads:'lead_id',Opportunities:'opportunity_id',Customers:'customer_id',Jobs:'job_id'};
   if(direct[sheetName]&&row.id)out[direct[sheetName]]=row.id;
   ['company_id','contact_id','lead_id','opportunity_id','customer_id','job_id'].forEach(k=>{if(row[k])out[k]=row[k];});
-  try{out.owner_person_id=tttProfile_().person_id||null;}catch(e){}
   return out;
 }
-function tttInsertActivity_(obj){return tttApi_('/rest/v1/activities',{method:'post',payload:Object.assign({organization_id:tttSettings_().organization_id},obj),prefer:'return=representation'});}
-function tttSyncLog_(source,direction,type,id,status,message,count){try{tttApi_('/rest/v1/workspace_sync_log',{method:'post',payload:{organization_id:tttSettings_().organization_id,sync_source:source,sync_direction:direction,entity_type:type,entity_id:id,status,message,row_count:Number(count||0),completed_at:new Date().toISOString()},prefer:'return=minimal'});}catch(e){}}
+function tttInsertActivity_(obj){
+  return tttEdge_({action:'upsert',table:'activities',record:obj});
+}
+function tttSyncLog_(source,direction,type,id,status,message,count){
+  try{
+    tttEdge_({
+      action:'sync_log',sync_source:source,sync_direction:direction,
+      entity_type:type,entity_id:id,status:status,message:message,row_count:Number(count||0)
+    });
+  }catch(e){}
+}
 
-function tttApi_(path,opt){
-  opt=opt||{}; let token=tttAccessToken_(), res=tttFetch_(path,opt,token);
-  if(res.getResponseCode()===401){token=tttRefresh_();res=tttFetch_(path,opt,token);}
-  if(res.getResponseCode()>=300)throw new Error('TTT-OS API '+res.getResponseCode()+': '+res.getContentText());
-  return res.getContentText()?tttJson_(res.getContentText()):null;
+function tttEdge_(payload){
+  const url=String(tttSettings_().supabase_url||'').replace(/\\\/$/,'')+'/functions/v1/workspace-api';
+  const res=UrlFetchApp.fetch(url,{
+    method:'post',
+    contentType:'application/json',
+    headers:{'x-google-access-token':ScriptApp.getOAuthToken()},
+    payload:JSON.stringify(payload||{}),
+    muteHttpExceptions:true
+  });
+  const body=tttJson_(res.getContentText())||{};
+  if(res.getResponseCode()>=300||body.ok===false)
+    throw new Error(body.error||('TTT workspace API error '+res.getResponseCode()));
+  return body;
 }
-function tttFetch_(path,opt,token){
-  const params={method:opt.method||'get',headers:{apikey:tttPublishableKey_(),Authorization:'Bearer '+token,Prefer:opt.prefer||'return=representation'},muteHttpExceptions:true};
-  if(opt.payload!==undefined){params.contentType='application/json';params.payload=JSON.stringify(opt.payload);}
-  return UrlFetchApp.fetch(tttSettings_().supabase_url+path,params);
-}
-function tttAccessToken_(){
-  const p=PropertiesService.getUserProperties(), token=p.getProperty('TTT_ACCESS_TOKEN'), exp=Number(p.getProperty('TTT_EXPIRES_AT')||0);
-  if(!token)throw new Error('Connect to TTT-OS first.');
-  return Date.now()/1000>exp-60?tttRefresh_():token;
-}
-function tttRefresh_(){
-  const p=PropertiesService.getUserProperties(), refresh=p.getProperty('TTT_REFRESH_TOKEN'); if(!refresh)throw new Error('Connect to TTT-OS again.');
-  const res=UrlFetchApp.fetch(tttSettings_().supabase_url+'/auth/v1/token?grant_type=refresh_token',{method:'post',contentType:'application/json',headers:{apikey:tttPublishableKey_()},payload:JSON.stringify({refresh_token:refresh}),muteHttpExceptions:true});
-  const body=tttJson_(res.getContentText()); if(res.getResponseCode()>=300||!body||!body.access_token)throw new Error('TTT-OS session refresh failed.');
-  tttSaveSession_(body);return body.access_token;
-}
-function tttSaveSession_(b){const p=PropertiesService.getUserProperties();p.setProperty('TTT_ACCESS_TOKEN',b.access_token);p.setProperty('TTT_REFRESH_TOKEN',b.refresh_token);p.setProperty('TTT_EXPIRES_AT',String(Math.floor(Date.now()/1000)+Number(b.expires_in||3600)));if(b.user&&b.user.id)p.setProperty('TTT_USER_ID',b.user.id);}
-function tttProfile_(){const id=PropertiesService.getUserProperties().getProperty('TTT_USER_ID');if(!id)throw new Error('Connect first.');const rows=tttApi_('/rest/v1/profiles?user_id=eq.'+encodeURIComponent(id)+'&select=user_id,organization_id,person_id,display_name,email,role,roles,active',{method:'get'});if(!rows||!rows.length)throw new Error('TTT profile not found.');return rows[0];}
-function tttPublishableKey_(){const k=PropertiesService.getScriptProperties().getProperty('SUPABASE_PUBLISHABLE_KEY');if(!k)throw new Error('SUPABASE_PUBLISHABLE_KEY is missing from Script Properties.');return k;}
 
 function tttWorkbook_(){return SpreadsheetApp.openById(TTT_CRM.WORKBOOK_ID);}
 function tttSettings_(){const s=tttWorkbook_().getSheetByName('Settings'), vals=s.getRange(2,1,Math.max(0,s.getLastRow()-1),3).getValues(), out={};vals.forEach(r=>{if(r[0])out[String(r[0])]=r[1];});return out;}
