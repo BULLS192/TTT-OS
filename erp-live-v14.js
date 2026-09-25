@@ -209,11 +209,15 @@
   }
   async function saveInventory(e){
     e.preventDefault();const f=e.currentTarget,fd=new FormData(f),pid=String(fd.get('product_id')),iid=String(fd.get('inventory_id')||'');
-    const p=state.products.find(x=>x.id===pid),row={organization_id:orgId,product_id:pid,sku:p?.ttt_sku||null,location:String(fd.get('location')||'Main Shop'),quantity_on_hand:num(fd.get('quantity_on_hand'))||0,quantity_reserved:num(fd.get('quantity_reserved'))||0,average_cost:num(fd.get('average_cost')),reorder_point:num(fd.get('reorder_point')),reorder_quantity:num(fd.get('reorder_quantity')),notes:String(fd.get('notes')||'').trim()||null,last_counted_at:new Date().toISOString(),updated_by:window.TTTCloud?.userId||null};
-    const result=iid?await client.from('inventory_items').update(row).eq('organization_id',orgId).eq('id',iid).select('*').single():await client.from('inventory_items').insert({...row,created_by:window.TTTCloud?.userId||null}).select('*').single();
+    const row={product_id:pid,location:String(fd.get('location')||'Main Shop'),quantity_on_hand:num(fd.get('quantity_on_hand'))||0,quantity_reserved:num(fd.get('quantity_reserved'))||0,average_cost:num(fd.get('average_cost')),reorder_point:num(fd.get('reorder_point')),reorder_quantity:num(fd.get('reorder_quantity')),notes:String(fd.get('notes')||'').trim()||null};
+    const result=await client.rpc('adjust_inventory_item',{
+      p_organization_id:orgId,p_product_id:pid,p_inventory_item_id:iid||null,p_location:row.location,
+      p_quantity_on_hand:row.quantity_on_hand,p_quantity_reserved:row.quantity_reserved,
+      p_average_cost:row.average_cost,p_reorder_point:row.reorder_point,p_reorder_quantity:row.reorder_quantity,p_notes:row.notes
+    });
     if(result.error)return toast('Inventory save failed: '+result.error.message);
-    await audit('inventory',result.data.id,'inventory_adjusted',{product_id:pid,quantity_on_hand:row.quantity_on_hand,quantity_reserved:row.quantity_reserved});
-    document.getElementById('erpInventoryDialog').close();await load(true);window.TTTCatalogCloud?.reload?.();
+    await audit('inventory',result.data?.inventory_item_id||iid||pid,'inventory_adjusted',{product_id:pid,quantity_on_hand:row.quantity_on_hand,quantity_reserved:row.quantity_reserved,quantity_delta:result.data?.quantity_delta||0});
+    document.getElementById('erpInventoryDialog').close();await load(true);window.TTTProductMaster?.reload?.();
   }
 
   function openVendor(companyId){
