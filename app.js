@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260925-erp-product-master-v14';
+  const v='20260925-crm-erp-live-v14';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -28,6 +28,7 @@
   document.write('<script src="/core-relational-v05.js?v='+v+'"></'+'script>');
   document.write('<script src="/media-cloud-v06.js?v='+v+'"></'+'script>');
   document.write('<script src="/operator-ui.js?v='+v+'"></'+'script>');
+  document.write('<script src="/crm-erp-v13.js?v='+v+'"></'+'script>');
   document.write('<script src="/vendors-v08.js?v='+v+'"></'+'script>');
   document.write('<script src="/scheduling-core-v09.js?v='+v+'"></'+'script>');
   document.write('<script src="/scheduling-v09.js?v='+v+'"></'+'script>');
@@ -40,5 +41,7 @@
   document.write('<script src="/expenses-v03.js?v='+v+'"></'+'script>');
   document.write('<script src="/personnel-v05.js?v='+v+'"></'+'script>');
   document.write('<script src="/product-catalog-v12.js?v='+v+'"></'+'script>');
+  document.write('<script src="/catalog-cloud-v14.js?v='+v+'"></'+'script>');
+  document.write('<script src="/erp-live-v14.js?v='+v+'"></'+'script>');
   document.write('<script src="/erp-product-master-v14.js?v='+v+'"></'+'script>');
 })();
