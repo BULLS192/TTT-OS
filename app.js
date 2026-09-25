@@ -21,7 +21,10 @@
     brand.alt='Thompson Transportation Technologies';
     brand.style.objectFit='contain';
   }
-  document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js"></'+'script>');\n  document.write('<script src="/supabase-config.js?v='+v+'"></'+'script>');\n  document.write('<script src="/app-core.js?v='+v+'"></'+'script>');\n  document.write('<script src="/cloud-sync.js?v='+v+'"></'+'script>');
+  document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js"></'+'script>');
+  document.write('<script src="/supabase-config.js?v='+v+'"></'+'script>');
+  document.write('<script src="/app-core.js?v='+v+'"></'+'script>');
+  document.write('<script src="/cloud-sync.js?v='+v+'"></'+'script>');
   document.write('<script src="/vendors-v08.js?v='+v+'"></'+'script>');
   document.write('<script src="/scheduling-core-v09.js?v='+v+'"></'+'script>');
   document.write('<script src="/scheduling-v09.js?v='+v+'"></'+'script>');
