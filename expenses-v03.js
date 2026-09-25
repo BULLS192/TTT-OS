@@ -77,7 +77,7 @@
     };
     form.elements.total?.addEventListener('input',update);
     const receiptJob=form.elements.jobRef; if(receiptJob)receiptJob.addEventListener('change',()=>{[...rows.querySelectorAll('.ex-li-row')].forEach(r=>{const j=r.querySelector('[data-li="jobId"]');if(!j.value&&receiptJob.value)j.value=receiptJob.value});update()});
-    form.addEventListener('submit',()=>{update();const id=document.querySelector('.ex-dialog .eyebrow')?.textContent?.trim(),snapshot=hidden.value;setTimeout(()=>{const st=expenseState(),e=st.expenses.find(x=>x.id===id)||st.expenses[st.expenses.length-1];if(!e)return;try{e.lineItems=JSON.parse(snapshot||'[]')}catch{e.lineItems=[]}e.allocationSummary=e.lineItems.reduce((a,x)=>{const k=x.allocationType==='Existing Job'?(x.jobId||'Unassigned Job'):x.allocationType;a[k]=(a[k]||0)+(+x.amount||0);return a},{});localStorage.setItem(EXP_KEY,JSON.stringify(st));window.TTTExpenses?.render?.()},0)},true);
+    form.addEventListener('submit',()=>{update();const id=document.querySelector('.ex-dialog .eyebrow')?.textContent?.trim(),snapshot=hidden.value;setTimeout(()=>{const st=expenseState(),e=st.expenses.find(x=>x.id===id)||st.expenses[st.expenses.length-1];if(!e)return;try{e.lineItems=JSON.parse(snapshot||'[]')}catch{e.lineItems=[]}e.allocationSummary=e.lineItems.reduce((a,x)=>{const k=x.allocationType==='Existing Job'?(x.jobId||'Unassigned Job'):x.allocationType;a[k]=(a[k]||0)+(+x.amount||0);return a},{});localStorage.setItem(EXP_KEY,JSON.stringify(st));window.TTTExpenseCloud?.queueFromLocal();window.TTTExpenses?.render?.()},0)},true);
     update();
   }
   const observer=new MutationObserver(enhance);observer.observe(document.documentElement,{childList:true,subtree:true});enhance();
