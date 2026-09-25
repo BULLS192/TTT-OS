@@ -190,3 +190,44 @@
 .form-section>.equipment-builder,.form-section>.pricing-banner{grid-column:3}
 @media(max-width:1000px){.pipeline{grid-template-columns:1fr 1fr}.detail-grid{grid-template-columns:1fr}.workflow-track{overflow:auto;grid-template-columns:repeat(7,120px)}.form-section>.equipment-builder,.form-section>.pricing-banner{grid-column:1/-1}}
 @media(max-width:680px){.pipeline{grid-template-columns:1fr 1fr}.detail-head,.detail-actions{align-items:stretch;flex-direction:column}.detail-actions label{min-width:0}.detail-list,.detail-list.two-col{grid-template-columns:1fr 1fr}.checkin-media{grid-template-columns:1fr}}
+
+
+/* TTT OS navigation architecture v1 */
+.sidebar{overflow:hidden;padding-bottom:16px}
+.sidebar .os-nav{display:flex;flex-direction:column;gap:4px;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:2px;scrollbar-width:thin;scrollbar-color:#26364f transparent}
+.nav-home{margin-bottom:4px}
+.nav-icon{display:inline-block;width:20px}
+.nav-create,.nav-search{border:1px solid #26364f;background:#111d30;color:#dce7f7;text-align:left;padding:10px 12px;border-radius:9px;font-weight:750;cursor:pointer;display:flex;gap:9px;align-items:center}
+.nav-create{background:#1557c0;border-color:#1557c0;color:#fff;margin-bottom:8px}
+.nav-create:hover{background:#1c64d5}
+.nav-group{border-top:1px solid #17243a;padding-top:5px}
+.nav-group-toggle{width:100%;border:0;background:transparent;color:#71839e;padding:8px 8px 6px;text-align:left;font-size:10px;font-weight:850;letter-spacing:.09em;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.nav-group-toggle:hover{color:#b8c6da}
+.nav-chevron{font-size:14px;transition:transform .18s ease}
+.nav-group.open .nav-chevron{transform:rotate(180deg)}
+.nav-group-items{display:none;padding-bottom:4px}
+.nav-group.open .nav-group-items{display:grid;gap:2px}
+.nav-group-items .nav-item,.nav-placeholder{padding:8px 12px 8px 18px;font-size:12px}
+.nav-placeholder{border:0;background:transparent;color:#62738d;text-align:left;border-radius:8px;font-weight:600;cursor:default}
+.nav-placeholder:after{content:"Soon";float:right;font-size:8px;text-transform:uppercase;letter-spacing:.06em;color:#52627a;border:1px solid #26354b;border-radius:99px;padding:2px 5px}
+.nav-bottom{margin-top:8px;border-top:1px solid #1d2a40;padding-top:8px;display:grid;gap:4px}
+.nav-search{border-color:transparent;background:transparent;color:#91a3bd;font-size:12px}
+.nav-search:hover{background:#162338;color:#fff}
+.nav-settings{display:flex;gap:9px;align-items:center}
+.sidebar-foot{margin-top:10px}
+@media(max-width:1000px) and (min-width:681px){
+ .sidebar .os-nav{overflow:visible}
+ .nav-group-toggle,.nav-group-items,.nav-create span:last-child,.nav-search span:last-child,.nav-settings span:last-child,.nav-home span:last-child{display:none}
+ .nav-create,.nav-search,.nav-settings,.nav-home{justify-content:center;padding:11px 6px;font-size:16px}
+ .nav-item.nav-home:after,.nav-item.nav-settings:after{content:""}
+}
+@media(max-width:680px){
+ .sidebar .os-nav{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;align-items:center}
+ .nav-group{border:0;padding:0;flex:0 0 auto}
+ .nav-group-toggle{display:none}
+ .nav-group-items{display:flex!important;padding:0;gap:4px}
+ .nav-group-items .nav-placeholder{display:none}
+ .nav-group-items .nav-item{font-size:12px;padding:9px 11px;white-space:nowrap}
+ .nav-create,.nav-search,.nav-settings,.nav-home{flex:0 0 auto;white-space:nowrap}
+ .nav-bottom{display:flex;border:0;margin:0;padding:0;gap:4px}
+}
