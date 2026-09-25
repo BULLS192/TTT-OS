@@ -20,6 +20,8 @@
   let pushTimer=null;
   let channel=null;
   let relationalCoreLoaded=false;
+  let operationalRelationalLoaded=false;
+  const OPERATIONAL_KEYS=['scheduling','warranties'];
   const CORE_KEYS=['customers','vehicles','jobs','personnel'];
 
   injectStyles();
@@ -213,12 +215,16 @@
     applyingRemote=true;
     try{
       const preserved=relationalCoreLoaded?Object.fromEntries(CORE_KEYS.map(key=>[key,deepClone(db?.[key]||[])])):null;
+      const preservedOperational=operationalRelationalLoaded?Object.fromEntries(OPERATIONAL_KEYS.map(key=>[key,deepClone(db?.[key]||(key==='scheduling'?{}:[]))])):null;
       const next=deepClone(row.state);
       if(coreOverride){
         CORE_KEYS.forEach(key=>{next[key]=deepClone(coreOverride[key]||[]);});
         relationalCoreLoaded=true;
       }else if(preserved){
         CORE_KEYS.forEach(key=>{next[key]=preserved[key];});
+      }
+      if(preservedOperational){
+        OPERATIONAL_KEYS.forEach(key=>{next[key]=preservedOperational[key];});
       }
       db=next;
       revision=Number(row.revision||0);
@@ -322,6 +328,8 @@
     get organizationId(){return organizationId;},
     get userId(){return currentUser?.id||null;},
     get relationalCoreLoaded(){return relationalCoreLoaded;},
+    get operationalRelationalLoaded(){return operationalRelationalLoaded;},
+    setOperationalRelationalLoaded(value=true){operationalRelationalLoaded=!!value;},
     syncNow:pushCloud,
     reload:reloadRemote,
     audit:writeAudit

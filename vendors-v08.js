@@ -1,5 +1,5 @@
 // TTT OS v0.8.1 — Vendor & Supplier directory bridge
-// Google Sheet remains the source of truth so TTT does not maintain duplicate vendor data.
+// Supabase is the live vendor/CRM source of truth; Google Workspace is retained for document/reference workflows.
 (function(){
   const DIRECTORY_URL='https://docs.google.com/spreadsheets/d/1crOoPQirn3TS1anibJN67lZN7CWf1uqCLEg6rxd4g5g/edit';
   const RAW_CARDS_URL='https://drive.google.com/drive/folders/1K9O7TE0rDePXSaokwwfGGxnvLqL0NPcc';
@@ -30,7 +30,7 @@
             <a class="btn primary" href="${DIRECTORY_URL}" target="_blank" rel="noopener">Open vendor directory</a>
           </div>
         </div>
-        <div class="workflow-note"><strong>Relational source of truth:</strong> Create a company once. Contacts, brands/products, pricing, documents, evaluations, opportunities and interactions link back to that company instead of repeating company data. Vendor IDs and contact names are resolved automatically in the Google Sheet.</div>
+        <div class="workflow-note"><strong>Relational operating model:</strong> Create a company once. Contacts, brands/products, pricing, documents, evaluations, opportunities and interactions link back to that company instead of repeating company data. Vendor IDs and contact names are resolved automatically in the Google Sheet.</div>
         <div class="stats">
           <div class="stat"><span>Company master</span><strong>1× entry</strong></div>
           <div class="stat"><span>Contacts</span><strong>Linked</strong></div>
