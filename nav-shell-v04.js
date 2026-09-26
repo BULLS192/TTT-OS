@@ -23,6 +23,7 @@
     'module-review':'Module Review',
     'job-costing':'Job Costing',
     invoices:'Invoices',
+    'quotes-estimates':'Quotes & Estimates',
     customerdetail:'Customer Details'
   };
 
@@ -135,6 +136,12 @@
     }
   }
   const REVIEW_MODULES={
+    inventory_archive:{
+      eyebrow:'ERP & INVENTORY',title:'Inventory Archive',status:'Legacy reference',
+      summary:'The older standalone inventory surface is retained only as an archive/reference. The active Inventory master now lives under ERP and combines the TTT catalog, stock, pricing references and reorder points.',
+      exists:['Legacy inventory reference','Historical local inventory concepts','Previous pricing/inventory UI'],
+      next:['Use ERP → Inventory for active stock','Use ERP → Pricing for sellable items and rates','Retire this archive after final data verification']
+    },
     purchasing:{
       eyebrow:'ERP & INVENTORY',title:'Purchasing',status:'Foundation exists — workflow needs consolidation',
       summary:'Products, supplier relationships, inventory quantities, MOQ and lead-time data already exist. What is not yet consolidated is the buyer workflow that turns stock needs into purchasing actions.',
@@ -228,6 +235,7 @@
       <button class="nav-item" type="button" data-erp-tab="pricing">Pricing</button>
       <button class="nav-item" type="button" data-shell-view="catalog">Supplier Catalog</button>
       <button class="nav-item" type="button" data-erp-tab="review">Review</button>
+      <button class="nav-item shell-review-nav" type="button" data-review-key="inventory_archive">Inventory Archive</button>
       <button class="nav-item shell-review-nav" type="button" data-review-key="purchasing">Purchasing <span class="nav-review-badge">Review</span></button>
       <button class="nav-item" type="button" data-erp-tab="purchase-orders">Purchase Orders</button>
       <button class="nav-item shell-review-nav" type="button" data-review-key="receiving">Receiving <span class="nav-review-badge">Review</span></button>
@@ -254,7 +262,8 @@
     `;
     group.hidden=false;bindSimpleNav(items);
     items.querySelector('.finance-quotes-nav')?.addEventListener('click',()=>{
-      if(typeof show==='function')show('crm');window.TTTCRM?.activateTab?.('opportunities');window.TTTCRM?.load?.();
+      if(typeof show==='function')show('quotes-estimates');
+      window.TTTFinanceDocs?.reload?.();
       markShellActive(items.querySelector('.finance-quotes-nav'));
       const h=document.getElementById('pageTitle');if(h)h.textContent='Quotes & Estimates';
     });
