@@ -8,11 +8,16 @@
     const text=initials(name);
     return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180"><rect width="180" height="180" rx="90" fill="#1557c0"/><text x="90" y="108" text-anchor="middle" font-family="Arial,sans-serif" font-size="64" font-weight="700" fill="white">'+text+'</text></svg>');
   }
+  function personnelAvatar(){
+    const pid=cloud()?.profile?.person_id;
+    if(!pid||typeof db==='undefined'||!Array.isArray(db?.personnel))return '';
+    return db.personnel.find(x=>x.id===pid)?.profilePhotoData||'';
+  }
   async function signedAvatar(path,name){
-    if(!path)return avatarSvg(name);
+    if(!path)return personnelAvatar()||avatarSvg(name);
     const c=cloud();
     const {data,error}=await c.client.storage.from('avatars').createSignedUrl(path,3600);
-    return error?avatarSvg(name):(data?.signedUrl||avatarSvg(name));
+    return error?(personnelAvatar()||avatarSvg(name)):(data?.signedUrl||personnelAvatar()||avatarSvg(name));
   }
   async function load(){
     const c=cloud(); if(!c?.client||!c?.userId)return false;
