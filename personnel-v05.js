@@ -41,6 +41,7 @@
   let peopleFilter='All';
   let searchTerm='';
   let dirty=false;
+  let peopleSection='personnel';
 
   const clone=v=>JSON.parse(JSON.stringify(v));
   const now=()=>new Date().toISOString();
@@ -116,21 +117,24 @@
 
   function injectShell(){
     if(!document.querySelector('link[data-ttt-personnel-v05]')){
-      const link=document.createElement('link');link.rel='stylesheet';link.href='/personnel-v05.css?v=20260916-personnel-v5';link.dataset.tttPersonnelV05='1';document.head.appendChild(link);
+      const link=document.createElement('link');link.rel='stylesheet';link.href='/personnel-v05.css?v=20260926-people-v6';link.dataset.tttPersonnelV05='1';document.head.appendChild(link);
     }
-    document.querySelectorAll('.nav-item[data-view="people"]').forEach(n=>n.remove());
     document.getElementById('people')?.remove();
 
-    const nav=document.createElement('button');
-    nav.className='nav-item';nav.dataset.view='people';nav.textContent='People';
-    const warranty=document.querySelector('.nav-item[data-view="warranty"]');
-    (warranty?.parentNode||document.querySelector('.sidebar nav'))?.insertBefore(nav,warranty||null);
+    const group=[...document.querySelectorAll('.nav-group')].find(g=>g.querySelector('.nav-group-toggle')?.textContent.includes('PEOPLE'));
+    const items=group?.querySelector('.nav-group-items');
+    if(items){
+      items.innerHTML=`
+        <button class="nav-item people-nav" data-view="people" data-people-section="personnel">Personnel</button>
+        <button class="nav-item people-nav" data-view="people" data-people-section="skills">Skills</button>
+        <button class="nav-item people-nav" data-view="people" data-people-section="availability">Availability</button>`;
+      group.classList.add('open');
+      items.querySelectorAll('[data-people-section]').forEach(nav=>nav.addEventListener('click',()=>{peopleSection=nav.dataset.peopleSection;show('people');renderPeople();}));
+    }
 
     const section=document.createElement('section');section.id='people';section.className='view';
     const settings=document.getElementById('settings');
     (settings?.parentNode||document.querySelector('main.main'))?.insertBefore(section,settings||null);
-
-    nav.addEventListener('click',()=>{show('people');renderPeople();});
   }
 
   function isAdmin(){return window.TTTCloud?.profile?.role==='owner_admin';}
@@ -145,13 +149,34 @@
   function renderPeople(){
     const root=document.getElementById('people');if(!root)return;
     dirty=false;
+    document.querySelectorAll('.people-nav').forEach(n=>n.classList.toggle('active',n.dataset.peopleSection===peopleSection));
+    if(peopleSection==='skills'){renderSkillsWorkspace(root);return;}
+    if(peopleSection==='availability'){renderAvailabilityWorkspace(root);return;}
     root.innerHTML=`
-      <div class="section-head people-head"><div><p class="eyebrow">TEAM & CAPABILITY</p><h2>People</h2><p class="muted">Personnel, roles, skills, certifications and scheduling eligibility.</p></div>${isAdmin()?'<button class="btn primary" id="addPersonBtn">+ Add person</button>':''}</div>
+      <div class="section-head people-head"><div><p class="eyebrow">TEAM DIRECTORY</p><h2>Personnel</h2><p class="muted">Team profiles, roles, certifications and operating responsibilities.</p></div>${isAdmin()?'<button class="btn primary" id="addPersonBtn">+ Add person</button>':''}</div>
       <div class="people-stats" id="peopleStats"></div>
       <div class="people-toolbar panel"><div class="status-filters" id="peopleFilters">${['All',...STATUSES].map(x=>`<button class="filter ${peopleFilter===x?'active':''}" data-people-filter="${e(x)}">${e(x)}</button>`).join('')}</div><input id="peopleSearch" class="people-search" placeholder="Search people, roles or skills…" value="${e(searchTerm)}"></div>
-      <div class="people-layout"><article class="panel people-directory"><div class="panel-head"><div><h3>Directory</h3><p class="muted" id="peopleCount"></p></div><button class="link-btn" id="skillsMatrixBtn">Skills matrix</button></div><div id="peopleList"></div></article><aside id="personPanel"></aside></div>
+      <div class="people-layout"><article class="panel people-directory"><div class="panel-head"><div><h3>Directory</h3><p class="muted" id="peopleCount"></p></div><button class="link-btn" id="skillsMatrixBtn">View skills matrix</button></div><div id="peopleList"></div></article><aside id="personPanel"></aside></div>
       <div id="skillsMatrix" class="panel skills-matrix-panel hidden"></div>`;
     renderStats();renderDirectory();renderEditor();bindStaticEvents();
+  }
+
+  function renderSkillsWorkspace(root){
+    const people=activePeople();
+    const custom=[...new Set(people.flatMap(p=>(p.skills||[]).map(s=>s.name)).filter(n=>!SKILL_CATALOG.some(s=>s.name===n)))];
+    const skills=[...SKILL_CATALOG,...custom.map(name=>({name,category:'Custom'}))];
+    root.innerHTML=`
+      <div class="section-head people-head"><div><p class="eyebrow">TEAM CAPABILITY</p><h2>Skills</h2><p class="muted">See capability coverage across the team. Level 3+ is eligible for skill-based scheduling.</p></div></div>
+      <div class="people-stats"><div class="stat"><span>Active people</span><strong>${people.length}</strong></div><div class="stat"><span>Skills covered</span><strong>${coverageCount()}</strong></div><div class="stat"><span>Schedule eligible</span><strong>${people.filter(p=>p.schedulingEligible).length}</strong></div><div class="stat"><span>Coverage gaps</span><strong>${skills.filter(s=>!people.some(p=>(p.skills||[]).some(x=>x.name===s.name&&Number(x.level)>=3))).length}</strong></div></div>
+      <article class="panel skills-workspace"><div class="panel-head"><div><h3>Skills matrix</h3><p class="muted">1 Awareness · 2 Basic · 3 Working · 4 Advanced · 5 Expert</p></div></div><div class="table-wrap"><table class="skills-table"><thead><tr><th>Skill</th>${people.map(p=>`<th>${e(p.displayName)}</th>`).join('')}</tr></thead><tbody>${skills.map(s=>`<tr><td><strong>${e(s.name)}</strong><small>${e(s.category)}</small></td>${people.map(p=>{const x=(p.skills||[]).find(k=>k.name===s.name);return `<td>${x?`<span class="skill-level level-${Number(x.level||0)}">${Number(x.level||0)}</span>`:'—'}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div></article>`;
+  }
+
+  function renderAvailabilityWorkspace(root){
+    const people=activePeople();
+    root.innerHTML=`
+      <div class="section-head people-head"><div><p class="eyebrow">WORKFORCE SCHEDULING</p><h2>Availability</h2><p class="muted">Standard working hours, weekly capacity and scheduling eligibility.</p></div></div>
+      <div class="people-stats"><div class="stat"><span>Active people</span><strong>${people.length}</strong></div><div class="stat"><span>Schedule eligible</span><strong>${people.filter(p=>p.schedulingEligible).length}</strong></div><div class="stat"><span>Weekly capacity</span><strong>${people.filter(p=>p.schedulingEligible).reduce((n,p)=>n+Number(p.availability?.maxWeeklyHours||0),0)}h</strong></div><div class="stat"><span>Unavailable</span><strong>${people.filter(p=>!p.schedulingEligible).length}</strong></div></div>
+      <article class="panel availability-panel"><div class="panel-head"><div><h3>Standard availability</h3><p class="muted">Edit hours from the person's Personnel profile. Job-specific scheduling will use these limits.</p></div></div><div class="table-wrap"><table><thead><tr><th>Person</th><th>Role</th><th>Scheduling</th><th>Standard hours</th><th>Max / week</th><th>Assignable skills</th></tr></thead><tbody>${people.map(p=>`<tr><td><strong>${e(p.displayName)}</strong></td><td>${e(displayRole(p))}</td><td><span class="badge ${p.schedulingEligible?'person-active':''}">${p.schedulingEligible?'Eligible':'Not eligible'}</span></td><td>${e(p.availability?.start||'—')} – ${e(p.availability?.end||'—')}</td><td>${e(p.availability?.maxWeeklyHours??'—')}h</td><td><div class="availability-skills">${(p.skills||[]).filter(s=>Number(s.level)>=SCHEDULING_LEVEL).map(s=>`<span>${e(s.name)}</span>`).join('')||'—'}</div></td></tr>`).join('')}</tbody></table></div></article>`;
   }
 
   function renderStats(){
