@@ -27,8 +27,9 @@
   function osDB(){
     try{
       const local=JSON.parse(localStorage.getItem('ttt-os-v0.2'))||{};
-      return Object.assign({jobs:[],customers:[],vehicles:[],personnel:[]},local,{personnel:Array.isArray(window.db?.personnel)?window.db.personnel:(local.personnel||[])});
-    }catch(e){return {jobs:[],customers:[],vehicles:[],personnel:Array.isArray(window.db?.personnel)?window.db.personnel:[]}}
+      let live=[];try{if(typeof db!=='undefined'&&Array.isArray(db.personnel))live=db.personnel;}catch(e){}
+      return Object.assign({jobs:[],customers:[],vehicles:[],personnel:[]},local,{personnel:live.length?live:(local.personnel||[])});
+    }catch(e){let live=[];try{if(typeof db!=='undefined'&&Array.isArray(db.personnel))live=db.personnel;}catch(_){}return {jobs:[],customers:[],vehicles:[],personnel:live}}
   }
   function personnelOptions(selected=''){
     const people=(osDB().personnel||[]).filter(p=>!p.archivedAt&&!p.archived_at).slice().sort((a,b)=>String(a.displayName||'').localeCompare(String(b.displayName||'')));
