@@ -149,6 +149,9 @@
     injectSearch();
     const o=document.getElementById('shellSearchOverlay'),i=document.getElementById('shellSearchInput');
     o.hidden=false;i.value='';renderSearch('');setTimeout(()=>i.focus(),0);
+    if(window.TTTCRM&&!window.TTTCRM.state?.loaded){
+      Promise.resolve(window.TTTCRM.load?.()).then(()=>{if(!o.hidden)renderSearch(i.value);}).catch(()=>{});
+    }
   }
   function closeSearch(){const o=document.getElementById('shellSearchOverlay');if(o)o.hidden=true;}
 
