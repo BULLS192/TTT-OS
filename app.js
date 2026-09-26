@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260926-crm-wave-v18';
+  const v='20260926-crm-wave-final';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
