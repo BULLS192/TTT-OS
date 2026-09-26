@@ -253,3 +253,18 @@
 .nav-account{display:flex;gap:9px;align-items:center}
 @media(max-width:900px){.account-layout{grid-template-columns:1fr}.account-layout>.panel:not(.account-profile-card){grid-column:1}.account-profile-card{position:static}}
 @media(max-width:680px){.account-profile-card{align-items:flex-start}.connected-account-row{align-items:flex-start;flex-direction:column}}
+
+
+/* Sidebar signed-in user card */
+.sidebar-user{margin-top:10px;padding-top:10px;border-top:1px solid #1d2b40;position:relative}
+.sidebar-user-button{width:100%;border:0;background:transparent;color:#fff;border-radius:10px;padding:9px 8px;display:grid;grid-template-columns:36px minmax(0,1fr) 18px;gap:9px;align-items:center;text-align:left;cursor:pointer}
+.sidebar-user-button:hover,.sidebar-user.open .sidebar-user-button{background:#162338}
+.sidebar-user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1557c0;border:1px solid #31425c}
+.sidebar-user-copy{min-width:0}.sidebar-user-copy strong,.sidebar-user-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sidebar-user-copy strong{font-size:12px}.sidebar-user-copy small{font-size:10px;color:#8fa1bd;margin-top:2px;text-transform:capitalize}
+.sidebar-user-chevron{color:#8fa1bd;font-size:18px;text-align:center}
+.sidebar-user-menu{position:absolute;left:0;right:0;bottom:56px;background:#111d30;border:1px solid #2b3b54;border-radius:11px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.3);z-index:30}
+.sidebar-user-menu[hidden]{display:none}
+.sidebar-user-menu button{width:100%;border:0;background:transparent;color:#dce7f7;text-align:left;padding:9px 10px;border-radius:7px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.sidebar-user-menu button:hover{background:#1b2b43}.sidebar-user-menu button.danger{color:#ffb4b4}
+.sidebar-user-sync{display:flex;align-items:center;gap:7px;border-top:1px solid #26364f;border-bottom:1px solid #26364f;margin:4px 0;padding:8px 10px;color:#8fa1bd;font-size:10px}
+.sidebar-user-sync .status-dot{width:7px;height:7px;flex:0 0 auto}
