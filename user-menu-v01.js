@@ -11,8 +11,8 @@
     byId('sidebarUserName').textContent=name;
     byId('sidebarUserRole').textContent=p.role==='owner_admin'?'Administrator':(p.role||'User').replaceAll('_',' ');
     const person=(typeof db!=='undefined'&&Array.isArray(db?.personnel)&&p.person_id)?db.personnel.find(x=>x.id===p.person_id):null;
-    let src=person?.profilePhotoData||fallback(name);
-    if(meta.avatar_path){
+    let src=window.TTTAvatar?await window.TTTAvatar.resolve(person,name):(person?.profilePhotoData||fallback(name));
+    if(!window.TTTAvatar&&meta.avatar_path){
       const {data}=await c.client.storage.from('avatars').createSignedUrl(meta.avatar_path,3600);
       if(data?.signedUrl)src=data.signedUrl;
     }
