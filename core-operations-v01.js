@@ -84,11 +84,14 @@ async function sync(){
     for(const co of changes){const r=await client.from('change_orders').upsert(changeOrderRow(j,co),{onConflict:'organization_id,id'});if(r.error)throw r.error;}
     const lines=Array.isArray(j.workExecution?.lines)?j.workExecution.lines:[];
     for(let i=0;i<lines.length;i++){const r=await client.from('work_order_lines').upsert(lineRow(j,lines[i],i),{onConflict:'organization_id,id'});if(r.error)throw r.error;}
-    const currentCo=changes.map(x=>String(x.id)),currentLines=lines.map((x,i)=>String(x.id||('WL-'+String(i+1).padStart(3,'0'))));
-    let q=client.from('change_orders').update({archived_at:now(),updated_at:now(),updated_by:userId}).eq('organization_id',orgId).eq('job_id',j.id).is('archived_at',null);
-    if(currentCo.length)q=q.not('id','in','('+currentCo.map(x=>'"'+x.replaceAll('"','')+'"').join(',')+')');await q;
-    let lq=client.from('work_order_lines').update({archived_at:now(),updated_at:now(),updated_by:userId}).eq('organization_id',orgId).eq('job_id',j.id).is('archived_at',null);
-    if(currentLines.length)lq=lq.not('id','in','('+currentLines.map(x=>'"'+x.replaceAll('"','')+'"').join(',')+')');await lq;
+    const currentCo=new Set(changes.map(x=>String(x.id))),currentLines=new Set(lines.map((x,i)=>String(x.id||('WL-'+String(i+1).padStart(3,'0')))));
+    const [oldCo,oldLines]=await Promise.all([
+      client.from('change_orders').select('id').eq('organization_id',orgId).eq('job_id',j.id).is('archived_at',null),
+      client.from('work_order_lines').select('id').eq('organization_id',orgId).eq('job_id',j.id).is('archived_at',null)
+    ]);
+    if(oldCo.error)throw oldCo.error;if(oldLines.error)throw oldLines.error;
+    for(const row of oldCo.data||[]){if(!currentCo.has(String(row.id))){const ar=await client.from('change_orders').update({archived_at:now(),updated_at:now(),updated_by:userId}).eq('organization_id',orgId).eq('id',row.id);if(ar.error)throw ar.error;}}
+    for(const row of oldLines.data||[]){if(!currentLines.has(String(row.id))){const ar=await client.from('work_order_lines').update({archived_at:now(),updated_at:now(),updated_by:userId}).eq('organization_id',orgId).eq('id',row.id);if(ar.error)throw ar.error;}}
   }
   lastHash=stateHash();
   window.TTTCloud?.audit?.('core_operations',null,'operations_normalized',{jobs:jobs().filter(j=>j.workOrderId).map(j=>j.id)});
@@ -111,5 +114,6 @@ async function init(){
 const priorRender=typeof render==='function'?render:null;
 if(priorRender){render=function(){const r=priorRender.apply(this,arguments);queue();return r;};}
 window.TTTCoreOperations={get ready(){return ready;},syncNow:sync,reload:load,jobCost};
+window.addEventListener('ttt:job-operational-change',queue);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>init().catch(console.error),{once:true});else init().catch(console.error);
 })();
