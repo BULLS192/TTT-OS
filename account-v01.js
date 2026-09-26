@@ -33,7 +33,8 @@
     byId('accountDisplayHeading').textContent=name;
     byId('accountRoleLabel').textContent=p.role==='owner_admin'?'Administrator':(p.role||'User').replaceAll('_',' ');
     byId('accountEmailLabel').textContent=user.email||'';
-    byId('accountAvatar').src=await signedAvatar(meta.avatar_path,name);
+    const person=window.TTTAvatar?.currentPerson?.();
+    byId('accountAvatar').src=window.TTTAvatar?await window.TTTAvatar.resolve(person,name):await signedAvatar(meta.avatar_path,name);
     return true;
   }
   function status(id,msg,ok){
@@ -42,7 +43,12 @@
   }
   async function uploadAvatar(userId){
     if(!pendingAvatarFile)return null;
-    const c=cloud();
+    const c=cloud(),person=window.TTTAvatar?.currentPerson?.();
+    if(window.TTTAvatar&&person){
+      const path=await window.TTTAvatar.uploadForPerson(person,pendingAvatarFile);
+      pendingAvatarFile=null;
+      return path;
+    }
     const ext=(pendingAvatarFile.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
     const path=userId+'/avatar.'+ext;
     const {error}=await c.client.storage.from('avatars').upload(path,pendingAvatarFile,{upsert:true,contentType:pendingAvatarFile.type,cacheControl:'3600'});
@@ -50,6 +56,7 @@
     pendingAvatarFile=null;
     return path;
   }
+
   async function saveProfile(e){
     e.preventDefault();
     const c=cloud(); if(!c?.client)return;
@@ -73,7 +80,8 @@
       if(c.profile)c.profile.display_name=displayName;
       status('accountProfileStatus','Profile saved.',true);
       byId('accountDisplayHeading').textContent=displayName;
-      if(metadata.avatar_path)byId('accountAvatar').src=await signedAvatar(metadata.avatar_path,displayName);
+      const person=window.TTTAvatar?.currentPerson?.();
+      byId('accountAvatar').src=window.TTTAvatar?await window.TTTAvatar.resolve(person,displayName):await signedAvatar(metadata.avatar_path,displayName);
       window.dispatchEvent(new CustomEvent('ttt:account-updated'));
       window.dispatchEvent(new CustomEvent('ttt:cloud-state-applied',{detail:{accountOnly:true}}));
     }catch(err){status('accountProfileStatus',err?.message||'Profile could not be saved.',false);}
