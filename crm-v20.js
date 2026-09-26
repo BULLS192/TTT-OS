@@ -816,7 +816,7 @@
     try{
       if(status==='approved'){
         var o=data.opportunities.find(function(x){return x.id===q.opportunity_id;});
-        if(q.discount_code_id){var dc=data.discount_codes.find(function(x){return x.id===q.discount_code_id;});if(dc){await cloud.client.from('discount_codes').update({times_used:Number(dc.times_used||0)+1,updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',dc.id);}}
+        if(q.discount_code_id){var dc=data.discount_codes.find(function(x){return x.id===q.discount_code_id;});if(dc){await cloud.client.from('discount_codes').update({times_used:Number(dc.times_used||0)+1,updated_at:new Date().toISOString(),updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',dc.id);}}
         var customer=await ensureCustomerForOpportunity(o);if(customer)patch.customer_id=customer.id;
         if(o)await cloud.client.from('opportunities').update({stage:'closed_won',probability_pct:100,customer_id:customer?.id||o.customer_id||null,updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',o.id);
       }
