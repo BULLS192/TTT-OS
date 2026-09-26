@@ -106,10 +106,10 @@
       if(typeof p.schedulingEligible!=='boolean')p.schedulingEligible=false;
       let u=db.users.find(x=>x.id===p.userId);
       if(!u){
-        u={id:p.userId,name:p.displayName,email:p.email||'',role:p.roles[0]||'read_only',roles:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};
+        u={id:p.userId,name:p.displayName,email:p.email||'',role:'read_only',roles:[],responsibilities:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};
         db.users.push(u);
       }else{
-        u.name=p.displayName;u.email=p.email||'';u.role=p.roles[0]||'read_only';u.roles=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;
+        u.name=p.displayName;u.email=p.email||'';u.responsibilities=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;
       }
     });
     syncScheduling(false);
@@ -250,13 +250,16 @@
   function renderStats(){
     const el=document.getElementById('peopleStats');if(!el)return;
     const active=activePeople();
-    el.innerHTML=`<div class="stat"><span>Active people</span><strong>${active.length}</strong></div><div class="stat"><span>TTT OS accounts</span><strong>${connectedAccounts()}</strong></div><div class="stat"><span>Schedule eligible</span><strong>${active.filter(p=>p.schedulingEligible).length}</strong></div><div class="stat"><span>Certifications expiring ≤90d</span><strong>${db.personnel.filter(p=>certExpiring(p)).length}</strong></div>`;
+    const accountStat=isAdmin()
+      ? '<div class="stat"><span>TTT OS accounts</span><strong>'+connectedAccounts()+'</strong></div>'
+      : '<div class="stat"><span>Your access</span><strong class="stat-text">'+e(accessLabel(window.TTTCloud?.profile?.role))+'</strong></div>';
+    el.innerHTML=`<div class="stat"><span>Active people</span><strong>${active.length}</strong></div>${accountStat}<div class="stat"><span>Schedule eligible</span><strong>${active.filter(p=>p.schedulingEligible).length}</strong></div><div class="stat"><span>Certifications expiring ≤90d</span><strong>${db.personnel.filter(p=>certExpiring(p)).length}</strong></div>`;
   }
 
   function renderDirectory(){
     const list=document.getElementById('peopleList'),count=document.getElementById('peopleCount');if(!list)return;
     const rows=filteredPeople();if(count)count.textContent=`${rows.length} record${rows.length===1?'':'s'}`;
-    list.innerHTML=rows.length?rows.map(p=>{const account=accountFor(p);return `<button type="button" class="person-card ${selectedPersonId===p.id?'selected':''}" data-person-id="${e(p.id)}">${personAvatarHtml(p)}<span class="person-main"><strong>${e(p.displayName)}</strong><small>${e(displayRole(p))} · ${e(p.department||'Unassigned')}</small><span class="person-skills">${(p.skills||[]).filter(s=>Number(s.level)>=SCHEDULING_LEVEL).slice(0,4).map(s=>`<em>${e(s.name)}</em>`).join('')||'<em>No operational skills set</em>'}</span></span><span class="person-meta"><span class="badge ${p.status==='Active'?'person-active':''}">${e(p.status)}</span>${account?'<small class="account-connected">TTT OS ✓</small>':'<small>No login</small>'}</span></button>`;}).join(''):'<div class="people-empty">No personnel match this view.</div>';
+    list.innerHTML=rows.length?rows.map(p=>{const account=accountFor(p);return `<button type="button" class="person-card ${selectedPersonId===p.id?'selected':''}" data-person-id="${e(p.id)}">${personAvatarHtml(p)}<span class="person-main"><strong>${e(p.displayName)}</strong><small>${e(displayRole(p))} · ${e(p.department||'Unassigned')}</small><span class="person-skills">${(p.skills||[]).filter(s=>Number(s.level)>=SCHEDULING_LEVEL).slice(0,4).map(s=>`<em>${e(s.name)}</em>`).join('')||'<em>No operational skills set</em>'}</span></span><span class="person-meta"><span class="badge ${p.status==='Active'?'person-active':''}">${e(p.status)}</span>${(isAdmin()||window.TTTCloud?.profile?.person_id===p.id)?(account?'<small class="account-connected">TTT OS ✓</small>':'<small>No login</small>'):(p.schedulingEligible?'<small>Scheduling ✓</small>':'<small>Not scheduled</small>')}</span></button>`;}).join(''):'<div class="people-empty">No personnel match this view.</div>';
     list.querySelectorAll('[data-person-id]').forEach(b=>b.addEventListener('click',()=>selectPerson(b.dataset.personId)));
     hydratePersonAvatars(list);
   }
@@ -299,11 +302,14 @@
   }
 
   function accountSectionHtml(p){
+    const own=window.TTTCloud?.profile?.person_id===p.id;
+    if(!isAdmin()&&!own){
+      return '<div class="person-subsection account-section"><div class="subsection-title"><div><strong>TTT OS account</strong><span>Login details and permissions are managed by an administrator.</span></div><span class="account-state">Managed</span></div></div>';
+    }
     const account=accountFor(p);
     if(!account){
       return `<div class="person-subsection account-section"><div class="subsection-title"><div><strong>TTT OS account</strong><span>Login access is separate from this personnel record.</span></div><span class="account-state not-linked">No login linked</span></div><div class="account-summary empty"><div><strong>Personnel only</strong><span>This person can exist in scheduling and operations without a TTT OS login. Account provisioning is handled from Settings & Admin.</span></div></div></div>`;
     }
-    const own=window.TTTCloud?.profile?.person_id===p.id;
     const canChange=isAdmin()&&!own;
     const accessOptions=ACCESS_LEVELS.map(([id,label])=>`<option value="${e(id)}" ${account.role===id?'selected':''}>${e(label)}</option>`).join('');
     const currentLegacy=!ACCESS_LEVELS.some(x=>x[0]===account.role)&&account.role!=='owner_admin'
@@ -402,7 +408,7 @@
     p.relationship=String(fd.get('relationship')||'Employee');p.status=String(fd.get('status')||'Onboarding');p.jobTitle=String(fd.get('jobTitle')||'').trim();p.department=String(fd.get('department')||'Operations');p.startDate=String(fd.get('startDate')||'');p.email=String(fd.get('email')||'').trim();p.phone=String(fd.get('phone')||'').trim();if(isAdmin())p.roles=fd.getAll('roles').map(String).filter(x=>RESPONSIBILITY_OPTIONS.some(r=>r[0]===x));p.schedulingEligible=fd.get('schedulingEligible')==='on';p.availability={start:String(fd.get('workStart')||'08:00'),end:String(fd.get('workEnd')||'18:00'),maxWeeklyHours:Number(fd.get('maxWeeklyHours')||40)};p.notes=String(fd.get('notes')||'').trim();p.updatedAt=now();
     p.skills=[];form.querySelectorAll('[data-skill-enabled]').forEach(cb=>{if(!cb.checked)return;const sel=form.querySelector(`[data-skill-level="${cssEscape(cb.dataset.skillEnabled)}"]`);p.skills.push({name:cb.dataset.skillEnabled,level:Number(sel?.value||3)});});
     p.certifications=[...form.querySelectorAll('[data-cert-id]')].map(row=>({id:row.dataset.certId,name:row.querySelector('[data-cert-name]')?.value.trim()||'',issuer:row.querySelector('[data-cert-issuer]')?.value.trim()||'',expires:row.querySelector('[data-cert-expires]')?.value||''})).filter(c=>c.name||c.issuer||c.expires);
-    let u=db.users.find(x=>x.id===p.userId);if(!u){u={id:p.userId,name:p.displayName,email:p.email,role:p.roles[0]||'read_only',roles:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};db.users.push(u);}else{u.name=p.displayName;u.email=p.email;u.role=p.roles[0]||'read_only';u.roles=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;}
+    let u=db.users.find(x=>x.id===p.userId);if(!u){u={id:p.userId,name:p.displayName,email:p.email,role:'read_only',roles:[],responsibilities:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};db.users.push(u);}else{u.name=p.displayName;u.email=p.email;u.responsibilities=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;}
     return true;
   }
 
