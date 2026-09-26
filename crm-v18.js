@@ -481,10 +481,23 @@
   }
 
 
+  function withLoaded(callback,attempt){
+    attempt=Number(attempt||0);
+    if(data.loaded){callback();return;}
+    if(attempt>30){toastSafe('CRM data is taking longer than expected to load. Please refresh and try again.');return;}
+    if(!data.loading)load(true);
+    setTimeout(function(){withLoaded(callback,attempt+1);},150);
+  }
+  function openCoreJobWhenReady(id,attempt){
+    attempt=Number(attempt||0);
+    try{if(typeof db!=='undefined'&&Array.isArray(db?.jobs)&&db.jobs.some(function(j){return j.id===id;})){openJob(id);return;}}catch(e){}
+    if(attempt>24){toastSafe('Job '+id+' was created. Open it from Jobs once synchronization completes.');return;}
+    setTimeout(function(){openCoreJobWhenReady(id,attempt+1);},125);
+  }
+
   function newLead(){
     if(typeof show==='function')show('crm');activateTab('leads');
-    var open=function(){document.getElementById('crmLeadFormWrap')?.classList.add('open');refreshLeadFormOptions();setTimeout(function(){document.querySelector('#crmLeadForm [name="first_name"]')?.focus();},0);};
-    if(data.loaded)open();else Promise.resolve(load(true)).then(open);
+    withLoaded(function(){document.getElementById('crmLeadFormWrap')?.classList.add('open');refreshLeadFormOptions();setTimeout(function(){document.querySelector('#crmLeadForm [name="first_name"]')?.focus();},0);});
   }
   function closeCreateModal(){document.getElementById('crmCreateModal')?.classList.remove('open');}
   function openCreateModal(title,subtitle,body){
@@ -494,7 +507,7 @@
   }
   function newContact(){
     if(typeof show==='function')show('crm');activateTab('contacts');
-    if(!data.loaded){Promise.resolve(load(true)).then(newContact);return;}
+    if(!data.loaded){withLoaded(newContact);return;}
     var companies=activeCompanies().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''));});
     openCreateModal('New contact','Create a customer, prospect, vendor, supplier, distributor, partner or referral contact.',
       '<form id="crmNewContactForm"><div class="crm-detail-grid"><label>First name<input name="first_name" required></label><label>Last name<input name="last_name" required></label><label>Company<select name="company_id"><option value="">No company</option>'+companies.map(function(x){return '<option value="'+attr(x.id)+'">'+html(x.name)+'</option>';}).join('')+'</select></label><label>Contact type<select name="contact_type">'+Object.keys(CONTACT_TYPES).map(function(k){return '<option value="'+k+'">'+html(CONTACT_TYPES[k])+'</option>';}).join('')+'</select></label><label>Job title<input name="title"></label><label>Email<input type="email" name="email"></label><label>Mobile<input name="mobile"></label><label>Office phone<input name="office_phone"></label><label>Source<input name="source" value="TTT-OS CRM"></label><label class="crm-span-2">Notes<textarea name="notes"></textarea></label></div><div class="crm-inline-actions top-gap"><button class="btn primary" type="submit">Create contact</button></div></form>');
@@ -502,7 +515,7 @@
   }
   function newCompany(){
     if(typeof show==='function')show('crm');activateTab('companies');
-    if(!data.loaded){Promise.resolve(load(true)).then(newCompany);return;}
+    if(!data.loaded){withLoaded(newCompany);return;}
     openCreateModal('New company','Create an organization once, then attach contacts, leads and opportunities to it.',
       '<form id="crmNewCompanyForm"><div class="crm-detail-grid"><label>Company name<input name="name" required></label><label>Type<select name="primary_type">'+['prospect','customer','dealership','fleet','vendor','supplier','distributor','partner','other'].map(function(x){return '<option value="'+x+'">'+html(x)+'</option>';}).join('')+'</select></label><label>Main phone<input name="main_phone"></label><label>General email<input type="email" name="general_email"></label><label>Website<input name="website"></label><label>Territory<input name="territory"></label><label>City<input name="city"></label><label>State / Province<input name="state"></label><label>Postal code<input name="postal_code"></label><label>Country<input name="country" value="United States"></label><label>Source<input name="source" value="TTT-OS CRM"></label><label class="crm-span-2">Notes<textarea name="notes"></textarea></label></div><div class="crm-inline-actions top-gap"><button class="btn primary" type="submit">Create company</button></div></form>');
     document.getElementById('crmNewCompanyForm')?.addEventListener('submit',createCompany);
@@ -602,7 +615,7 @@
       await cloud.client.from('quotes').update({job_id:jid,customer_id:customer.id,updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',q.id);
       await cloud.client.from('opportunities').update({stage:'closed_won',probability_pct:100,customer_id:customer.id,won_job_id:jid,updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',o.id);
       await cloud.audit?.('job',jid,'job_created_from_opportunity',{opportunity_id:o.id,quote_id:q.id,customer_id:customer.id});
-      closeCreateModal();data.loaded=false;await load(true);toastSafe('Job '+jid+' created from '+q.id+'.');setTimeout(function(){openJob(jid);},250);
+      closeCreateModal();data.loaded=false;await load(true);toastSafe('Job '+jid+' created from '+q.id+'.');openCoreJobWhenReady(jid,0);
     }catch(err){console.error(err);toastSafe('Job creation failed: '+String(err.message||err));}
   }
 
