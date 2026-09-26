@@ -268,3 +268,29 @@
 .sidebar-user-menu button:hover{background:#1b2b43}.sidebar-user-menu button.danger{color:#ffb4b4}
 .sidebar-user-sync{display:flex;align-items:center;gap:7px;border-top:1px solid #26364f;border-bottom:1px solid #26364f;margin:4px 0;padding:8px 10px;color:#8fa1bd;font-size:10px}
 .sidebar-user-sync .status-dot{width:7px;height:7px;flex:0 0 auto}
+
+
+/* My Account responsive cleanup v2 */
+.account-profile-card{min-width:0}
+.account-profile-card>div:last-child{min-width:0;max-width:100%;overflow:hidden}
+#accountDisplayHeading,#accountRoleLabel,#accountEmailLabel{max-width:100%}
+#accountEmailLabel{overflow-wrap:anywhere;word-break:break-word;line-height:1.35}
+@media(max-width:1100px){
+  .account-layout{grid-template-columns:minmax(210px,.7fr) minmax(0,1.5fr)}
+  .account-profile-card{gap:14px}
+  .account-avatar{width:76px;height:76px}
+}
+@media(max-width:900px){
+  .account-layout{grid-template-columns:1fr}
+  .account-layout>.panel:not(.account-profile-card){grid-column:1}
+  .account-profile-card{position:static;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center}
+  .account-avatar-wrap{grid-row:1;grid-column:1}
+  .account-profile-card>div:last-child{grid-row:1;grid-column:2}
+}
+@media(max-width:560px){
+  .account-profile-card{grid-template-columns:1fr;text-align:center}
+  .account-avatar-wrap,.account-profile-card>div:last-child{grid-column:1}
+  .account-avatar-wrap{grid-row:1}
+  .account-profile-card>div:last-child{grid-row:2;width:100%}
+  #accountEmailLabel{font-size:12px}
+}
