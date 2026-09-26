@@ -21,11 +21,7 @@
   function money(v){return Number.isFinite(Number(v))?'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}
   function esc2(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
   function ensureUI(){
-    const nav=document.querySelector('.sidebar nav');
-    if(nav&&!nav.querySelector('[data-view="catalog"]')){
-      const b=document.createElement('button'); b.className='nav-item'; b.dataset.view='catalog'; b.textContent='Pricing & Catalog';
-      nav.appendChild(b);
-    }
+    // Navigation is owned centrally by nav-shell-v03.
     const main=document.querySelector('main.main');
     if(main&&!document.getElementById('catalog')){
       const sec=document.createElement('section'); sec.id='catalog'; sec.className='view';
