@@ -88,7 +88,7 @@
   }
   function numOrNull(v){const n=Number(v);return v===''||v==null||Number.isNaN(n)?null:n;}
   function personIdForName(name){
-    const people=window.db?.personnel||[];
+    let people=[];try{if(typeof db!=='undefined'&&Array.isArray(db.personnel))people=db.personnel;}catch(e){}
     return people.find(p=>String(p.displayName||'').toLowerCase()===String(name||'').toLowerCase())?.id||null;
   }
 
