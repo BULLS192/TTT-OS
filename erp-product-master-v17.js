@@ -193,11 +193,11 @@ async function saveReview(e,w){
  let q;if(w)q=c.client.from('inventory_wishlist').update(row).eq('organization_id',c.organizationId).eq('id',w.id).select('*').single();else{row.created_by=c.userId;q=c.client.from('inventory_wishlist').insert(row).select('*').single();}
  const {data,error}=await q;if(error)return toast('Review save failed: '+error.message);
  await c.audit?.('inventory_wishlist',data.id,w?'wishlist_updated':'wishlist_created',{product_id:data.product_id,priority:data.priority,status:data.status});
- document.getElementById('pmReviewPanel')?.classList.remove('open');toast('Review updated');await load();activeTab='wishlist';render();
+ document.getElementById('pmReviewPanel')?.classList.remove('open');toast('Review updated');await load();activeTab='review';render();
 }
 async function setReviewStatus(id,status){
  const c=cloud(),{error}=await c.client.from('inventory_wishlist').update({status,updated_by:c.userId,updated_at:new Date().toISOString()}).eq('organization_id',c.organizationId).eq('id',id);
- if(error)return toast('Review update failed: '+error.message);await c.audit?.('inventory_wishlist',id,'wishlist_status_changed',{status});await load();activeTab='wishlist';render();
+ if(error)return toast('Review update failed: '+error.message);await c.audit?.('inventory_wishlist',id,'wishlist_status_changed',{status});await load();activeTab='review';render();
 }
 async function ackAlert(id){
  const c=cloud(),a=reorderAlerts.find(x=>x.id===id);if(!a)return;
@@ -208,10 +208,10 @@ async function wishFromAlert(id){
  const c=cloud(),a=reorderAlerts.find(x=>x.id===id),item=inventory.find(x=>x.id===a?.inventory_item_id);if(!a)return;
  const productId=a.product_id||item?.product_id||null,name=productLabel(productId);
  const existing=wishlistOpen().find(x=>x.product_id&&x.product_id===productId);
- if(existing){activeTab='wishlist';render();return toast('This product is already on the Review.');}
+ if(existing){activeTab='review';render();return toast('This product is already on the Review.');}
  const row={organization_id:c.organizationId,product_id:productId,item_name:name,desired_quantity:Number(a.recommended_quantity||1),priority:'high',reason:'Automatic reorder alert at '+Number(a.available_quantity||0)+' available; reorder point '+Number(a.reorder_point||0),status:'ready_to_buy',created_by:c.userId,updated_by:c.userId};
  const {data,error}=await c.client.from('inventory_wishlist').insert(row).select('*').single();if(error)return toast('Could not add reorder item to Review: '+error.message);
- await c.audit?.('inventory_wishlist',data.id,'created_from_reorder_alert',{reorder_alert_id:id,product_id:productId});toast('Reorder item added to Review.');await load();activeTab='wishlist';render();
+ await c.audit?.('inventory_wishlist',data.id,'created_from_reorder_alert',{reorder_alert_id:id,product_id:productId});toast('Reorder item added to Review.');await load();activeTab='review';render();
 }
 function openProduct(p){
  selected=p||null;const panel=document.getElementById('pmProductPanel');if(!panel)return;panel.classList.add('open');
