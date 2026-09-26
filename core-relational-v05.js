@@ -90,6 +90,7 @@
       status:cleanText(x.status),
       email:cleanText(x.email),
       phone:cleanText(x.phone),
+      avatar_path:cleanText(x.avatarPath),
       scheduling_eligible:!!x.schedulingEligible,
       roles:Array.isArray(x.roles)?x.roles:[],
       skills:Array.isArray(x.skills)?x.skills:[],
