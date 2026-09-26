@@ -93,6 +93,7 @@ async function sync(){
     for(const row of oldCo.data||[]){if(!currentCo.has(String(row.id))){const ar=await client.from('change_orders').update({archived_at:now(),updated_at:now(),updated_by:userId}).eq('organization_id',orgId).eq('id',row.id);if(ar.error)throw ar.error;}}
     for(const row of oldLines.data||[]){if(!currentLines.has(String(row.id))){const ar=await client.from('work_order_lines').update({archived_at:now(),updated_at:now(),updated_by:userId}).eq('organization_id',orgId).eq('id',row.id);if(ar.error)throw ar.error;}}
   }
+  await window.TTTCoreRelational?.syncNow?.();
   lastHash=stateHash();
   window.TTTCloud?.audit?.('core_operations',null,'operations_normalized',{jobs:jobs().filter(j=>j.workOrderId).map(j=>j.id)});
 }
