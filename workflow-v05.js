@@ -71,6 +71,8 @@
         serialNumber:'',
         installedLocation:'',
         laborHours:'',
+        materialCost:'',
+        laborCost:'',
         technicianNotes:'',
         completionNotes:''
       }))
@@ -178,6 +180,8 @@
               <label>Serial number<input data-field="serialNumber" value="${safe(x.serialNumber)}"></label>
               <label>Installed location<input data-field="installedLocation" value="${safe(x.installedLocation)}" placeholder="Dash, trunk, under seat..."></label>
               <label>Actual labor hours<input data-field="laborHours" type="number" min="0" step="0.25" value="${safe(x.laborHours)}"></label>
+              <label>Actual material cost ($)<input data-field="materialCost" type="number" min="0" step="0.01" value="${safe(x.materialCost)}"></label>
+              <label>Actual labor cost ($)<input data-field="laborCost" type="number" min="0" step="0.01" value="${safe(x.laborCost)}"></label>
               <label class="span2">Technician notes<textarea data-field="technicianNotes">${safe(x.technicianNotes)}</textarea></label>
               <label class="span2">Completion notes<textarea data-field="completionNotes">${safe(x.completionNotes)}</textarea></label>
             </div>
@@ -252,6 +256,10 @@
     });
     if(w.lines.some(x=>x.laborHours!=='' && (!Number.isFinite(Number(x.laborHours)) || Number(x.laborHours)<0))){
       toast('Labor hours must be zero or greater');
+      return false;
+    }
+    if(w.lines.some(x=>['materialCost','laborCost'].some(k=>x[k]!==''&&(!Number.isFinite(Number(x[k]))||Number(x[k])<0)))){
+      toast('Actual material and labor costs must be zero or greater');
       return false;
     }
     w.notes=document.getElementById('v05WorkNotes')?.value||'';
