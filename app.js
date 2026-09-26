@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260925-crm-v17b';
+  const v='20260926-avatar-unified-v1';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -25,6 +25,7 @@
   document.write('<script src="/supabase-config.js?v='+v+'"></'+'script>');
   document.write('<script src="/app-core.js?v='+v+'"></'+'script>');
   document.write('<script src="/cloud-sync.js?v='+v+'"></'+'script>');
+  document.write('<script src="/avatar-service-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/core-relational-v05.js?v='+v+'"></'+'script>');
   document.write('<script src="/media-cloud-v06.js?v='+v+'"></'+'script>');
   document.write('<script src="/operator-ui.js?v='+v+'"></'+'script>');
