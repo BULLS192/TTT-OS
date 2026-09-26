@@ -87,7 +87,7 @@
       .ttt-auth-form{display:grid;gap:14px}.ttt-auth-form label{font-size:13px;font-weight:700;color:#334155}.ttt-auth-form input{width:100%;margin-top:6px;border:1px solid #d6deea;border-radius:10px;padding:12px 13px;font:inherit}
       .ttt-auth-actions{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap}.ttt-auth-actions button{min-height:42px}.ttt-auth-error{color:#b42318!important;background:#fef3f2;border:1px solid #fecdca;border-radius:10px;padding:10px 12px;margin:0!important;display:none}
       .ttt-auth-meta{margin-top:18px!important;font-size:12px}.ttt-cloud-init{background:#f6f9fd;border:1px solid #dce6f2;border-radius:12px;padding:14px;margin-bottom:18px}.ttt-cloud-init strong{display:block;margin-bottom:8px}.ttt-cloud-counts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.ttt-cloud-counts span{background:#fff;border:1px solid #e5ebf3;border-radius:9px;padding:9px;text-align:center;font-size:11px;color:#65758b}.ttt-cloud-counts b{display:block;color:#142033;font-size:17px}
-      #tttCloudBar{position:fixed;right:18px;bottom:18px;z-index:80;display:flex;align-items:center;gap:9px;background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:8px 12px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:12px}
+      #tttCloudBar{display:none!important}
       #tttCloudStatus:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#8fa1bd;margin-right:7px}#tttCloudStatus[data-state="ok"]:before{background:#32d583}#tttCloudStatus[data-state="busy"]:before{background:#fdb022}#tttCloudStatus[data-state="error"]:before{background:#f04438}
       #tttCloudUser{color:#c7d2e3}#tttCloudLogout{border:0;background:transparent;color:#8fc0ff;font:inherit;cursor:pointer;padding:2px 4px}
       @media(max-width:700px){#tttCloudBar{left:12px;right:12px;bottom:12px;justify-content:center}.ttt-cloud-counts{grid-template-columns:repeat(2,1fr)}}
@@ -315,7 +315,10 @@
     client.auth.onAuthStateChange(async(event,session)=>{
       if(event==='SIGNED_OUT'){ready=false;currentUser=null;profile=null;organizationId=null;showLogin();setSyncStatus('Signed out','');return;}
       if(session?.user&&(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='USER_UPDATED')){
-        if(currentUser?.id!==session.user.id||!ready)await bootstrap(session.user);
+        const changedUser=currentUser?.id!==session.user.id;
+        currentUser=session.user;
+        if(changedUser||!ready)await bootstrap(session.user);
+        else if(event==='USER_UPDATED')window.dispatchEvent(new CustomEvent('ttt:account-updated'));
       }
     });
   }
