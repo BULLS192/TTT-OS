@@ -74,11 +74,21 @@
 
     <div class="nav-bottom">
       <button class="nav-search" type="button" id="globalSearchBtn"><span>⌕</span><span>Global Search</span></button>
-      <button class="nav-item nav-account" data-view="myaccount"><span>◉</span><span>My Account</span></button>
       <button class="nav-item nav-settings" data-view="settings"><span>⚙</span><span>Settings & Admin</span></button>
     </div>
   </nav>
-  <div class="sidebar-foot"><span class="status-dot"></span><div><strong>Shared cloud</strong><small>Multi-device TTT database</small></div></div>
+  <div class="sidebar-user" id="sidebarUser">
+    <button class="sidebar-user-button" id="sidebarUserButton" type="button" aria-haspopup="menu" aria-expanded="false">
+      <img id="sidebarUserAvatar" class="sidebar-user-avatar" alt="">
+      <span class="sidebar-user-copy"><strong id="sidebarUserName">TTT User</strong><small id="sidebarUserRole">User</small></span>
+      <span class="sidebar-user-chevron">⋮</span>
+    </button>
+    <div class="sidebar-user-menu" id="sidebarUserMenu" role="menu" hidden>
+      <button type="button" id="sidebarMyAccount">My Account</button>
+      <div class="sidebar-user-sync"><span class="status-dot"></span><span id="sidebarSyncLabel">Cloud connected</span></div>
+      <button type="button" id="sidebarSignOut" class="danger">Sign Out</button>
+    </div>
+  </div>
 </aside>
 <main class="main">
 <header class="topbar">
@@ -252,6 +262,6 @@
 <script src="google-sync-v02.js"></script>
 <script src="document-preview-v04.js"></script>
 <script src="workflow-v05.js"></script>
-<script src="tint-config-v06.js"></script>\n<script src="nav-shell-v01.js"></script>\n<script src="account-v01.js"></script>
+<script src="tint-config-v06.js"></script>\n<script src="nav-shell-v01.js"></script>\n<script src="account-v01.js"></script>\n<script src="user-menu-v01.js"></script>
 </body>
 </html>
