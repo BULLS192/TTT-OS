@@ -69,7 +69,6 @@ function render(){
  const tabs='<div class="pm-tabs">'+
    '<button class="pm-tab '+(activeTab==='inventory'?'active':'')+'" data-pm-tab="inventory">Inventory <span class="count">'+physical.length+'</span></button>'+
    '<button class="pm-tab '+(activeTab==='pricing'?'active':'')+'" data-pm-tab="pricing">Pricing <span class="count">'+products.length+'</span></button>'+
-   '<button class="pm-tab '+(activeTab==='reorder'?'active':'')+'" data-pm-tab="reorder">Reorder <span class="count">'+reorderAlerts.length+'</span></button>'+
    '<button class="pm-tab '+(activeTab==='review'?'active':'')+'" data-pm-tab="review">Review <span class="count">'+wishlistOpen().length+'</span></button>'+
    '<button class="pm-tab '+(activeTab==='purchase-orders'?'active':'')+'" data-pm-tab="purchase-orders">Purchase Orders <span class="count">'+purchaseOrders.length+'</span></button></div>';
  const head='<div class="section-head"><div><p class="eyebrow">ERP & INVENTORY</p><h2>Inventory & Pricing</h2><p class="muted">One master for TTT sellable items, supplier catalog references, physical stock and pricing.</p></div><div class="pm-action-row"><button class="btn secondary" id="pmRefresh">Refresh</button><button class="btn primary" id="pmNew">+ New item</button></div></div>'+
