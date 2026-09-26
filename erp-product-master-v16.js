@@ -3,7 +3,7 @@
 'use strict';
 const money=v=>v==null||v===''?'—':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(v)||0);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let products=[],inventory=[],suppliers=[],wishlist=[],reorderAlerts=[],purchaseOrders=[],purchaseOrderLines=[],companies=[],channel=null,selected=null,activeTab='inventory';
+let products=[],inventory=[],suppliers=[],wishlist=[],reorderAlerts=[],purchaseOrders=[],purchaseOrderLines=[],companies=[],channel=null,selected=null,activeTab='inventory',searchTerm='';
 
 async function waitCloud(){for(let i=0;i<120;i++){if(window.TTTCloud?.ready&&window.TTTCloud.organizationId)return true;await new Promise(r=>setTimeout(r,100));}return false;}
 function cloud(){return window.TTTCloud;}
@@ -83,13 +83,13 @@ function renderTab(){
  renderInventory(body);
 }
 function renderInventory(body){
- const q=(document.getElementById('pmSearch')?.value||'').trim().toLowerCase();
+ const q=searchTerm.trim().toLowerCase();
  const visible=products.filter(p=>!q||[p.ttt_sku,p.dealer_sku,p.brand,p.model,p.variant,p.name,p.category].some(v=>String(v||'').toLowerCase().includes(q)));
  const rows=visible.map(p=>{const inv=invFor(p.id),m=margin(p),cost=Number(p.dealer_cost||0),sell=Number(p.sell_price||p.map_price||0),records=invRows(p.id),reorder=records.some(x=>x.reorder_point!=null&&available(x)<=Number(x.reorder_point||0));
  return '<tr class="pm-row" data-product-id="'+esc(p.id)+'"><td><b>'+esc(p.ttt_sku||'Pending')+'</b></td><td>'+esc(p.brand||'—')+'</td><td>'+esc(p.model||p.name||'—')+'</td><td>'+esc(p.variant||'—')+'</td><td>'+esc(p.dealer_sku||'—')+'</td><td>'+money(cost)+'</td><td>'+money(sell)+'</td><td>'+(m==null?'—':m.toFixed(1)+'%')+'</td><td>'+inv.on+'</td><td>'+(inv.on-inv.res)+'</td><td>'+(reorder?'<span class="pm-alert">REORDER</span>':'—')+'</td><td class="pm-stock"><button class="btn secondary compact" data-stock="'+esc(p.id)+'">Stock</button></td></tr>'}).join('');
- body.innerHTML='<div class="pm-toolbar"><input id="pmSearch" placeholder="Search SKU, brand, model, category…" value="'+esc(q)+'"></div>'+
+ body.innerHTML='<div class="pm-toolbar"><input id="pmSearch" placeholder="Search SKU, brand, model, category…" value="'+esc(searchTerm)+'"></div>'+
  '<div class="table-wrap"><table><thead><tr><th>TTT SKU</th><th>Brand</th><th>Model</th><th>Variant</th><th>Dealer SKU</th><th>Dealer Cost</th><th>TTT Price</th><th>Margin</th><th>On Hand</th><th>Available</th><th>Reorder</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="12" class="pm-empty">No products match this view.</td></tr>')+'</tbody></table></div>';
- document.getElementById('pmSearch')?.addEventListener('input',render);
+ document.getElementById('pmSearch')?.addEventListener('input',e=>{searchTerm=e.target.value;renderInventory(body);});
  body.querySelectorAll('.pm-row').forEach(tr=>tr.addEventListener('click',e=>{if(e.target.closest('[data-stock]'))return;openProduct(products.find(p=>p.id===tr.dataset.productId));}));
  body.querySelectorAll('[data-stock]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openStock(products.find(p=>p.id===b.dataset.stock));}));
 }
