@@ -227,7 +227,7 @@
 
   function injectShell(){
     if(!document.querySelector('link[data-ttt-personnel-v05]')){
-      const link=document.createElement('link');link.rel='stylesheet';link.href='/personnel-v06.css?v=20260926-personnel-cleanup-v1';link.dataset.tttPersonnelV05='1';document.head.appendChild(link);
+      const link=document.createElement('link');link.rel='stylesheet';link.href='/personnel-v07.css?v=20260926-weekly-hours-v1';link.dataset.tttPersonnelV05='1';document.head.appendChild(link);
     }
     document.getElementById('people')?.remove();
 
@@ -522,8 +522,9 @@
       const enabled=form.querySelector(`[name="avail_${key}_enabled"]`)?.checked===true;
       const start=String(form.querySelector(`[name="avail_${key}_start"]`)?.value||'08:00');
       const end=String(form.querySelector(`[name="avail_${key}_end"]`)?.value||'18:00');
+      const endInput=form.querySelector(`[name="avail_${key}_end"]`);
+      endInput?.setCustomValidity('');
       if(enabled&&dayMinutes({enabled:true,start,end})<=0){
-        const endInput=form.querySelector(`[name="avail_${key}_end"]`);
         endInput?.setCustomValidity('End time must be later than start time.');
         endInput?.reportValidity();endInput?.focus();return false;
       }
