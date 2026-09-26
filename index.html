@@ -74,6 +74,7 @@
 
     <div class="nav-bottom">
       <button class="nav-search" type="button" id="globalSearchBtn"><span>⌕</span><span>Global Search</span></button>
+      <button class="nav-item nav-account" data-view="myaccount"><span>◉</span><span>My Account</span></button>
       <button class="nav-item nav-settings" data-view="settings"><span>⚙</span><span>Settings & Admin</span></button>
     </div>
   </nav>
@@ -189,6 +190,58 @@
 </section>
 
 <section id="warranty" class="view"><div class="empty-state"><div>🛡️</div><h2>Warranty Records</h2><p>Completed work orders will feed equipment and workmanship warranties here.</p></div></section>
+
+<section id="myaccount" class="view">
+  <div class="section-head"><div><p class="eyebrow">PERSONAL SETTINGS</p><h2>My Account</h2></div></div>
+  <div class="account-layout">
+    <article class="panel account-profile-card">
+      <div class="account-avatar-wrap">
+        <img id="accountAvatar" class="account-avatar" alt="Profile picture">
+        <label class="btn secondary compact account-avatar-btn">Change photo<input id="accountAvatarInput" type="file" accept="image/*" hidden></label>
+      </div>
+      <div>
+        <h3 id="accountDisplayHeading">TTT User</h3>
+        <p class="muted" id="accountRoleLabel">User</p>
+        <p class="muted" id="accountEmailLabel"></p>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><h3>Profile</h3><p class="muted">Your personal details inside TTT OS.</p></div></div>
+      <form id="accountProfileForm" class="account-form">
+        <div class="form-grid">
+          <label>Display name<input id="accountDisplayName" name="displayName" required></label>
+          <label>Phone<input id="accountPhone" name="phone" autocomplete="tel"></label>
+          <label>Job title<input id="accountJobTitle" name="jobTitle"></label>
+          <label>Timezone<select id="accountTimezone" name="timezone"><option value="America/Chicago">Central Time (US)</option><option value="Asia/Singapore">Singapore</option><option value="America/New_York">Eastern Time (US)</option><option value="America/Denver">Mountain Time (US)</option><option value="America/Los_Angeles">Pacific Time (US)</option></select></label>
+        </div>
+        <div class="account-actions"><button class="btn primary" type="submit">Save profile</button><span class="account-status" id="accountProfileStatus"></span></div>
+      </form>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><h3>Login & Security</h3><p class="muted">Managed securely through your TTT OS login.</p></div></div>
+      <form id="accountEmailForm" class="account-form">
+        <label>Email address<input id="accountEmail" type="email" autocomplete="email" required></label>
+        <div class="account-actions"><button class="btn secondary" type="submit">Update email</button><span class="account-status" id="accountEmailStatus"></span></div>
+      </form>
+      <div class="account-divider"></div>
+      <form id="accountPasswordForm" class="account-form">
+        <div class="form-grid">
+          <label>New password<input id="accountPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+          <label>Confirm password<input id="accountPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required></label>
+        </div>
+        <div class="account-actions"><button class="btn secondary" type="submit">Change password</button><span class="account-status" id="accountPasswordStatus"></span></div>
+      </form>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><h3>Connected Accounts</h3><p class="muted">Email and calendar connections used by TTT OS.</p></div></div>
+      <div class="connected-account-row"><div><strong>Google Workspace</strong><span>Gmail, Calendar and Drive</span></div><span class="badge" id="accountGoogleStatus">Managed by TTT OS</span></div>
+    </article>
+  </div>
+</section>
+
 <section id="settings" class="view"><div class="grid two"><article class="panel"><h3>Current operator</h3><p><strong id="currentOperatorName">Signed out</strong></p><p class="muted" id="currentOperatorRole">Sign in to TTT OS</p></article><article class="panel"><h3>v0.5 workflow</h3><p class="muted">TTT OS is the operator interface. Google Workspace synchronization runs automatically in the background once the one-time bridge connection is configured.</p></article></div></section>
 </main>
 </div>
@@ -199,6 +252,6 @@
 <script src="google-sync-v02.js"></script>
 <script src="document-preview-v04.js"></script>
 <script src="workflow-v05.js"></script>
-<script src="tint-config-v06.js"></script>\n<script src="nav-shell-v01.js"></script>
+<script src="tint-config-v06.js"></script>\n<script src="nav-shell-v01.js"></script>\n<script src="account-v01.js"></script>
 </body>
 </html>
