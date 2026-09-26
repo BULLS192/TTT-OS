@@ -187,9 +187,10 @@
     for(const exp of expenses){
       const rows=allocationRows(exp),ids=rows.map(x=>x.id);
       if(rows.length){const up=await client.from('expense_allocations').upsert(rows,{onConflict:'organization_id,id'});if(up.error)throw up.error;}
-      let q=client.from('expense_allocations').update({archived_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:profile.user_id}).eq('organization_id',orgId).eq('expense_id',String(exp.id)).is('archived_at',null);
-      if(ids.length)q=q.not('id','in','('+ids.join(',')+')');
-      const gone=await q;if(gone.error)console.warn('TTT Expenses: allocation archive warning',gone.error);
+      const existing=await client.from('expense_allocations').select('id').eq('organization_id',orgId).eq('expense_id',String(exp.id)).is('archived_at',null);
+      if(existing.error){console.warn('TTT Expenses: allocation reconciliation warning',existing.error);continue;}
+      const keep=new Set(ids.map(String));
+      for(const old of existing.data||[]){if(!keep.has(String(old.id))){const gone=await client.from('expense_allocations').update({archived_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:profile.user_id}).eq('organization_id',orgId).eq('id',old.id);if(gone.error)console.warn('TTT Expenses: allocation archive warning',gone.error);}}
     }
   }
 
