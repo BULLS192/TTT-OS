@@ -65,6 +65,7 @@
         .nav-item.nav-home:after,.nav-item.nav-settings:after{content:none!important}
         .sidebar-user-copy{display:block!important}
       }
+      @media(max-width:820px) and (min-width:681px){.sidebar{width:196px!important}.main{margin-left:196px!important;padding:20px 18px 64px!important}}
       @media(max-width:680px){
         .sidebar-user{display:block;margin-top:8px;padding-top:8px;max-width:320px}
         .shell-dialog{border-radius:12px}
