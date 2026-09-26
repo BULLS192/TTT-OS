@@ -132,7 +132,7 @@
     if(wrappedSave||typeof window.save!=='function')return;
     const previous=window.save;
     window.save=function(){
-      try{if(typeof window.db!=='undefined')normalizeObject(window.db);}catch(err){console.warn('TTT phone normalization skipped',err);}
+      try{if(typeof db!=='undefined')normalizeObject(db);}catch(err){console.warn('TTT phone normalization skipped',err);}
       return previous.apply(this,arguments);
     };
     try{save=window.save;}catch{}
@@ -142,9 +142,9 @@
   function migrateCurrentState(){
     if(migrating)return;
     try{
-      if(typeof window.db==='undefined'||typeof window.save!=='function')return;
+      if(typeof db==='undefined'||typeof window.save!=='function')return;
       migrating=true;
-      if(normalizeObject(window.db))window.save();
+      if(normalizeObject(db))window.save();
     }finally{migrating=false;}
   }
 
