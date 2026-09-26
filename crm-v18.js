@@ -130,7 +130,7 @@
     var loading=document.getElementById('crmLoading');if(loading){loading.style.display='block';loading.textContent='Loading CRM data…';}var body=document.getElementById('crmBody');if(body)body.style.display='none';
     var org=cloud.organizationId;
     var specs=[
-      ['companies','id,name,primary_type,status,website,main_phone,general_email,address1,address2,city,state,postal_code,country,territory,owner_person_id,source,notes,updated_at'],
+      ['companies','id,name,primary_type,status,website,main_phone,general_email,address1,address2,city,state,postal_code,country,territory,owner_person_id,source,notes,updated_at,archived_at'],
       ['contacts','id,company_id,display_name,first_name,middle_name,last_name,title,role_type,contact_type,territory,mobile,office_phone,email,linkedin,preferred_contact_method,relationship_strength,source,last_interaction_at,next_action,next_action_at,notes,updated_at,archived_at'],
       ['leads','id,company_id,contact_id,customer_id,source,source_detail,campaign,status,service_interest,description,estimated_value,priority,owner_person_id,first_contact_at,last_contact_at,next_action,next_action_at,converted_at,lost_reason,referral_contact_id,referral_company_id,referral_name,utm_source,utm_medium,utm_campaign,utm_content,utm_term,created_at,updated_at'],
       ['opportunities','id,lead_id,company_id,contact_id,customer_id,title,opportunity_type,category,stage,priority,estimated_value,probability_pct,expected_close_date,next_step,next_step_date,owner_person_id,source,source_evidence_url,related_service,won_job_id,lost_reason,notes,created_at,updated_at'],
@@ -483,8 +483,8 @@
 
   function newLead(){
     if(typeof show==='function')show('crm');activateTab('leads');
-    document.getElementById('crmLeadFormWrap')?.classList.add('open');refreshLeadFormOptions();
-    setTimeout(function(){document.querySelector('#crmLeadForm [name="first_name"]')?.focus();},0);
+    var open=function(){document.getElementById('crmLeadFormWrap')?.classList.add('open');refreshLeadFormOptions();setTimeout(function(){document.querySelector('#crmLeadForm [name="first_name"]')?.focus();},0);};
+    if(data.loaded)open();else Promise.resolve(load(true)).then(open);
   }
   function closeCreateModal(){document.getElementById('crmCreateModal')?.classList.remove('open');}
   function openCreateModal(title,subtitle,body){
@@ -494,6 +494,7 @@
   }
   function newContact(){
     if(typeof show==='function')show('crm');activateTab('contacts');
+    if(!data.loaded){Promise.resolve(load(true)).then(newContact);return;}
     var companies=activeCompanies().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''));});
     openCreateModal('New contact','Create a customer, prospect, vendor, supplier, distributor, partner or referral contact.',
       '<form id="crmNewContactForm"><div class="crm-detail-grid"><label>First name<input name="first_name" required></label><label>Last name<input name="last_name" required></label><label>Company<select name="company_id"><option value="">No company</option>'+companies.map(function(x){return '<option value="'+attr(x.id)+'">'+html(x.name)+'</option>';}).join('')+'</select></label><label>Contact type<select name="contact_type">'+Object.keys(CONTACT_TYPES).map(function(k){return '<option value="'+k+'">'+html(CONTACT_TYPES[k])+'</option>';}).join('')+'</select></label><label>Job title<input name="title"></label><label>Email<input type="email" name="email"></label><label>Mobile<input name="mobile"></label><label>Office phone<input name="office_phone"></label><label>Source<input name="source" value="TTT-OS CRM"></label><label class="crm-span-2">Notes<textarea name="notes"></textarea></label></div><div class="crm-inline-actions top-gap"><button class="btn primary" type="submit">Create contact</button></div></form>');
@@ -501,6 +502,7 @@
   }
   function newCompany(){
     if(typeof show==='function')show('crm');activateTab('companies');
+    if(!data.loaded){Promise.resolve(load(true)).then(newCompany);return;}
     openCreateModal('New company','Create an organization once, then attach contacts, leads and opportunities to it.',
       '<form id="crmNewCompanyForm"><div class="crm-detail-grid"><label>Company name<input name="name" required></label><label>Type<select name="primary_type">'+['prospect','customer','dealership','fleet','vendor','supplier','distributor','partner','other'].map(function(x){return '<option value="'+x+'">'+html(x)+'</option>';}).join('')+'</select></label><label>Main phone<input name="main_phone"></label><label>General email<input type="email" name="general_email"></label><label>Website<input name="website"></label><label>Territory<input name="territory"></label><label>City<input name="city"></label><label>State / Province<input name="state"></label><label>Postal code<input name="postal_code"></label><label>Country<input name="country" value="United States"></label><label>Source<input name="source" value="TTT-OS CRM"></label><label class="crm-span-2">Notes<textarea name="notes"></textarea></label></div><div class="crm-inline-actions top-gap"><button class="btn primary" type="submit">Create company</button></div></form>');
     document.getElementById('crmNewCompanyForm')?.addEventListener('submit',createCompany);
@@ -534,6 +536,7 @@
     var out=await cloud.client.from('quotes').insert(row).select('*').single();if(out.error)return toastSafe('Quote could not be created: '+out.error.message);
     var line={organization_id:cloud.organizationId,quote_id:out.data.id,line_type:'service',description:String(fd.get('description')||o.related_service||o.title),quantity:1,unit_price:subtotal,line_total:subtotal,sort_order:1};
     var lineOut=await cloud.client.from('quote_lines').insert(line);if(lineOut.error){console.warn('Quote line creation failed',lineOut.error);toastSafe('Quote created, but its first line needs attention.');}
+    await cloud.client.from('opportunities').update({stage:'proposal',probability_pct:50,next_step:'Review / approve quote '+out.data.id,updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',o.id);
     await cloud.audit?.('quote',out.data.id,'quote_created',{opportunity_id:o.id,total});closeCreateModal();data.loaded=false;selected={type:'opportunity',id:o.id};await load(true);toastSafe('Draft quote '+out.data.id+' created.');
   }
   async function ensureCustomerForOpportunity(o){
@@ -571,6 +574,8 @@
   }
   function openJobModal(opportunityId,quoteId){
     var o=data.opportunities.find(function(x){return x.id===opportunityId;}),q=data.quotes.find(function(x){return x.id===quoteId;});if(!o||!q)return;
+    if(q.job_id){openJob(q.job_id);return;}
+    if(String(q.status||'').toLowerCase()!=='approved')return toastSafe('Approve the quote before creating a job.');
     var vehicles=data.vehicles.filter(function(v){return o.customer_id&&v.customer_id===o.customer_id;});
     openCreateModal('Create job from approved quote',o.title,
       '<form id="crmJobForm"><div class="crm-detail-grid"><label>Existing vehicle<select name="vehicle_id"><option value="">Create / leave vehicle blank</option>'+vehicles.map(function(v){return '<option value="'+attr(v.id)+'">'+html([v.year,v.make,v.model,v.trim].filter(Boolean).join(' ')||v.vin||v.id)+'</option>';}).join('')+'</select></label><label>Preferred appointment<input name="appointment" type="datetime-local"></label><label>Year<input name="year"></label><label>Make<input name="make"></label><label>Model<input name="model"></label><label>Trim<input name="trim"></label><label>VIN<input name="vin" maxlength="17"></label><label>Color<input name="color"></label><label>Vehicle type<input name="vehicle_type"></label><label>Plate<input name="plate"></label><label>Expected duration<select name="duration"><option>Same day</option><option>1 day</option><option>2–3 days</option><option>4–7 days</option><option>1–2 weeks</option><option>Custom / TBD</option></select></label><label>Parts readiness<select name="parts_status"><option>No special parts required</option><option>Need to confirm parts</option><option>Parts need ordering</option><option>Parts ordered</option><option>Parts received</option><option>Customer supplied</option></select></label><label class="crm-span-2">Job / scope notes<textarea name="notes">'+html(o.notes||'')+'</textarea></label></div><div class="crm-inline-actions top-gap"><button class="btn primary" type="submit">Create linked job</button></div></form>');
@@ -606,7 +611,7 @@
     var form=ev.currentTarget,fd=new FormData(form),org=cloud.organizationId,profile=cloud.profile||{},email=String(fd.get('email')||'').trim(),companyInput=String(fd.get('company')||'').trim(),refId=String(fd.get('referral_contact_id')||'').trim()||null;var submit=form.querySelector('button[type="submit"]');
     try{
       submit.disabled=true;submit.textContent='Creating…';var companyId=null;
-      if(companyInput){var comp=data.companies.find(function(x){return String(x.name||'').trim().toLowerCase()===companyInput.toLowerCase();});if(!comp){var cr=await cloud.client.from('companies').insert({organization_id:org,name:companyInput,primary_type:'prospect',status:'active',owner_person_id:profile.person_id||null,source:'TTT-OS CRM',created_by:cloud.userId,updated_by:cloud.userId}).select('*').single();if(cr.error)throw cr.error;comp=cr.data;data.companies.push(comp);}companyId=comp.id;}
+      if(companyInput){var comp=activeCompanies().find(function(x){return String(x.name||'').trim().toLowerCase()===companyInput.toLowerCase();});if(!comp){var cr=await cloud.client.from('companies').insert({organization_id:org,name:companyInput,primary_type:'prospect',status:'active',owner_person_id:profile.person_id||null,source:'TTT-OS CRM',created_by:cloud.userId,updated_by:cloud.userId}).select('*').single();if(cr.error)throw cr.error;comp=cr.data;data.companies.push(comp);}companyId=comp.id;}
       var con=email?activeContacts().find(function(x){return String(x.email||'').trim().toLowerCase()===email.toLowerCase();}):null;
       if(!con){var first=String(fd.get('first_name')||'').trim(),last=String(fd.get('last_name')||'').trim();var co=await cloud.client.from('contacts').insert({organization_id:org,company_id:companyId,first_name:first,last_name:last,display_name:[first,last].filter(Boolean).join(' '),email:email||null,mobile:String(fd.get('mobile')||'').trim()||null,owner_person_id:profile.person_id||null,source:'TTT-OS CRM',contact_type:'prospect',relationship_strength:'New',created_by:cloud.userId,updated_by:cloud.userId}).select('*').single();if(co.error)throw co.error;con=co.data;data.contacts.push(con);}else if(companyId&&!con.company_id){var cu=await cloud.client.from('contacts').update({company_id:companyId,updated_by:cloud.userId}).eq('organization_id',org).eq('id',con.id).select('*').single();if(cu.error)throw cu.error;Object.assign(con,cu.data);}
       var ref=refId?contact(refId):null;
