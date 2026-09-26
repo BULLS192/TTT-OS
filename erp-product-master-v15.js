@@ -10,7 +10,7 @@ function cloud(){return window.TTTCloud;}
 function invRows(id){return inventory.filter(x=>x.product_id===id);}
 function invFor(id){return invRows(id).reduce((a,x)=>({on:a.on+Number(x.quantity_on_hand||0),res:a.res+Number(x.quantity_reserved||0)}),{on:0,res:0});}
 function margin(p){const cost=Number(p.dealer_cost||0),sell=Number(p.sell_price||p.map_price||0);return sell?((sell-cost)/sell*100):null;}
-function root(){return document.querySelector('[data-view="pricing-catalog"],#pricingCatalogView,#catalogView');}
+function root(){return document.getElementById('pricing-catalog')||document.querySelector('#pricingCatalogView,#catalogView');}
 function num(v){return v===''||v==null?null:Number(v);}
 function injectStyle(){
  if(document.getElementById('tttProductOpsStyles'))return;
