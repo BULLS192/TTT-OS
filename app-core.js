@@ -21,6 +21,30 @@ function clone(x){return JSON.parse(JSON.stringify(x))}
 function load(){try{return JSON.parse(localStorage.getItem(DB_KEY))||clone(seed)}catch{return clone(seed)}}
 function save(){localStorage.setItem(DB_KEY,JSON.stringify(db))}
 function esc(v=""){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+window.TTTUI=Object.assign(window.TTTUI||{},{
+  rerenderPreserveFocus(renderFn,fallbackId){
+    const active=document.activeElement;
+    const state={
+      id:active?.id||fallbackId||'',
+      name:active?.getAttribute?.('name')||'',
+      start:typeof active?.selectionStart==='number'?active.selectionStart:null,
+      end:typeof active?.selectionEnd==='number'?active.selectionEnd:null,
+      direction:active?.selectionDirection||'none',
+      scrollX:window.scrollX,scrollY:window.scrollY
+    };
+    const out=renderFn();
+    let next=state.id?document.getElementById(state.id):null;
+    if(!next&&state.name)next=document.querySelector('[name="'+String(state.name).replace(/"/g,'\\\"')+'"]');
+    if(next&&typeof next.focus==='function'){
+      try{next.focus({preventScroll:true});}catch(_){next.focus();}
+      if(state.start!=null&&typeof next.setSelectionRange==='function'){
+        try{next.setSelectionRange(state.start,state.end??state.start,state.direction);}catch(_){}
+      }
+      if(window.scrollX!==state.scrollX||window.scrollY!==state.scrollY)window.scrollTo(state.scrollX,state.scrollY);
+    }
+    return out;
+  }
+});
 function money(v){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(v||0))}
 function uid(p){return p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
 function currentActor(){const pid=window.TTTCloud?.profile?.person_id;if(pid&&Array.isArray(db?.personnel)){const p=db.personnel.find(x=>x.id===pid);if(p?.userId)return p.userId}const email=window.TTTCloud?.profile?.email;if(email&&Array.isArray(db?.users)){const u=db.users.find(x=>String(x.email||"").toLowerCase()===String(email).toLowerCase());if(u?.id)return u.id}return "usr_derek"}
