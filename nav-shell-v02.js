@@ -66,7 +66,7 @@
         .sidebar-user-copy{display:block!important}
       }
       @media(max-width:680px){
-        .sidebar-user{display:none}
+        .sidebar-user{display:block;margin-top:8px;padding-top:8px;max-width:320px}
         .shell-dialog{border-radius:12px}
         .shell-overlay{padding:8vh 10px 12px}
         .shell-result{grid-template-columns:72px minmax(0,1fr) auto}
