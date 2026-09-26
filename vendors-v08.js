@@ -6,17 +6,7 @@
   const VENDOR_ROOT_URL='https://drive.google.com/drive/folders/1QOnSrSiK-3AwPPnBPcxe6FYHVBJjsccW';
 
   function injectVendorModule(){
-    const nav=document.querySelector('.sidebar nav');
-    if(nav && !nav.querySelector('[data-view="vendors"]')){
-      const btn=document.createElement('button');
-      btn.className='nav-item';
-      btn.dataset.view='vendors';
-      btn.textContent='Vendors';
-      const settings=nav.querySelector('[data-view="settings"]');
-      nav.insertBefore(btn,settings||null);
-      btn.addEventListener('click',()=>show('vendors'));
-    }
-
+    // Navigation is owned centrally by nav-shell-v03.
     const main=document.querySelector('main.main');
     if(main && !document.getElementById('vendors')){
       const section=document.createElement('section');
