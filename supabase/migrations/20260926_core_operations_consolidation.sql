@@ -374,7 +374,7 @@ on conflict (organization_id,id) do update set
 -- Seed alerts for any inventory that predates this trigger.
 update public.inventory_items set quantity_on_hand=quantity_on_hand;
 
-do $
+do $$
 declare t text;
 begin
   foreach t in array array['work_orders','work_order_lines','change_orders','expense_allocations','inventory_wishlist','inventory_reorder_alerts','discount_codes']
