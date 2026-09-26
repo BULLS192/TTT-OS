@@ -227,6 +227,13 @@ create index if not exists expense_allocations_job_idx on public.expense_allocat
 create index if not exists expense_allocations_work_order_idx on public.expense_allocations(organization_id,work_order_id) where archived_at is null;
 create index if not exists inventory_wishlist_status_idx on public.inventory_wishlist(organization_id,status) where archived_at is null;
 create unique index if not exists inventory_reorder_alert_open_uq on public.inventory_reorder_alerts(organization_id,inventory_item_id) where status='open';
+create index if not exists change_orders_work_order_idx on public.change_orders(organization_id,work_order_id) where archived_at is null;
+create index if not exists work_order_lines_change_order_idx on public.work_order_lines(organization_id,change_order_id) where archived_at is null and change_order_id is not null;
+create index if not exists work_order_lines_product_idx on public.work_order_lines(organization_id,product_id) where archived_at is null and product_id is not null;
+create index if not exists inventory_wishlist_product_idx on public.inventory_wishlist(organization_id,product_id) where archived_at is null and product_id is not null;
+create index if not exists inventory_wishlist_vendor_idx on public.inventory_wishlist(organization_id,preferred_vendor_company_id) where archived_at is null and preferred_vendor_company_id is not null;
+create index if not exists inventory_reorder_alert_product_idx on public.inventory_reorder_alerts(organization_id,product_id) where product_id is not null;
+create index if not exists quotes_discount_code_idx on public.quotes(organization_id,discount_code_id) where archived_at is null and discount_code_id is not null;
 
 alter table public.work_orders enable row level security;
 alter table public.work_order_lines enable row level security;
