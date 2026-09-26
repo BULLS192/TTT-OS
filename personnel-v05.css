@@ -5,3 +5,9 @@
 .availability-skills span{font-size:10px;background:#eef3f9;color:#405168;padding:4px 7px;border-radius:99px;white-space:nowrap}
 .availability-panel td{vertical-align:middle}
 @media(max-width:1000px){.skills-workspace .table-wrap,.availability-panel .table-wrap{overflow-x:auto}.skills-workspace table,.availability-panel table{min-width:760px}}
+
+.person-avatar-photo{object-fit:cover;display:block;overflow:hidden}
+.person-editor-head{position:relative}
+.person-editor-identity{min-width:0;flex:1}
+.person-photo-btn{margin-left:auto;white-space:nowrap}
+@media(max-width:760px){.person-editor-head{align-items:flex-start;flex-wrap:wrap}.person-photo-btn{margin-left:64px}}
