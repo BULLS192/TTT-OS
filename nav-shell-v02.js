@@ -82,15 +82,18 @@
   function buildSalesNav(){
     const group=salesGroup(),items=group?.querySelector('.nav-group-items');
     if(!items)return;
+    document.querySelectorAll('.nav-item[data-view="crm"]').forEach(el=>{if(!el.closest('.nav-group-items'))el.remove();});
     items.innerHTML=`
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="dashboard">Overview</button>
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="leads">Leads</button>
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="opportunities">Opportunities</button>
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="contacts">Contacts</button>
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="companies">Companies</button>
+      <button class="nav-item sales-customer-nav" type="button" data-view="customers">Customers</button>
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="activity">Activities</button>
     `;
     group.classList.add('open');
+    items.querySelector('.sales-customer-nav')?.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();if(typeof show==='function')show('customers');});
     items.querySelectorAll('[data-crm-tab]').forEach(btn=>btn.addEventListener('click',ev=>{
       ev.preventDefault();ev.stopPropagation();
       if(typeof show==='function')show('crm');
