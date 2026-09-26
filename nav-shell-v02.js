@@ -99,6 +99,7 @@
       if(typeof show==='function')show('crm');
       const tab=btn.dataset.crmTab;
       window.TTTCRM?.activateTab?.(tab);
+      window.TTTCRM?.load?.();
       setCrmNavActive(tab);
     }));
   }
