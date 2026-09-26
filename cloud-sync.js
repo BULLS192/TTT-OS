@@ -325,6 +325,7 @@
     get ready(){return ready;},
     get revision(){return revision;},
     get profile(){return profile;},
+    get user(){return currentUser;},
     get organizationId(){return organizationId;},
     get userId(){return currentUser?.id||null;},
     get relationalCoreLoaded(){return relationalCoreLoaded;},
