@@ -59,7 +59,9 @@
       state:cleanText(x.state),
       postal_code:cleanText(x.postalCode),
       country:cleanText(x.country),
-      notes:cleanText(x.notes)
+      notes:cleanText(x.notes),
+      company_id:cleanText(x.companyId),
+      primary_contact_id:cleanText(x.primaryContactId)
     });
   }
 
@@ -120,7 +122,10 @@
       equipment:Array.isArray(x.equipment)?x.equipment:[],
       check_in:x.checkIn&&typeof x.checkIn==='object'?x.checkIn:null,
       legacy_audit:Array.isArray(x.audit)?x.audit:[],
-      created_by_legacy_user_id:cleanText(x.createdBy)
+      created_by_legacy_user_id:cleanText(x.createdBy),
+      opportunity_id:cleanText(x.opportunityId),
+      primary_quote_id:cleanText(x.primaryQuoteId),
+      primary_invoice_id:cleanText(x.primaryInvoiceId)
     });
   }
 
