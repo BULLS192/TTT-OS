@@ -34,3 +34,6 @@
 .person-form-grid .span-2{grid-column:1/-1}
 @media(max-width:900px){.account-summary{grid-template-columns:1fr 1fr}.account-summary>div:last-child{grid-column:1/-1}}
 @media(max-width:620px){.account-summary,.responsibility-checks{grid-template-columns:1fr}.account-summary>div:last-child{grid-column:auto}}
+
+.people-stats .stat .stat-text{font-size:15px;line-height:1.25;overflow-wrap:anywhere}
+.person-form-grid input[readonly],.person-form-grid select:disabled,.schedule-toggle input:disabled{background:#f3f6fa;color:#66758a;cursor:not-allowed}
