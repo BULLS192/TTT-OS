@@ -1,4 +1,4 @@
-// TTT OS Expenses v0.5 — receipt exceptions, personnel purchasers and compliance
+// TTT OS Expenses v0.5.1 — receipt exceptions, personnel purchasers and compliance
 (function(){
   const KEY='ttt-os-expenses-v1';
   const CATS=['Installation Materials','Window Tint Materials','Audio & Electronics','Tools & Equipment','Shop Supplies','Software & Subscriptions','Fuel','Parking & Tolls','Travel','Business Meal','Marketing','Professional Services','Shipping','Other / Needs Classification'];
