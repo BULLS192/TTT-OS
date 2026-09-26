@@ -17,6 +17,7 @@
   function clean(v){return v==null||String(v).trim()===''?null:String(v);}
   function n(v,d=null){const x=Number(v);return v==null||v===''||Number.isNaN(x)?d:x;}
   function admin(){return profile?.role==='owner_admin';}
+  function manager(){return ['owner_admin','manager'].includes(profile?.role);}
   function sched(){
     if(!db.scheduling||typeof db.scheduling!=='object')db.scheduling={};
     const s=db.scheduling;
@@ -142,8 +143,8 @@
       settingsHash=hash(s.settings||{});
     }
     const steps=[
-      ['shop_resources',s.resources,snapshots.resources,rowResource,admin()],
-      ['service_templates',s.serviceTemplates,snapshots.templates,rowTemplate,admin()],
+      ['shop_resources',s.resources,snapshots.resources,rowResource,manager()],
+      ['service_templates',s.serviceTemplates,snapshots.templates,rowTemplate,manager()],
       ['scheduling_technicians',s.technicians,snapshots.technicians,rowTech,admin()],
       ['work_operations',s.operations,snapshots.operations,rowOperation,true],
       ['warranties',Array.isArray(db.warranties)?db.warranties:[],snapshots.warranties,rowWarranty,true],
