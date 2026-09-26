@@ -66,7 +66,7 @@ function renderInvoices(){
 function openQuoteInCRM(id){
  const q=quotes.find(x=>x.id===id);if(!q)return;
  if(typeof show==='function')show('crm');window.TTTCRM?.activateTab?.('opportunities');window.TTTCRM?.load?.();
- setTimeout(()=>{if(q.opportunity_id)window.TTTCRM?.openDetail?.('opportunity',q.opportunity_id);},200);
+ setTimeout(()=>{if(q.opportunity_id)window.TTTCRM?.openOpportunity?.(q.opportunity_id);},200);
 }
 function modal(html){document.getElementById('fdModal')?.remove();const m=document.createElement('div');m.id='fdModal';m.className='fd-modal';m.innerHTML='<div class="fd-dialog">'+html+'</div>';document.body.appendChild(m);m.addEventListener('mousedown',e=>{if(e.target===m)m.remove();});return m;}
 function openCreateInvoice(quoteId){
