@@ -6,6 +6,7 @@
     crm:'CRM',
     jobs:'Jobs',
     vehicles:'Vehicles',
+    vehicledetail:'Vehicle Details',
     warranty:'Service & Warranty',
     customers:'Customers',
     newjob:'New Job',
