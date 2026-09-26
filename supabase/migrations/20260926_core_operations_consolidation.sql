@@ -326,7 +326,55 @@ select j.organization_id,j.work_order_id,j.id,coalesce(j.status,'open'),coalesce
 from public.jobs j where j.archived_at is null and j.work_order_id is not null
 on conflict (organization_id,id) do nothing;
 
-do $$
+insert into public.change_orders(
+  organization_id,id,job_id,work_order_id,status,reason,description,schedule_impact,
+  parts_delta,labor_delta,fees_delta,total_delta,signer_name,approved_at,approval_method,
+  previous_authorized_total,revised_authorized_total,source_json,created_at,updated_at
+)
+select j.organization_id,co->>'id',j.id,j.work_order_id,coalesce(co->>'status','Draft'),
+  co->>'reason',coalesce(co->>'description',''),co->>'scheduleImpact',
+  coalesce((co->>'partsDelta')::numeric,0),coalesce((co->>'laborDelta')::numeric,0),
+  coalesce((co->>'feesDelta')::numeric,0),coalesce((co->>'totalDelta')::numeric,0),
+  co->>'signerName',nullif(co->>'approvedAt','')::timestamptz,co->>'approvalMethod',
+  nullif(co->>'previousAuthorizedTotal','')::numeric,nullif(co->>'revisedAuthorizedTotal','')::numeric,
+  co,coalesce(nullif(co->>'createdAt','')::timestamptz,j.created_at),j.updated_at
+from public.jobs j
+cross join lateral jsonb_array_elements(coalesce(j.source_json->'changeOrders','[]'::jsonb)) co
+where j.archived_at is null and j.work_order_id is not null and co ? 'id'
+on conflict (organization_id,id) do update set
+  status=excluded.status,reason=excluded.reason,description=excluded.description,
+  schedule_impact=excluded.schedule_impact,parts_delta=excluded.parts_delta,labor_delta=excluded.labor_delta,
+  fees_delta=excluded.fees_delta,total_delta=excluded.total_delta,signer_name=excluded.signer_name,
+  approved_at=excluded.approved_at,approval_method=excluded.approval_method,
+  previous_authorized_total=excluded.previous_authorized_total,revised_authorized_total=excluded.revised_authorized_total,
+  source_json=excluded.source_json,updated_at=excluded.updated_at;
+
+insert into public.work_order_lines(
+  organization_id,id,work_order_id,job_id,change_order_id,line_type,category,brand,model,
+  quantity,status,serial_number,installed_location,actual_labor_hours,material_cost,labor_cost,
+  technician_notes,completion_notes,sort_order,source_json,created_at,updated_at
+)
+select j.organization_id,coalesce(line->>'id','WL-'||ord::text),j.work_order_id,j.id,
+  nullif(line->>'changeOrderId',''),'service',line->>'category',line->>'brand',line->>'model',
+  coalesce((line->>'qty')::numeric,1),coalesce(line->>'status','Not Started'),line->>'serialNumber',
+  line->>'installedLocation',nullif(line->>'laborHours','')::numeric,
+  nullif(line->>'materialCost','')::numeric,nullif(line->>'laborCost','')::numeric,
+  line->>'technicianNotes',line->>'completionNotes',ord::integer,line,j.created_at,j.updated_at
+from public.jobs j
+cross join lateral jsonb_array_elements(coalesce(j.source_json->'workExecution'->'lines','[]'::jsonb)) with ordinality x(line,ord)
+where j.archived_at is null and j.work_order_id is not null
+on conflict (organization_id,id) do update set
+  work_order_id=excluded.work_order_id,job_id=excluded.job_id,change_order_id=excluded.change_order_id,
+  category=excluded.category,brand=excluded.brand,model=excluded.model,quantity=excluded.quantity,
+  status=excluded.status,serial_number=excluded.serial_number,installed_location=excluded.installed_location,
+  actual_labor_hours=excluded.actual_labor_hours,material_cost=excluded.material_cost,labor_cost=excluded.labor_cost,
+  technician_notes=excluded.technician_notes,completion_notes=excluded.completion_notes,
+  sort_order=excluded.sort_order,source_json=excluded.source_json,updated_at=excluded.updated_at;
+
+-- Seed alerts for any inventory that predates this trigger.
+update public.inventory_items set quantity_on_hand=quantity_on_hand;
+
+do $
 declare t text;
 begin
   foreach t in array array['work_orders','work_order_lines','change_orders','expense_allocations','inventory_wishlist','inventory_reorder_alerts','discount_codes']
