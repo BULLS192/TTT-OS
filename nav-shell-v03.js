@@ -101,7 +101,7 @@
         else if(typeof show==='function')show(view);
       }else if(view==='pricing-catalog'){
         if(typeof show==='function')show(view);
-        window.TTTProductMaster?.reload?.();
+        Promise.resolve(window.TTTProductMaster?.reload?.()).then(()=>window.TTTProductMaster?.openTab?.(btn.dataset.erpTab||'inventory'));
       }else if(typeof show==='function')show(view);
       markShellActive(btn);
     }));
@@ -218,12 +218,14 @@
   function buildErpNav(){
     const group=groupByTitle('ERP & INVENTORY'),items=group?.querySelector('.nav-group-items');if(!items)return;
     items.innerHTML=`
-      <button class="nav-item" type="button" data-shell-view="pricing-catalog">Products & Catalog</button>
-      <button class="nav-item" type="button" data-shell-view="pricing-catalog">Inventory</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="inventory">Products & Catalog</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="inventory">Inventory</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="reorder">Reorder Alerts</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="wishlist">Wishlist</button>
       <button class="nav-item" type="button" data-shell-view="catalog">Supplier Catalog</button>
       <button class="nav-item" type="button" data-shell-view="vendors">Vendors</button>
       <button class="nav-item shell-review-nav" type="button" data-review-key="purchasing">Purchasing <span class="nav-review-badge">Review</span></button>
-      <button class="nav-item shell-review-nav" type="button" data-review-key="purchase_orders">Purchase Orders <span class="nav-review-badge">Review</span></button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="purchase-orders">Purchase Orders</button>
       <button class="nav-item shell-review-nav" type="button" data-review-key="receiving">Receiving <span class="nav-review-badge">Review</span></button>
     `;
     group.hidden=false;bindSimpleNav(items);
