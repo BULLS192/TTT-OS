@@ -81,6 +81,47 @@
       created_by:profile?.user_id||null
     };
   }
+  function allocationId(expenseId,lineId,index){
+    const raw=String(expenseId)+'-'+String(lineId||index).replace(/[^a-zA-Z0-9_-]/g,'').slice(-32);
+    return ('EXA-'+raw).slice(0,120);
+  }
+  function allocationRowsForExpense(exp){
+    return (Array.isArray(exp.lineItems)?exp.lineItems:[]).map((x,index)=>({
+      organization_id:orgId,
+      id:allocationId(exp.id,x.id,index),
+      expense_id:String(exp.id),
+      line_item_id:x.id||null,
+      allocation_type:x.allocationType||'General TTT Expense',
+      job_id:x.jobId||null,
+      work_order_id:x.workOrderId||null,
+      amount:Number(x.amount||0),
+      category:x.category||exp.category||null,
+      note:x.note||null,
+      source_json:{description:x.description||'',qty:Number(x.qty||1),allocationType:x.allocationType||'',jobId:x.jobId||null,workOrderId:x.workOrderId||null},
+      archived_at:null,
+      updated_at:new Date().toISOString(),
+      updated_by:profile?.user_id||null,
+      created_by:profile?.user_id||null
+    })).filter(x=>x.amount||x.job_id||x.work_order_id);
+  }
+  async function syncAllocations(exp){
+    const rows=allocationRowsForExpense(exp),ids=new Set(rows.map(x=>x.id));
+    if(rows.length){
+      const {error}=await client.from('expense_allocations').upsert(rows,{onConflict:'organization_id,id'});
+      if(error)throw error;
+    }
+    const {data:existing,error:readError}=await client.from('expense_allocations')
+      .select('id').eq('organization_id',orgId).eq('expense_id',String(exp.id)).is('archived_at',null);
+    if(readError)throw readError;
+    const stale=(existing||[]).map(x=>x.id).filter(id=>!ids.has(id));
+    if(stale.length){
+      const {error}=await client.from('expense_allocations')
+        .update({archived_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:profile?.user_id||null})
+        .eq('organization_id',orgId).in('id',stale);
+      if(error)throw error;
+    }
+  }
+
   function numOrNull(v){const n=Number(v);return v===''||v==null||Number.isNaN(n)?null:n;}
   function personIdForName(name){
     const people=window.db?.personnel||[];
@@ -177,6 +218,10 @@
     if(changed.length){
       const {error}=await client.from('expenses').upsert(changed,{onConflict:'organization_id,id'});
       if(error){console.error('TTT Expenses: cloud save failed',error);return;}
+      for(const row of changed){
+        const exp=expenses.find(x=>String(x.id)===String(row.id));
+        if(exp){try{await syncAllocations(exp);}catch(err){console.error('TTT Expenses: allocation sync failed',err);}}
+      }
       changed.forEach(r=>cloudIds.add(r.id));
     }
 
