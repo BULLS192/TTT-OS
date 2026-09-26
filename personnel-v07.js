@@ -146,11 +146,12 @@
   function updateWeeklyHoursPreview(form){
     if(!form)return;
     let total=0;
+    const readOnly=form.dataset.personReadOnly==='1';
     WEEK_DAYS.forEach(([key])=>{
       const enabled=form.querySelector(`[name="avail_${key}_enabled"]`)?.checked;
       const start=form.querySelector(`[name="avail_${key}_start"]`);
       const end=form.querySelector(`[name="avail_${key}_end"]`);
-      if(start)start.disabled=!enabled;if(end)end.disabled=!enabled;
+      if(start)start.disabled=readOnly||!enabled;if(end)end.disabled=readOnly||!enabled;
       const mins=enabled?dayMinutes({enabled:true,start:start?.value,end:end?.value}):0;
       total+=mins;
       const out=form.querySelector(`[data-day-hours="${key}"]`);if(out)out.textContent=hoursLabel(mins/60)+'h';
@@ -388,6 +389,7 @@
       const note=document.createElement('div');
       note.className='people-rule';
       note.innerHTML='<strong>Read-only profile</strong><span>You can view this teammate’s skills and availability. Only that person or the TTT OS administrator can edit the profile.</span>';
+      personForm.dataset.personReadOnly='1';
       personForm.prepend(note);
       personForm.querySelectorAll('input,select,textarea,button').forEach(el=>{if(el.id!=='closePersonBtn')el.disabled=true;});
     }
