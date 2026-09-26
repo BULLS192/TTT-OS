@@ -245,6 +245,9 @@
     const expected=revision;
     const next=expected+1;
     const snapshot=deepClone(db);
+    // Normalized operational entities live in relational Supabase tables.
+    // app_state is retained only for legacy/non-normalized module state.
+    [...CORE_KEYS,...OPERATIONAL_KEYS].forEach(key=>delete snapshot[key]);
     setSyncStatus('Saving…','busy');
     const {data,error}=await client.from('app_state')
       .update({state:snapshot,revision:next,updated_at:new Date().toISOString(),updated_by:currentUser.id})
