@@ -229,7 +229,7 @@
 
   function injectShell(){
     if(!document.querySelector('link[data-ttt-personnel-v05]')){
-      const link=document.createElement('link');link.rel='stylesheet';link.href='/personnel-v07.css?v=20260926-weekly-hours-v1';link.dataset.tttPersonnelV05='1';document.head.appendChild(link);
+      const link=document.createElement('link');link.rel='stylesheet';link.href='/personnel-v08.css?v=20260926-availability-v08';link.dataset.tttPersonnelV05='1';document.head.appendChild(link);
     }
     document.getElementById('people')?.remove();
 
