@@ -274,16 +274,16 @@
       <form id="personForm" data-person-id="${e(p.id)}" autocomplete="off">
         <div class="person-form-grid">
           <label>First name<input name="firstName" required value="${e(p.firstName||'')}"></label><label>Last name<input name="lastName" required value="${e(p.lastName||'')}"></label>
-          <label>Relationship<select name="relationship">${RELATIONSHIPS.map(x=>`<option value="${e(x)}" ${x===p.relationship?'selected':''}>${e(x)}</option>`).join('')}</select></label>
-          <label>Status<select name="status">${STATUSES.map(x=>`<option value="${e(x)}" ${x===p.status?'selected':''}>${e(x)}</option>`).join('')}</select></label>
-          <label class="span-2">Job title<input name="jobTitle" value="${e(p.jobTitle||'')}"></label>
-          <label>Department<select name="department">${DEPARTMENTS.map(x=>`<option value="${e(x)}" ${x===p.department?'selected':''}>${e(x)}</option>`).join('')}</select></label>
-          <label>Start date<input type="date" name="startDate" value="${e(p.startDate||'')}"></label>
+          <label>Relationship<select name="relationship" ${isAdmin()?'':'disabled'}>${RELATIONSHIPS.map(x=>`<option value="${e(x)}" ${x===p.relationship?'selected':''}>${e(x)}</option>`).join('')}</select></label>
+          <label>Status<select name="status" ${isAdmin()?'':'disabled'}>${STATUSES.map(x=>`<option value="${e(x)}" ${x===p.status?'selected':''}>${e(x)}</option>`).join('')}</select></label>
+          <label class="span-2">Job title<input name="jobTitle" value="${e(p.jobTitle||'')}" ${isAdmin()?'':'readonly'}></label>
+          <label>Department<select name="department" ${isAdmin()?'':'disabled'}>${DEPARTMENTS.map(x=>`<option value="${e(x)}" ${x===p.department?'selected':''}>${e(x)}</option>`).join('')}</select></label>
+          <label>Start date<input type="date" name="startDate" value="${e(p.startDate||'')}" ${isAdmin()?'':'readonly'}></label>
           <label>Email<input type="email" name="email" value="${e(p.email||'')}"></label><label>Phone<input name="phone" value="${e(p.phone||'')}"></label>
         </div>
         ${accountSectionHtml(p)}
         <div class="person-subsection"><div class="subsection-title"><div><strong>Work responsibilities</strong><span>Operational responsibilities are separate from login permissions and job title.</span></div></div><div class="role-checks responsibility-checks">${RESPONSIBILITY_OPTIONS.map(([id,label])=>`<label><input type="checkbox" name="roles" value="${e(id)}" ${(p.roles||[]).includes(id)?'checked':''} ${isAdmin()?'':'disabled'}> ${e(label)}</label>`).join('')}</div></div>
-        <div class="person-subsection"><div class="subsection-title"><div><strong>Operations & scheduling</strong><span>Controls whether this person can be assigned shop operations.</span></div></div><label class="schedule-toggle"><input type="checkbox" name="schedulingEligible" ${p.schedulingEligible?'checked':''}><span><strong>Scheduling eligible</strong><small>Only skills at Working (3) or above become scheduling capabilities.</small></span></label><div class="person-form-grid compact-grid"><label>Standard start<input type="time" name="workStart" value="${e(p.availability?.start||'08:00')}"></label><label>Standard end<input type="time" name="workEnd" value="${e(p.availability?.end||'18:00')}"></label><label>Max weekly hours<input type="number" min="0" max="100" name="maxWeeklyHours" value="${e(p.availability?.maxWeeklyHours??40)}"></label></div></div>
+        <div class="person-subsection"><div class="subsection-title"><div><strong>Operations & scheduling</strong><span>Controls whether this person can be assigned shop operations.</span></div></div><label class="schedule-toggle"><input type="checkbox" name="schedulingEligible" ${p.schedulingEligible?'checked':''} ${isAdmin()?'':'disabled'}><span><strong>Scheduling eligible</strong><small>Only skills at Working (3) or above become scheduling capabilities.</small></span></label><div class="person-form-grid compact-grid"><label>Standard start<input type="time" name="workStart" value="${e(p.availability?.start||'08:00')}"></label><label>Standard end<input type="time" name="workEnd" value="${e(p.availability?.end||'18:00')}"></label><label>Max weekly hours<input type="number" min="0" max="100" name="maxWeeklyHours" value="${e(p.availability?.maxWeeklyHours??40)}"></label></div></div>
         <div class="person-subsection"><div class="subsection-title"><div><strong>Skills</strong><span>Capability matrix used by Operations.</span></div><button type="button" class="btn secondary compact" id="addCustomSkillBtn">+ Custom skill</button></div><div class="skill-editor" id="skillEditor">${skillEditorHtml(p)}</div></div>
         <div class="person-subsection"><div class="subsection-title"><div><strong>Certifications & licenses</strong><span>Track expirations before work is assigned.</span></div><button type="button" class="btn secondary compact" id="addCertBtn">+ Add</button></div><div id="certEditor">${certEditorHtml(p)}</div></div>
         <label class="person-notes">Notes<textarea name="notes" placeholder="Responsibilities, onboarding notes, operating restrictions, etc.">${e(p.notes||'')}</textarea></label>
@@ -405,7 +405,16 @@
     const form=document.getElementById('personForm');if(!form||form.dataset.personId!==p.id)return false;
     const fd=new FormData(form);
     p.firstName=String(fd.get('firstName')||'').trim();p.lastName=String(fd.get('lastName')||'').trim();p.displayName=[p.firstName,p.lastName].filter(Boolean).join(' ')||'Unnamed Person';
-    p.relationship=String(fd.get('relationship')||'Employee');p.status=String(fd.get('status')||'Onboarding');p.jobTitle=String(fd.get('jobTitle')||'').trim();p.department=String(fd.get('department')||'Operations');p.startDate=String(fd.get('startDate')||'');p.email=String(fd.get('email')||'').trim();p.phone=String(fd.get('phone')||'').trim();if(isAdmin())p.roles=fd.getAll('roles').map(String).filter(x=>RESPONSIBILITY_OPTIONS.some(r=>r[0]===x));p.schedulingEligible=fd.get('schedulingEligible')==='on';p.availability={start:String(fd.get('workStart')||'08:00'),end:String(fd.get('workEnd')||'18:00'),maxWeeklyHours:Number(fd.get('maxWeeklyHours')||40)};p.notes=String(fd.get('notes')||'').trim();p.updatedAt=now();
+    if(isAdmin()){
+      p.relationship=String(fd.get('relationship')||p.relationship||'Employee');
+      p.status=String(fd.get('status')||p.status||'Onboarding');
+      p.jobTitle=String(fd.get('jobTitle')||'').trim();
+      p.department=String(fd.get('department')||p.department||'Operations');
+      p.startDate=String(fd.get('startDate')||'');
+      p.roles=fd.getAll('roles').map(String).filter(x=>RESPONSIBILITY_OPTIONS.some(r=>r[0]===x));
+      p.schedulingEligible=fd.get('schedulingEligible')==='on';
+    }
+    p.email=String(fd.get('email')||'').trim();p.phone=String(fd.get('phone')||'').trim();p.availability={start:String(fd.get('workStart')||'08:00'),end:String(fd.get('workEnd')||'18:00'),maxWeeklyHours:Number(fd.get('maxWeeklyHours')||40)};p.notes=String(fd.get('notes')||'').trim();p.updatedAt=now();
     p.skills=[];form.querySelectorAll('[data-skill-enabled]').forEach(cb=>{if(!cb.checked)return;const sel=form.querySelector(`[data-skill-level="${cssEscape(cb.dataset.skillEnabled)}"]`);p.skills.push({name:cb.dataset.skillEnabled,level:Number(sel?.value||3)});});
     p.certifications=[...form.querySelectorAll('[data-cert-id]')].map(row=>({id:row.dataset.certId,name:row.querySelector('[data-cert-name]')?.value.trim()||'',issuer:row.querySelector('[data-cert-issuer]')?.value.trim()||'',expires:row.querySelector('[data-cert-expires]')?.value||''})).filter(c=>c.name||c.issuer||c.expires);
     let u=db.users.find(x=>x.id===p.userId);if(!u){u={id:p.userId,name:p.displayName,email:p.email,role:'read_only',roles:[],responsibilities:clone(p.roles),active:p.status==='Active',personId:p.id,created_at:p.createdAt||now()};db.users.push(u);}else{u.name=p.displayName;u.email=p.email;u.responsibilities=clone(p.roles);u.active=p.status==='Active';u.personId=p.id;}
