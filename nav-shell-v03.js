@@ -20,7 +20,8 @@
     catalog:'Supplier Catalog',
     vendors:'Vendors',
     'pricing-catalog':'Products & Inventory',
-    'module-review':'Module Review'
+    'module-review':'Module Review',
+    'job-costing':'Job Costing'
   };
 
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -102,6 +103,8 @@
       }else if(view==='pricing-catalog'){
         if(typeof show==='function')show(view);
         Promise.resolve(window.TTTProductMaster?.reload?.()).then(()=>window.TTTProductMaster?.openTab?.(btn.dataset.erpTab||'inventory'));
+      }else if(view==='job-costing'){
+        if(typeof show==='function')show(view);window.TTTFinanceOps?.reload?.();
       }else if(typeof show==='function')show(view);
       markShellActive(btn);
     }));
@@ -238,7 +241,7 @@
       <button class="nav-item shell-review-nav" type="button" data-review-key="invoices">Invoices <span class="nav-review-badge">Review</span></button>
       <button class="nav-item shell-review-nav" type="button" data-review-key="payments">Payments <span class="nav-review-badge">Review</span></button>
       <button class="nav-item" type="button" data-shell-view="expenses">Expenses</button>
-      <button class="nav-item shell-review-nav" type="button" data-review-key="job_costing">Job Costing <span class="nav-review-badge">Review</span></button>
+      <button class="nav-item" type="button" data-shell-view="job-costing">Job Costing</button>
     `;
     group.hidden=false;bindSimpleNav(items);
     items.querySelector('.finance-quotes-nav')?.addEventListener('click',()=>{
