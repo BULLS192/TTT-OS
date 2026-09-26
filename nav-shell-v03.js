@@ -218,7 +218,8 @@
   function buildErpNav(){
     const group=groupByTitle('ERP & INVENTORY'),items=group?.querySelector('.nav-group-items');if(!items)return;
     items.innerHTML=`
-      <button class="nav-item" type="button" data-shell-view="pricing-catalog">Products & Inventory</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog">Products & Catalog</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog">Inventory</button>
       <button class="nav-item" type="button" data-shell-view="catalog">Supplier Catalog</button>
       <button class="nav-item" type="button" data-shell-view="vendors">Vendors</button>
       <button class="nav-item shell-review-nav" type="button" data-review-key="purchasing">Purchasing <span class="nav-review-badge">Review</span></button>
@@ -254,7 +255,6 @@
     ensureShellViews();removeLegacyStandaloneNav();
     buildSalesNav();buildOperationsNav();buildErpNav();buildFinanceNav();buildInsightsNav();
     const people=groupByTitle('PEOPLE');if(people)people.hidden=false;
-    setTimeout(()=>window.TTTProductMaster?.reload?.(),0);
   }
 
   function setCrmNavActive(tab){
