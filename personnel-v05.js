@@ -143,9 +143,21 @@
   function initials(p){return (p.displayName||'?').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();}
   function personAvatarHtml(p,large=false){
     const cls='person-avatar'+(large?' large':'');
-    return p.profilePhotoData
-      ? '<img class="'+cls+' person-avatar-photo" src="'+e(p.profilePhotoData)+'" alt="'+e(p.displayName||'Profile photo')+'">'
-      : '<span class="'+cls+'">'+e(initials(p))+'</span>';
+    return '<span class="'+cls+'" data-person-avatar-id="'+e(p.id)+'">'+e(initials(p))+'</span>';
+  }
+  async function hydratePersonAvatars(root=document){
+    if(!window.TTTAvatar)return;
+    const nodes=[...root.querySelectorAll('[data-person-avatar-id]')];
+    await Promise.all(nodes.map(async node=>{
+      const p=db.personnel.find(x=>x.id===node.dataset.personAvatarId);if(!p)return;
+      const src=await window.TTTAvatar.resolve(p,p.displayName);
+      if(!src)return;
+      node.style.backgroundImage='url("'+String(src).replace(/"/g,'%22')+'")';
+      node.style.backgroundSize='cover';
+      node.style.backgroundPosition='center';
+      node.textContent='';
+      node.classList.add('has-photo');
+    }));
   }
   function displayRole(p){return p.jobTitle||p.relationship||'Team member';}
   function certExpiring(p,days=90){const max=Date.now()+days*86400000;return (p.certifications||[]).some(c=>c.expires&&new Date(c.expires).getTime()>=Date.now()&&new Date(c.expires).getTime()<=max);}
@@ -196,6 +208,7 @@
     const rows=filteredPeople();if(count)count.textContent=`${rows.length} record${rows.length===1?'':'s'}`;
     list.innerHTML=rows.length?rows.map(p=>`<button type="button" class="person-card ${selectedPersonId===p.id?'selected':''}" data-person-id="${e(p.id)}">${personAvatarHtml(p)}<span class="person-main"><strong>${e(p.displayName)}</strong><small>${e(displayRole(p))} · ${e(p.department||'Unassigned')}</small><span class="person-skills">${(p.skills||[]).filter(s=>Number(s.level)>=SCHEDULING_LEVEL).slice(0,4).map(s=>`<em>${e(s.name)}</em>`).join('')||'<em>No operational skills set</em>'}</span></span><span class="person-meta"><span class="badge ${p.status==='Active'?'person-active':''}">${e(p.status)}</span>${p.schedulingEligible?'<small>Scheduling ✓</small>':'<small>Not scheduled</small>'}</span></button>`).join(''):'<div class="people-empty">No personnel match this view.</div>';
     list.querySelectorAll('[data-person-id]').forEach(b=>b.addEventListener('click',()=>selectPerson(b.dataset.personId)));
+    hydratePersonAvatars(list);
   }
 
   function renderEditor(){
@@ -231,6 +244,7 @@
       personForm.querySelectorAll('input,select,textarea,button').forEach(el=>{if(el.id!=='closePersonBtn')el.disabled=true;});
     }
     bindEditorEvents();
+    hydratePersonAvatars(panel);
   }
 
   function skillEditorHtml(p){
@@ -269,22 +283,22 @@
   function closeEditor(){if(dirty&&!window.confirm('Discard unsaved changes?'))return;selectedPersonId=null;dirty=false;renderDirectory();renderEditor();}
   function addPerson(){if(!isAdmin()){if(typeof toast==='function')toast('Administrator access required');return;}if(dirty&&!window.confirm('Discard unsaved changes and create a new person?'))return;const p={id:uid('per'),userId:uid('usr'),displayName:'New Person',firstName:'',lastName:'',relationship:'Employee',jobTitle:'',department:'Operations',status:'Onboarding',email:'',phone:'',schedulingEligible:false,roles:[],skills:[],certifications:[],availability:{start:'08:00',end:'18:00',maxWeeklyHours:40},startDate:'',notes:'',createdAt:now(),updatedAt:now(),schedulingId:''};db.personnel.push(p);save();selectedPersonId=p.id;dirty=false;renderStats();renderDirectory();renderEditor();requestAnimationFrame(()=>document.querySelector('#personForm input[name="firstName"]')?.focus());}
 
-  function setPersonPhoto(file){
-    if(!file||!file.type.startsWith('image/'))return;
-    if(file.size>2*1024*1024){window.alert('Profile image must be under 2 MB.');return;}
+  async function setPersonPhoto(file){
+    if(!file||!String(file.type||'').startsWith('image/'))return;
     const p=db.personnel.find(x=>x.id===selectedPersonId);if(!p)return;
-    const img=new Image(),reader=new FileReader();
-    reader.onload=()=>{img.src=String(reader.result);};
-    img.onload=()=>{
-      const size=240,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;
-      const ctx=canvas.getContext('2d'),scale=Math.max(size/img.width,size/img.height);
-      const w=img.width*scale,h=img.height*scale;
-      ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);
-      p.profilePhotoData=canvas.toDataURL('image/jpeg',.82);
-      dirty=true;renderDirectory();renderEditor();
-      if(typeof toast==='function')toast('Profile photo ready — save profile to keep it');
-    };
-    reader.readAsDataURL(file);
+    if(!window.TTTAvatar){window.alert('Profile photo service is not ready yet.');return;}
+    try{
+      const btn=document.querySelector('.person-photo-btn');
+      if(btn)btn.classList.add('is-busy');
+      if(typeof toast==='function')toast('Uploading profile photo…');
+      await window.TTTAvatar.uploadForPerson(p,file);
+      await hydratePersonAvatars(document.getElementById('people')||document);
+      if(typeof toast==='function')toast('Profile photo updated');
+    }catch(err){
+      window.alert(err?.message||'Profile photo could not be updated.');
+    }finally{
+      document.querySelector('.person-photo-btn')?.classList.remove('is-busy');
+    }
   }
 
   function addCustomSkill(){const name=window.prompt('Custom skill name');if(!name?.trim())return;const n=name.trim();const editor=document.getElementById('skillEditor');if(!editor)return;if([...editor.querySelectorAll('[data-skill-enabled]')].some(x=>String(x.dataset.skillEnabled).toLowerCase()===n.toLowerCase())){window.alert('That skill is already listed.');return;}const row=document.createElement('div');row.className='skill-row';row.innerHTML=`<label><input type="checkbox" data-skill-enabled="${e(n)}" checked><span>${e(n)}</span></label><select data-skill-level="${e(n)}">${Object.entries(LEVELS).map(([v,l])=>`<option value="${v}" ${v==='3'?'selected':''}>${v} · ${e(l)}</option>`).join('')}</select>`;editor.appendChild(row);const cb=row.querySelector('[data-skill-enabled]'),sel=row.querySelector('select');cb.addEventListener('change',()=>{sel.disabled=!cb.checked;dirty=true;});row.querySelectorAll('select,input').forEach(x=>{x.addEventListener('change',()=>dirty=true);x.addEventListener('input',()=>dirty=true);});dirty=true;}
