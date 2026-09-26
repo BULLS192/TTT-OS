@@ -43,11 +43,12 @@
     j.updatedAt=at;
     j.syncState='pending';
     j.audit=j.audit||[];
-    j.audit.push({at,actor:'usr_derek',action,...extra});
+    j.audit.push({at,actor:window.TTTCloud?.profile?.person_id||window.TTTCloud?.userId||'system',action,...extra});
     // Commit the complete local record before entering the replaceable sync path.
     // A failed local write must throw before a Google job can be queued.
     localStorage.setItem(DB_KEY,JSON.stringify(db));
     if(window.TTTSync?.queueJob) window.TTTSync.queueJob(j);
+    window.dispatchEvent(new CustomEvent('ttt:job-operational-change',{detail:{jobId:j.id,action}}));
   }
 
   function ensureExecution(j){
