@@ -231,3 +231,25 @@
  .nav-create,.nav-search,.nav-settings,.nav-home{flex:0 0 auto;white-space:nowrap}
  .nav-bottom{display:flex;border:0;margin:0;padding:0;gap:4px}
 }
+
+
+/* My Account v1 */
+.account-layout{display:grid;grid-template-columns:minmax(250px,.75fr) minmax(0,1.65fr);gap:16px;align-items:start}
+.account-profile-card{display:flex;gap:18px;align-items:center;position:sticky;top:24px}
+.account-profile-card h3{margin:0 0 4px;font-size:22px}
+.account-profile-card p{margin:3px 0}
+.account-avatar-wrap{display:grid;gap:10px;justify-items:center}
+.account-avatar{width:88px;height:88px;border-radius:50%;object-fit:cover;background:#e7edf6;border:3px solid #fff;box-shadow:0 0 0 1px #d9e1ec}
+.account-avatar-btn{white-space:nowrap}
+.account-layout>.panel:not(.account-profile-card){grid-column:2}
+.account-form{display:grid;gap:14px;margin-top:12px}
+.account-form>label,.account-form .form-grid label{display:grid;gap:6px;color:#536176;font-size:12px;font-weight:700}
+.account-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.account-status{font-size:12px;color:#607086}
+.account-status.ok{color:#137a42}.account-status.error{color:#b42318}
+.account-divider{height:1px;background:#e9edf3;margin:18px 0}
+.connected-account-row{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:8px 0}
+.connected-account-row strong,.connected-account-row span{display:block}.connected-account-row div span{font-size:12px;color:#738198;margin-top:3px}
+.nav-account{display:flex;gap:9px;align-items:center}
+@media(max-width:900px){.account-layout{grid-template-columns:1fr}.account-layout>.panel:not(.account-profile-card){grid-column:1}.account-profile-card{position:static}}
+@media(max-width:680px){.account-profile-card{align-items:flex-start}.connected-account-row{align-items:flex-start;flex-direction:column}}
