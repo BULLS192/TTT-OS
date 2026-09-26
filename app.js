@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260926-nav-restore-v1';
+  const v='20260926-core-ops-wave-v1';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -35,12 +35,12 @@
   document.write('<script src="/scheduling-v10.js?v='+v+'"></'+'script>');
   document.write('<script src="/scheduling-v11.js?v='+v+'"></'+'script>');
   document.write('<script src="/ops-relational-v13.js?v='+v+'"></'+'script>');
-  document.write('<script src="/expenses-cloud-v04.js?v='+v+'"></'+'script>');
+  document.write('<script src="/expenses-cloud-v05.js?v='+v+'"></'+'script>');
   document.write('<script src="/expenses-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/expenses-v02.js?v='+v+'"></'+'script>');
-  document.write('<script src="/expenses-v03.js?v='+v+'"></'+'script>');
-  document.write('<script src="/personnel-v07.js?v='+v+'"></'+'script>');
+  document.write('<script src="/expenses-v04.js?v='+v+'"></'+'script>');
+  document.write('<script src="/personnel-v08.js?v='+v+'"></'+'script>');
   document.write('<script src="/product-catalog-v12.js?v='+v+'"></'+'script>');
-  document.write('<script src="/crm-v19.js?v='+v+'"></'+'script>');
-  document.write('<script src="/erp-product-master-v15.js?v='+v+'"></'+'script>');
+  document.write('<script src="/crm-v20.js?v='+v+'"></'+'script>');
+  document.write('<script src="/erp-product-master-v16.js?v='+v+'"></'+'script>');
 })();
