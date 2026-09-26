@@ -4,7 +4,7 @@
     const cloud=window.TTTCloud;
     const profile=cloud?.profile;
     if(!profile)return false;
-    const name=profile.display_name||'TTT user';
+    const name=cloud?.user?.user_metadata?.display_name||profile.display_name||'TTT user';
     const first=String(name).split(/\s+/)[0]||'there';
     const hour=new Date().getHours();
     const greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
