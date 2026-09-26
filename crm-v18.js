@@ -138,7 +138,7 @@
       ['quotes','id,opportunity_id,customer_id,company_id,contact_id,job_id,status,quote_date,expires_at,total,deposit_required,google_doc_url,pdf_drive_file_id,sent_at,approved_at,declined_at,updated_at'],
       ['invoices','id,quote_id,customer_id,company_id,contact_id,job_id,status,invoice_date,due_date,total,amount_paid,balance_due,paid_at,updated_at'],
       ['jobs','id,work_order_id,customer_id,vehicle_id,status,appointment_local,estimate_total,opportunity_id,primary_quote_id,primary_invoice_id,updated_at'],
-      ['documents','id,company_id,contact_id,customer_id,job_id,quote_id,invoice_id,document_type,title,document_date,drive_url,mime_type,confidentiality,notes,updated_at'],
+      ['documents','id,company_id,contact_id,customer_id,job_id,quote_id,invoice_id,lead_id,opportunity_id,document_type,title,document_date,drive_url,storage_path,mime_type,confidentiality,notes,updated_at'],
       ['quote_lines','id,quote_id,line_type,description,quantity,unit_price,labor_hours,taxable,line_total,sort_order,updated_at'],
       ['customers','id,display_name,first_name,middle_name,last_name,phone,email,company_id,primary_contact_id,updated_at'],
       ['vehicles','id,customer_id,vin,year,make,model,trim,color,vehicle_type,plate,updated_at'],
@@ -266,7 +266,7 @@
 
   function leadDetail(id){
     var l=data.leads.find(function(x){return x.id===id;});if(!l)return detailHead('LEAD','Lead not found','The record may have been archived.');
-    var c=contact(l.contact_id),ref=l.referral_contact_id?contactName(l.referral_contact_id):(l.referral_name||'—'),acts=activitiesFor('lead_id',id);
+    var c=contact(l.contact_id),ref=l.referral_contact_id?contactName(l.referral_contact_id):(l.referral_name||'—'),acts=activitiesFor('lead_id',id),docs=data.documents.filter(function(d){return d.lead_id===id;});
     var opp=data.opportunities.find(function(o){return o.lead_id===id;});var status=String(l.status||'new').toLowerCase();
     var utm=[l.utm_source&&('source='+l.utm_source),l.utm_medium&&('medium='+l.utm_medium),l.utm_campaign&&('campaign='+l.utm_campaign),l.utm_content&&('content='+l.utm_content),l.utm_term&&('term='+l.utm_term)].filter(Boolean).join(' · ')||'—';
     return detailHead('LEAD',contactName(l.contact_id),companyName(l.company_id))+'<div class="crm-detail-body">'+
@@ -287,6 +287,7 @@
       '<button class="btn danger" id="crmDeleteLead">Delete lead</button></div><p class="muted top-gap">Delete removes the lead from the active CRM while preserving audit history and linked records.</p></article>'+
       '<article class="crm-detail-card"><h4>Contact</h4><div class="crm-detail-meta">'+meta('Name',contactName(l.contact_id))+meta('Email',c?.email)+meta('Phone',c?.mobile||c?.office_phone)+meta('Organization',companyName(l.company_id))+'</div></article>'+
       '<article class="crm-detail-card"><div class="panel-head"><h4>Activities & correspondence</h4><span class="badge">'+acts.length+'</span></div><div class="crm-link-list">'+(acts.map(activityMini).join('')||'<div class="crm-mini-empty">No activity logged for this lead.</div>')+'</div><div class="top-gap">'+activityFormHTML()+'</div></article>'+
+      '<article class="crm-detail-card"><div class="panel-head"><div><h4>Attachments</h4><p class="muted">Private files associated with this lead.</p></div><span class="badge">'+docs.length+'</span></div><div class="crm-link-list">'+(docs.map(documentMini).join('')||'<div class="crm-mini-empty">No files attached yet.</div>')+'</div><div class="top-gap">'+attachmentFormHTML('lead',id)+'</div></article>'+
     '</div>';
   }
 
@@ -296,7 +297,7 @@
     var quoteIds=quotes.map(function(q){return q.id;}),jobIds=jobs.map(function(j){return j.id;});
     var invoices=data.invoices.filter(function(i){return jobIds.includes(i.job_id)||quoteIds.includes(i.quote_id);});
     var invoiceIds=invoices.map(function(i){return i.id;});
-    var docs=data.documents.filter(function(d){return jobIds.includes(d.job_id)||quoteIds.includes(d.quote_id)||invoiceIds.includes(d.invoice_id);});
+    var docs=data.documents.filter(function(d){return d.opportunity_id===o.id||jobIds.includes(d.job_id)||quoteIds.includes(d.quote_id)||invoiceIds.includes(d.invoice_id);});
     return {quotes:quotes,jobs:jobs,invoices:invoices,documents:docs};
   }
 
@@ -319,7 +320,7 @@
       '<article class="crm-detail-card"><div class="panel-head"><div><h4>Quotes</h4><p class="muted">Proposal and approval control point before a job is created.</p></div><div class="crm-inline-actions"><span class="badge">'+rels.quotes.length+'</span><button class="btn secondary compact" id="crmCreateQuote">+ Quote</button></div></div><div class="crm-link-list">'+(rels.quotes.map(quoteMini).join('')||'<div class="crm-mini-empty">No quotations linked yet.</div>')+'</div></article>'+
       '<article class="crm-detail-card"><div class="panel-head"><h4>Jobs / Work Orders</h4><span class="badge">'+rels.jobs.length+'</span></div><div class="crm-link-list">'+(rels.jobs.map(jobMini).join('')||'<div class="crm-mini-empty">No jobs or work orders linked yet.</div>')+'</div></article>'+
       '<article class="crm-detail-card"><div class="panel-head"><h4>Invoices</h4><span class="badge">'+rels.invoices.length+'</span></div><div class="crm-link-list">'+(rels.invoices.map(invoiceMini).join('')||'<div class="crm-mini-empty">No invoices linked yet.</div>')+'</div></article>'+
-      '<article class="crm-detail-card"><div class="panel-head"><h4>Documents</h4><span class="badge">'+rels.documents.length+'</span></div><div class="crm-link-list">'+(rels.documents.map(documentMini).join('')||'<div class="crm-mini-empty">No related documents yet.</div>')+'</div></article>'+
+      '<article class="crm-detail-card"><div class="panel-head"><div><h4>Documents & attachments</h4><p class="muted">Private opportunity files plus quote/job documents.</p></div><span class="badge">'+rels.documents.length+'</span></div><div class="crm-link-list">'+(rels.documents.map(documentMini).join('')||'<div class="crm-mini-empty">No related documents yet.</div>')+'</div><div class="top-gap">'+attachmentFormHTML('opportunity',id)+'</div></article>'+
     '</div>';
   }
 
@@ -332,7 +333,13 @@
   }
   function invoiceMini(i){var bal=i.balance_due==null?Number(i.total||0)-Number(i.amount_paid||0):Number(i.balance_due||0);return '<div class="crm-link-item"><div><strong>'+html(i.id)+'</strong><small>'+html(i.status)+' · Due '+dateOnly(i.due_date)+'</small></div><div>'+cash(i.total)+' · '+cash(bal)+' due</div></div>';}
   function jobMini(j){return '<div class="crm-link-item"><div><strong>'+html(j.work_order_id||j.id)+'</strong><small>'+html(j.status||'Job')+' · '+(j.appointment_local?when(j.appointment_local):'No appointment')+'</small></div><button class="btn secondary compact" data-open-job="'+attr(j.id)+'">Open Job</button></div>';}
-  function documentMini(d){return '<div class="crm-link-item"><div><strong>'+html(d.title)+'</strong><small>'+html(d.document_type||'Document')+' · '+dateOnly(d.document_date)+'</small></div>'+(d.drive_url?'<a class="crm-primary-link" target="_blank" rel="noopener" href="'+attr(d.drive_url)+'">Open</a>':'<span class="badge">Linked</span>')+'</div>';}
+  function documentMini(d){
+    var open=d.drive_url?'<a class="crm-primary-link" target="_blank" rel="noopener" href="'+attr(d.drive_url)+'">Open</a>':d.storage_path?'<button class="btn secondary compact" data-open-attachment="'+attr(d.id)+'">Open</button>':'<span class="badge">Linked</span>';
+    return '<div class="crm-link-item"><div><strong>'+html(d.title)+'</strong><small>'+html(d.document_type||'Document')+' · '+dateOnly(d.document_date)+'</small></div><div class="crm-quote-actions">'+open+(d.storage_path?'<button class="btn danger compact" data-remove-attachment="'+attr(d.id)+'">Remove</button>':'')+'</div></div>';
+  }
+  function attachmentFormHTML(type,id){
+    return '<form class="crm-attachment-form" data-attachment-type="'+attr(type)+'" data-attachment-id="'+attr(id)+'"><div class="crm-detail-grid"><label>File title<input name="title" placeholder="Optional — defaults to filename"></label><label>File<input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,text/plain,text/csv,.docx,.xlsx" required></label></div><div class="crm-inline-actions top-gap"><button class="btn secondary compact" type="submit">Attach file</button><small class="muted">Maximum 10 MB</small></div></form>';
+  }
 
   function contactDetail(id){
     var c=contact(id);if(!c)return detailHead('CONTACT','Contact not found','');
@@ -401,6 +408,9 @@
     document.getElementById('crmDeleteContact')?.addEventListener('click',function(){archiveRecord('contact',id);});
     document.getElementById('crmDeleteCompany')?.addEventListener('click',function(){archiveRecord('company',id);});
     document.getElementById('crmActivityForm')?.addEventListener('submit',function(e){logActivity(e,type,id);});
+    document.querySelector('.crm-attachment-form')?.addEventListener('submit',uploadAttachment);
+    document.querySelectorAll('[data-open-attachment]').forEach(function(b){b.onclick=function(){openAttachment(b.dataset.openAttachment);};});
+    document.querySelectorAll('[data-remove-attachment]').forEach(function(b){b.onclick=function(){removeAttachment(b.dataset.removeAttachment,type,id);};});
   }
 
   async function updateLeadStatus(id,status){
@@ -462,6 +472,37 @@
     if(!window.confirm('Delete this '+label+' from the active CRM? Its audit history and linked records will be preserved.'))return;
     var out=await cloud.client.from(table).update({archived_at:new Date().toISOString(),updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',id);
     if(out.error)return toastSafe('Delete failed: '+out.error.message);await cloud.audit?.(label,id,label+'_archived',{});closeDetail();data.loaded=false;await load(true);toastSafe((type==='lead'?'Lead':type==='opportunity'?'Opportunity':type==='company'?'Company':'Contact')+' removed from active CRM.');
+  }
+
+  async function uploadAttachment(ev){
+    ev.preventDefault();var form=ev.currentTarget,cloud=window.TTTCloud;if(!cloud?.ready)return;
+    var file=form.elements.file?.files?.[0];if(!file)return;
+    if(file.size>10*1024*1024)return toastSafe('Attachment must be 10 MB or smaller.');
+    var type=form.dataset.attachmentType,id=form.dataset.attachmentId,safe=String(file.name||'attachment').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-120);
+    var path=cloud.organizationId+'/'+type+'/'+id+'/'+Date.now()+'_'+safe;
+    var button=form.querySelector('button[type="submit"]');
+    try{
+      if(button){button.disabled=true;button.textContent='Uploading…';}
+      var upload=await cloud.client.storage.from('crm-attachments').upload(path,file,{upsert:false,contentType:file.type||undefined,cacheControl:'3600'});if(upload.error)throw upload.error;
+      var parent=type==='lead'?data.leads.find(function(x){return x.id===id;}):data.opportunities.find(function(x){return x.id===id;});
+      var row={organization_id:cloud.organizationId,company_id:parent?.company_id||null,contact_id:parent?.contact_id||null,customer_id:parent?.customer_id||null,lead_id:type==='lead'?id:null,opportunity_id:type==='opportunity'?id:null,document_type:'crm_attachment',title:String(new FormData(form).get('title')||'').trim()||file.name,document_date:todayISO(),storage_path:path,mime_type:file.type||null,confidentiality:'internal',created_by:cloud.userId,updated_by:cloud.userId};
+      var out=await cloud.client.from('documents').insert(row).select('*').single();if(out.error){await cloud.client.storage.from('crm-attachments').remove([path]);throw out.error;}
+      await cloud.audit?.('document',out.data.id,'crm_attachment_added',{regarding_type:type,regarding_id:id});data.loaded=false;await load(true);toastSafe('Attachment added.');
+    }catch(err){console.error(err);toastSafe('Attachment upload failed: '+String(err.message||err));}
+    finally{if(button){button.disabled=false;button.textContent='Attach file';}}
+  }
+  async function openAttachment(documentId){
+    var cloud=window.TTTCloud,d=data.documents.find(function(x){return x.id===documentId;});if(!cloud?.ready||!d?.storage_path)return;
+    var out=await cloud.client.storage.from('crm-attachments').createSignedUrl(d.storage_path,300);
+    if(out.error)return toastSafe('Attachment could not be opened: '+out.error.message);
+    if(out.data?.signedUrl)window.open(out.data.signedUrl,'_blank','noopener');
+  }
+  async function removeAttachment(documentId,type,id){
+    var cloud=window.TTTCloud,d=data.documents.find(function(x){return x.id===documentId;});if(!cloud?.ready||!d)return;
+    if(!window.confirm('Remove this attachment from the CRM record?'))return;
+    if(d.storage_path){var storage=await cloud.client.storage.from('crm-attachments').remove([d.storage_path]);if(storage.error)return toastSafe('Attachment file could not be removed: '+storage.error.message);}
+    var out=await cloud.client.from('documents').update({archived_at:new Date().toISOString(),updated_by:cloud.userId}).eq('organization_id',cloud.organizationId).eq('id',documentId);if(out.error)return toastSafe('Attachment record could not be removed: '+out.error.message);
+    await cloud.audit?.('document',documentId,'crm_attachment_removed',{regarding_type:type,regarding_id:id});data.loaded=false;await load(true);toastSafe('Attachment removed.');
   }
 
   async function logActivity(ev,type,id){
