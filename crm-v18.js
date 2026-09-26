@@ -297,7 +297,7 @@
     var quoteIds=quotes.map(function(q){return q.id;}),jobIds=jobs.map(function(j){return j.id;});
     var invoices=data.invoices.filter(function(i){return jobIds.includes(i.job_id)||quoteIds.includes(i.quote_id);});
     var invoiceIds=invoices.map(function(i){return i.id;});
-    var docs=data.documents.filter(function(d){return d.opportunity_id===o.id||jobIds.includes(d.job_id)||quoteIds.includes(d.quote_id)||invoiceIds.includes(d.invoice_id);});
+    var docs=data.documents.filter(function(d){return d.opportunity_id===o.id||(o.lead_id&&d.lead_id===o.lead_id)||jobIds.includes(d.job_id)||quoteIds.includes(d.quote_id)||invoiceIds.includes(d.invoice_id);});
     return {quotes:quotes,jobs:jobs,invoices:invoices,documents:docs};
   }
 
