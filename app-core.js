@@ -38,7 +38,19 @@ window.TTTUI=Object.assign(window.TTTUI||{},{
 });
 function money(v){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(v||0))}
 function uid(p){return p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
-function currentActor(){const pid=window.TTTCloud?.profile?.person_id;if(pid&&Array.isArray(db?.personnel)){const p=db.personnel.find(x=>x.id===pid);if(p?.userId)return p.userId}const email=window.TTTCloud?.profile?.email;if(email&&Array.isArray(db?.users)){const u=db.users.find(x=>String(x.email||"").toLowerCase()===String(email).toLowerCase());if(u?.id)return u.id}return "usr_derek"}
+function currentActor(){const pid=window.TTTCloud?.profile?.person_id;if(pid&&Array.isArray(db?.personnel)){const p=db.personnel.find(x=>x.id===pid);if(p?.userId)return p.userId}const email=window.TTTCloud?.profile?.email;if(email&&Array.isArray(db?.users)){const u=db.users.find(x=>String(x.email||"").toLowerCase()===String(email).toLowerCase());if(u?.id)return u.id}return pid||"usr_unknown"}
+async function allocateOperationalNumber(entityType){
+  const cloud=window.TTTCloud;
+  if(!cloud?.ready||!cloud?.client||!cloud?.organizationId)throw new Error("TTT cloud connection is required to reserve an operational number.");
+  const {data,error}=await cloud.client.rpc("next_ttt_operational_number",{
+    p_organization_id:cloud.organizationId,
+    p_entity_type:entityType
+  });
+  if(error)throw error;
+  const value=Array.isArray(data)?data[0]:data;
+  if(!value)throw new Error("Supabase did not return an operational number.");
+  return String(value);
+}
 function customer(id){return db.customers.find(x=>x.id===id)}
 function vehicle(id){return db.vehicles.find(x=>x.id===id)}
 function job(id){return db.jobs.find(x=>x.id===id)}
@@ -105,7 +117,30 @@ function checkInBlock(j){const ci=j.checkIn||{};if(j.status==="Ready for Check-I
 return '<article class="panel detail-section"><div class="panel-head"><h3>Check-In Record</h3><span class="badge">Recorded</span></div><dl class="detail-list two-col"><dt>Odometer</dt><dd>'+esc(ci.odometer||"—")+'</dd><dt>Fuel / charge</dt><dd>'+esc(ci.fuel||"—")+'</dd><dt>Keys</dt><dd>'+esc(ci.keys||"—")+'</dd><dt>Warning lights</dt><dd>'+esc(ci.warningLights||"None")+'</dd><dt>Belongings</dt><dd>'+esc(ci.belongings||"None noted")+'</dd><dt>Condition notes</dt><dd>'+esc(ci.conditionNotes||"None noted")+'</dd></dl></article>'}
 function saveCheckIn(e,j){e.preventDefault();const fd=new FormData(e.currentTarget),now=new Date().toISOString();j.checkIn={odometer:fd.get("odometer"),fuel:fd.get("fuel"),keys:fd.get("keys"),warningLights:fd.get("warningLights"),belongings:fd.get("belongings"),conditionNotes:fd.get("conditionNotes"),capturedAt:now,photoCount:e.currentTarget.photos.files.length,hasVideo:!!e.currentTarget.video.files.length};j.status="Checked In";j.audit.push({at:now,actor:currentActor(),action:"vehicle_checked_in"});save();render();toast("Vehicle checked in")}
 function authorizationBlock(j){if(j.status==="Awaiting Final Authorization")return '<article class="panel detail-section emphasis"><div class="panel-head"><div><h3>Final Authorization</h3><p class="muted">Confirm scope after physical inspection. This is the point a Work Order is created.</p></div><span class="badge">Customer approval</span></div><div class="authorization-summary"><p><strong>Estimate:</strong> '+money(j.estimateTotal)+'</p><p><strong>Inspection:</strong> '+esc(j.checkIn?.conditionNotes||"No additional condition notes")+'</p><label class="consent"><input type="checkbox" id="finalAuthCheck"> Customer approves the final scope, estimate and inspection findings.</label><label>Customer authorized by<input id="finalAuthName" placeholder="Customer full name"></label><button class="btn primary top-gap" id="authorizeBtn">Authorize & Create Work Order</button></div></article>';if(j.finalAuthorization)return '<article class="panel detail-section"><div class="panel-head"><h3>Final Authorization</h3><span class="badge">Signed</span></div><p>Authorized by <strong>'+esc(j.finalAuthorization.name)+'</strong> · '+new Date(j.finalAuthorization.at).toLocaleString()+'</p></article>';return ""}
-function authorizeWork(j){if(!document.getElementById("finalAuthCheck").checked||!document.getElementById("finalAuthName").value.trim()){toast("Customer authorization is required");return}const now=new Date().toISOString();j.finalAuthorization={name:document.getElementById("finalAuthName").value.trim(),at:now,termsVersion:"0.2"};j.workOrderId="WO-"+new Date().toISOString().slice(2,10).replaceAll("-","")+"-"+String(db.jobs.filter(x=>x.workOrderId).length+1).padStart(3,"0");j.status="In Progress";j.audit.push({at:now,actor:currentActor(),action:"final_authorization_and_work_order_created",workOrderId:j.workOrderId});save();render();toast(j.workOrderId+" created")}
+async function authorizeWork(j){
+  const approved=document.getElementById("finalAuthCheck");
+  const nameInput=document.getElementById("finalAuthName");
+  if(!approved?.checked||!nameInput?.value.trim()){toast("Customer authorization is required");return}
+  const btn=document.getElementById("authorizeBtn");
+  if(btn?.disabled)return;
+  if(btn){btn.disabled=true;btn.textContent="Reserving Work Order…"}
+  try{
+    const workOrderId=await allocateOperationalNumber("work_order");
+    const now=new Date().toISOString();
+    j.finalAuthorization={name:nameInput.value.trim(),at:now,termsVersion:"0.2"};
+    j.workOrderId=workOrderId;
+    j.status="In Progress";
+    j.audit.push({at:now,actor:currentActor(),action:"final_authorization_and_work_order_created",workOrderId:j.workOrderId});
+    save();
+    render();
+    toast(j.workOrderId+" created");
+  }catch(err){
+    console.error("TTT work-order number allocation failed",err);
+    toast("Work Order was not created. Check the cloud connection and try again.");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="Authorize & Create Work Order"}
+  }
+}
 function workOrderBlock(j){return '<article class="panel detail-section workorder-card"><div class="panel-head"><div><p class="eyebrow">ACTIVE WORK ORDER</p><h3>'+esc(j.workOrderId)+'</h3></div><span class="badge">'+esc(j.status)+'</span></div><div class="work-tabs"><span>Overview</span><span>Parts / Equipment</span><span>Progress</span><span>Change Orders</span><span>QC</span><span>Delivery</span><span>Warranty</span></div><p class="muted">The work-order execution tabs are now correctly downstream of check-in and final customer authorization. These are the next modules to deepen.</p></article>'}
 
 const stateSel=document.getElementById("stateSelect");stateSel.innerHTML='<option value="">State</option>'+STATES.map(s=>'<option '+(s==="TX"?"selected":"")+'>'+s+'</option>').join("");
@@ -128,7 +163,46 @@ const serviceRows=document.getElementById("serviceRows");
 function addServiceRow(values={}){const row=document.createElement("div");row.className="equipment-row";row.innerHTML='<label>Service<select data-eq="category"><option value="">Select service</option>'+SERVICES.map(s=>'<option '+(values.category===s?"selected":"")+'>'+s+'</option>').join("")+'</select></label><label>Brand<select data-eq="brand"><option value="">Select brand</option>'+Object.keys(EQUIPMENT_CATALOG).map(b=>'<option>'+b+'</option>').join("")+'</select></label><label>Product / model<select data-eq="model"><option value="">Select model</option></select></label><label>Qty<input data-eq="qty" type="number" min="1" value="1"></label><label class="equipment-note">Line notes<input data-eq="note" placeholder="Variant, location, customer-supplied..."></label><button type="button" class="remove-equipment">×</button>';serviceRows.appendChild(row);const b=row.querySelector('[data-eq="brand"]'),m=row.querySelector('[data-eq="model"]');const refresh=()=>m.innerHTML='<option value="">Select model</option>'+((EQUIPMENT_CATALOG[b.value]||["Custom / Other"]).map(x=>'<option>'+x+'</option>').join(""));b.onchange=refresh;refresh();row.querySelector(".remove-equipment").onclick=()=>row.remove()}
 document.getElementById("addServiceBtn").onclick=()=>addServiceRow();addServiceRow();
 ["parts","labor","fees"].forEach(n=>document.querySelector('[name="'+n+'"]').oninput=updateTotal);function updateTotal(){const f=document.getElementById("jobForm");document.getElementById("estimateTotal").textContent=money(["parts","labor","fees"].reduce((s,n)=>s+Number(f.elements[n].value||0),0))}
-document.getElementById("jobForm").onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget),now=new Date().toISOString(),full=[fd.get("firstName"),fd.get("middleName"),fd.get("lastName")].filter(Boolean).join(" ");let c=db.customers.find(x=>x.email&&fd.get("email")&&x.email.toLowerCase()===fd.get("email").toLowerCase());if(!c){c={id:uid("cus"),firstName:fd.get("firstName"),middleName:fd.get("middleName"),lastName:fd.get("lastName"),name:full,phone:fd.get("phone"),email:fd.get("email"),address1:fd.get("address1"),address2:fd.get("address2"),city:fd.get("city"),state:fd.get("state"),postalCode:fd.get("postalCode"),country:fd.get("country"),notes:fd.get("customerNotes")};db.customers.push(c)}let v=db.vehicles.find(x=>fd.get("vin")&&x.vin===fd.get("vin"));if(!v){v={id:uid("veh"),customerId:c.id,vin:fd.get("vin"),year:resolved("year"),make:resolved("make"),model:resolved("model"),trim:fd.get("trim"),color:fd.get("color"),wrap:fd.get("wrap"),type:fd.get("vehicleType"),plate:fd.get("plate")};db.vehicles.push(v)}const equipment=[...document.querySelectorAll(".equipment-row")].map(r=>({category:r.querySelector('[data-eq="category"]').value,brand:r.querySelector('[data-eq="brand"]').value,model:r.querySelector('[data-eq="model"]').value,qty:Number(r.querySelector('[data-eq="qty"]').value||1),note:r.querySelector('[data-eq="note"]').value})).filter(x=>x.category||x.brand||x.model);const parts=+fd.get("parts")||0,labor=+fd.get("labor")||0,fees=+fd.get("fees")||0,num=db.jobs.length+1,date=new Date().toISOString().slice(2,10).replaceAll("-","");const j={id:"J-"+date+"-"+String(num).padStart(3,"0"),estimateId:"EST-"+date+"-"+String(num).padStart(3,"0"),workOrderId:null,customerId:c.id,vehicleId:v.id,services:[...new Set(equipment.map(x=>x.category).filter(Boolean))],equipment,requestNotes:fd.get("requestNotes"),estimate:{parts,labor,fees,deposit:+fd.get("deposit")||0},estimateTotal:parts+labor+fees,status:fd.get("initialStatus"),appointment:fd.get("appointment"),partsStatus:fd.get("partsStatus"),duration:fd.get("duration"),createdAt:now,createdBy:currentActor(),audit:[{at:now,actor:currentActor(),action:"job_created"}]};db.jobs.push(j);save();e.currentTarget.reset();serviceRows.innerHTML="";addServiceRow();populateVehicleSelectors();updateTotal();currentJobId=j.id;show("jobdetail");toast(j.id+" created")};
+document.getElementById("jobForm").onsubmit=async e=>{
+  e.preventDefault();
+  const form=e.currentTarget;
+  const submitBtn=form.querySelector('[type="submit"]');
+  if(submitBtn?.disabled)return;
+  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="Reserving Job Number…"}
+  try{
+    const jobId=await allocateOperationalNumber("job");
+    const estimateId=jobId.replace(/^J-/,"EST-");
+    const fd=new FormData(form),now=new Date().toISOString(),full=[fd.get("firstName"),fd.get("middleName"),fd.get("lastName")].filter(Boolean).join(" ");
+    let c=db.customers.find(x=>x.email&&fd.get("email")&&x.email.toLowerCase()===fd.get("email").toLowerCase());
+    if(!c){
+      c={id:uid("cus"),firstName:fd.get("firstName"),middleName:fd.get("middleName"),lastName:fd.get("lastName"),name:full,phone:fd.get("phone"),email:fd.get("email"),address1:fd.get("address1"),address2:fd.get("address2"),city:fd.get("city"),state:fd.get("state"),postalCode:fd.get("postalCode"),country:fd.get("country"),notes:fd.get("customerNotes")};
+      db.customers.push(c);
+    }
+    let v=db.vehicles.find(x=>fd.get("vin")&&x.vin===fd.get("vin"));
+    if(!v){
+      v={id:uid("veh"),customerId:c.id,vin:fd.get("vin"),year:resolved("year"),make:resolved("make"),model:resolved("model"),trim:fd.get("trim"),color:fd.get("color"),wrap:fd.get("wrap"),type:fd.get("vehicleType"),plate:fd.get("plate")};
+      db.vehicles.push(v);
+    }
+    const equipment=[...document.querySelectorAll(".equipment-row")].map(r=>({category:r.querySelector('[data-eq="category"]').value,brand:r.querySelector('[data-eq="brand"]').value,model:r.querySelector('[data-eq="model"]').value,qty:Number(r.querySelector('[data-eq="qty"]').value||1),note:r.querySelector('[data-eq="note"]').value})).filter(x=>x.category||x.brand||x.model);
+    const parts=+fd.get("parts")||0,labor=+fd.get("labor")||0,fees=+fd.get("fees")||0;
+    const j={id:jobId,estimateId,workOrderId:null,customerId:c.id,vehicleId:v.id,services:[...new Set(equipment.map(x=>x.category).filter(Boolean))],equipment,requestNotes:fd.get("requestNotes"),estimate:{parts,labor,fees,deposit:+fd.get("deposit")||0},estimateTotal:parts+labor+fees,status:fd.get("initialStatus"),appointment:fd.get("appointment"),partsStatus:fd.get("partsStatus"),duration:fd.get("duration"),createdAt:now,createdBy:currentActor(),audit:[{at:now,actor:currentActor(),action:"job_created"}]};
+    db.jobs.push(j);
+    save();
+    form.reset();
+    serviceRows.innerHTML="";
+    addServiceRow();
+    populateVehicleSelectors();
+    updateTotal();
+    currentJobId=j.id;
+    show("jobdetail");
+    toast(j.id+" created");
+  }catch(err){
+    console.error("TTT job number allocation failed",err);
+    toast("Job was not created. Check the cloud connection and try again.");
+  }finally{
+    if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="Create Job"}
+  }
+}
 // Production has no demo-reset control; Supabase remains authoritative.
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)}
 render();
