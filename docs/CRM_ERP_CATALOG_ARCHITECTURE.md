@@ -1,86 +1,63 @@
-# TTT CRM + ERP + Dealer Catalog Architecture
+# TTT CRM + ERP + Catalog Architecture
 
-Status: Architecture lock — 2026-09-25
+Status: Supabase-first architecture — 2026-09-27
 
 ## System ownership
-- Supabase is the canonical operational system of record.
-- TTT OS is the primary user interface.
-- Google Drive owns source documents and generated business documents.
-- Google Sheets is a reporting, analysis, controlled bulk-edit/import/export surface; it is not a second master database.
-- Google Workspace integrations may mirror or publish approved data, but must not create competing truth.
+- **Supabase is the canonical operational system of record.**
+- **TTT-OS is the primary operating interface.**
+- Browser/local storage is a compatibility cache only where older modules still require it; it is not authoritative.
+- External communication or document providers may be integrated later through provider-neutral references, but no external office suite, spreadsheet, or file service may act as a mirror database or competing source of truth.
 
 ## Shared CRM/ERP flow
-Lead -> Opportunity -> Quote -> Customer/Company/Contact -> Vehicle -> Job/Work Order -> Invoice -> Payment
+Lead → Opportunity → Quote → Customer / Company / Contact → Vehicle → Job → Work Order → Invoice → Payment
 
-Vendor -> Dealer Catalog -> Product Master -> Inventory -> Purchase Order -> Receiving -> Job Consumption -> Actual Job Margin
+Supplier → Supplier Catalog → Product Master → Inventory → Job Consumption → Actual Job Margin
 
-## Dealer catalog model
-Dealer catalogs are supplier-specific commercial records, not the Product Master itself.
+## Product and supplier catalog model
+Supplier catalogs are source/reference commercial records. They are not the Product Master.
 
-products_services:
-Canonical TTT product/service identity. One stable TTT SKU per sellable inventory variant.
+### `products_services`
+Canonical TTT identity for products, materials, services and labor. Each active record receives a stable TTT SKU.
 
-supplier_products:
-Supplier/dealer relationship for a product: dealer SKU, dealer cost, MAP, MSRP, MOQ, lead time, effective/expiry dates, preferred supplier, source document.
+### Raw Supplier Catalog
+The current reference snapshot contains:
+- 940 raw supplier rows
+- 84 BlackVue rows
+- 856 JL Audio rows
+- 862 unique physical catalog items after deduplication
 
-product_price_history:
-Append-only history for supplier cost, MAP/MSRP and TTT selling-price changes.
+The canonical Product Master currently contains those 862 physical products plus 12 services and 4 labor records, for 878 total pricing records.
 
-inventory_items:
-Current stock position by product/location: on hand, reserved, reorder point/quantity, average cost.
+### `supplier_products`
+Future normalized supplier relationship layer: dealer SKU, dealer cost, MAP/MSRP, MOQ, lead time, effective dates, preferred supplier and source-document reference.
 
-inventory_transactions:
+### `product_price_history`
+Append-only price/cost history.
+
+### `inventory_items`
+Current stock position by product/location: on hand, reserved, reorder point, reorder quantity and average cost.
+
+### `inventory_transactions`
 Movement ledger for receiving, reservation, release, consumption, adjustment, return and transfer.
 
-vendors + companies:
-Supplier/dealer account, terms, categories, represented brands and commercial relationship.
-
-documents:
-Google Drive references for confidential price lists, POs, invoices, contracts and other source evidence.
-
 ## Catalog ingestion rule
-1. Archive original supplier/dealer document in Google Drive.
-2. Register source document in Supabase.
-3. Parse/import rows into staging or supplier_products as Reference status.
-4. Validate model/variant/SKU/price alignment.
-5. Match or create canonical Product Master record and TTT SKU.
-6. Promote validated supplier relationship/prices.
+1. Register the supplier source document/reference.
+2. Parse supplier rows into a staging/reference layer.
+3. Validate model, variant, SKU and price alignment.
+4. Match or create the canonical Product Master record.
+5. Assign/retain the TTT SKU.
+6. Promote validated supplier pricing.
 7. Record price history.
-8. TTT OS reads authenticated Supabase records, never confidential dealer-cost data from a public static JS bundle.
+8. TTT-OS reads authenticated Supabase records for operational pricing and inventory.
 
 ## Pricing rule
-Supplier cost is vendor-specific. TTT selling price belongs to the canonical TTT product. Quote lines snapshot both unit cost and unit selling price so later catalog changes never rewrite historical quote/job profitability.
+Supplier cost is supplier-specific. TTT selling price belongs to the canonical TTT item. Quote lines snapshot unit cost and selling price so later catalog changes never rewrite historical quote/job profitability.
 
 ## Inventory rule
-Inventory quantities must be transaction-driven. Purchase receiving adds stock; quote/job reservation reserves stock; cancellation releases it; job consumption reduces it; adjustments require an inventory transaction/audit trail.
+Inventory quantities should ultimately be transaction-driven. Receiving adds stock; job reservation reserves stock; cancellation releases it; work-order consumption reduces it; adjustments require an auditable inventory transaction.
 
-## Google Sheets rule
-Sheets can show synchronized CRM/ERP data and support controlled imports/bulk edits. Any accepted edit must write back to Supabase through the integration layer. Sheets must not independently calculate or own live inventory balances.
-
-## Current catalog caution
-The existing 940-row BlackVue/JL catalog snapshot is reference/staging data. It must be validated against source documents before becoming quote-ready Product Master data, because some PDF-extracted BlackVue rows have model/price alignment issues.
+## Document/reference rule
+Operational records may contain provider-neutral fields such as `document_id`, `document_url`, `storage_file_id`, `storage_url`, or other external-reference IDs. Those references must never turn an external provider into a second operational database.
 
 ## Coordination rule
-New CRM/ERP work should extend these shared canonical entities instead of creating parallel product, vendor, inventory, quote, purchasing, customer or job databases.
-
-
-## Google Workspace implementation v1 — 2026-09-25
-
-The existing Google workbook `TTT OS — Master Database v1` remains in service, but legacy tabs are preserved rather than treated as the new canonical schema.
-
-A new Supabase-aligned mirror layer has been added using `DB_*` tabs. These tabs use the exact Supabase column names and are intended for controlled reporting, bulk edit/import/export and Workspace workflows.
-
-Initial live mirrors have been seeded for companies, contacts, customers, vehicles, jobs, vendors, personnel, email templates and Workspace links. The Apps Script bridge performs repeatable full-table synchronization, including the larger product catalog.
-
-Workspace bridge source is version-controlled under `apps-script/` and supports:
-- Supabase -> Google Sheets full/table synchronization
-- controlled Sheets -> Supabase entity upsert
-- Gmail sends with CRM activity logging
-- Google Calendar appointment upsert
-- Google Drive entity-folder creation and link persistence
-- sync audit logging
-- backward compatibility with the current TTT-OS `syncJob` and `sendQuote` actions
-
-Secrets rule: the Supabase service-role key is allowed only in Apps Script Script Properties. It must never be stored in the workbook, TTT-OS browser code, GitHub, or a public environment variable.
-
-Cutover rule: do not delete the legacy Sheets tabs until the new bridge has been deployed, authorized and verified against live TTT-OS workflows.
+New CRM/ERP work must extend the shared canonical entities rather than creating parallel product, vendor, inventory, quote, purchasing, customer or job databases.
