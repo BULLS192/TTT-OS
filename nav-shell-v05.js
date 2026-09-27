@@ -165,7 +165,7 @@
       eyebrow:'FINANCE',title:'Invoices',status:'Relational support exists — standalone finance workspace needs consolidation',
       summary:'Invoice records and links already exist in the CRM/operational data model, but TTT-OS does not yet present a complete invoice register as a dedicated Finance screen.',
       exists:['Quotes and quote lines','Customer / Opportunity / Job links','Invoice relationship fields','Document relationships','Job estimate values'],
-      next:['Invoice register','Generate from approved work / job','Tax and discount handling','Invoice status / due date','PDF / Workspace delivery']
+      next:['Invoice register','Generate from approved work / job','Tax and discount handling','Invoice status / due date','PDF / document delivery']
     },
     payments:{
       eyebrow:'FINANCE',title:'Payments',status:'Review stage — payment workflow is not yet consolidated',
