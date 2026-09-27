@@ -308,7 +308,6 @@
       (created.equipment||[]).forEach((eq,i)=>{if(configs[i])eq.tintConfig=configs[i];});
       created.updatedAt=new Date().toISOString();
       save();
-      if(window.TTTSync?.queueJob) window.TTTSync.queueJob(created);
     }
     // app.js resets the builder after save; restore the v0.6 smart row for the next job.
     serviceRowsEl.innerHTML='';
@@ -316,10 +315,4 @@
     addBtn.onclick=()=>smartAddServiceRow();
     return result;
   };
-})();
-
-// Load the v0.7 business controls without changing the existing document/script order.
-(function(){
-  if(document.querySelector('script[data-ttt-v07]'))return;
-  const s=document.createElement('script');s.src='business-data-v07.js';s.dataset.tttV07='1';document.body.appendChild(s);
 })();
