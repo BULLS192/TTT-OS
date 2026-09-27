@@ -2,76 +2,52 @@
 
 Internal operating system for Thompson Transportation Technologies (TTT).
 
-## Current status — v0.1 foundation
+## Current architecture
 
-TTT OS is now a working browser prototype, designed **single-operator-first for Derek** while keeping user IDs, roles, assignments and audit records in the data model so additional technicians/employees can be added later without a rewrite.
+TTT OS is a multi-user operational web application backed by Supabase.
 
-### Working now
-- Operations dashboard
-- Customer records
-- Vehicle records
-- Work-order list and statuses
-- Protected new-work-order intake
-- Vehicle type, VIN, mileage, keys received and personal-item notes
-- Multiple photo capture/upload fields per vehicle view
-- Damage/condition notes
-- TTT service categories
-- Equipment and scope documentation
-- Estimate and lead-time capture
-- Versioned Terms & Conditions acknowledgement
-- Customer + TTT representative signatures
-- Default assignment to Derek
-- Audit-event creation
-- Local browser persistence
-
-> Photo binaries are previewed in the current prototype; production photo storage will move to hosted object storage.
-
-## Open the prototype
-
-This version has no build step.
-
-1. Clone/download the repository.
-2. Open `index.html` in a modern browser.
-3. Use **Reset demo** to restore the sample records.
-
-## Purpose
-
-TTT OS is the internal business platform for managing customers, vehicles, estimates, work orders, vehicle intake/condition documentation, technician workflow, quality control, delivery, warranties, inventory, scheduling, and reporting.
+- **Supabase** is the authoritative operational system of record.
+- **TTT OS** is the primary user interface.
+- Browser storage is compatibility/cache only for legacy modules and must not act as a competing database.
+- Business documents and attachments use provider-neutral references; storage/document tooling is not part of the data-ownership model.
 
 ## Core workflow
 
-Lead → Customer → Vehicle → Estimate → Authorization → Vehicle Check-In → Condition Photos → Work Order → Work → QC → Customer Approval → Payment → Delivery → Warranty Record
+Lead → Opportunity → Quote → Customer → Vehicle → Job → Work Order → Operations / Scheduling → Change Order → QC → Delivery → Invoice → Job Costing
 
-## v0.1 Modules
+## Active areas
 
-- Dashboard
-- Customers
-- Vehicles
-- Work Orders
-- Vehicle Check-In & Condition Photos
-- Estimates / authorization
-- Digital signatures
-- Warranty scaffold
+- Sales & CRM
+- Customers and vehicle history
+- Jobs and work orders
+- Configurable scheduling bays/resources and service-time templates
+- Check-in, condition documentation, authorization, QC and delivery
+- ERP Inventory and Pricing
+- Supplier Catalog
+- Expenses and multi-Job / Work-Order allocation
+- Quotes and Invoices
+- Job Costing
+- Personnel, skills, availability and time off
+- Service & Warranty
+- Supabase authentication, organization isolation, realtime synchronization and audit history
 
-## Planned modules
+## Catalog model
 
-- Work-order detail view
-- Photo annotation / damage markup
-- QC & delivery workflow
-- Scheduling
-- Inventory & parts
-- Purchase orders / vendors
-- Invoicing & payments
-- Customer communications
-- CRM / leads
-- Reporting & analytics
-- Admin / users / roles
-- Dealer / customer portal
+The raw supplier source snapshot currently contains 940 rows:
+- BlackVue: 84
+- JL Audio: 856
 
-## Scalability principle
+These deduplicate to 862 canonical supplier products:
+- BlackVue: 84
+- JL Audio: 778
 
-Derek is the default v0.1 operator. The system is intentionally not hard-coded as a permanent single-user app. Work orders already reference `createdBy` and `assignedTo` users, and audit/media records reference the acting user. See `docs/DATA_MODEL.md`.
+The Pricing Master currently contains 878 active priced records:
+- 862 products
+- 12 services
+- 4 labor records
 
-## Architecture principle
+The counts differ intentionally because Pricing includes TTT-created services and labor in addition to physical supplier products.
 
-The public TTT website and TTT OS remain separate applications. The public site may create leads or service requests in TTT OS later, while internal operational data stays inside TTT OS.
+## Development principle
+
+Extend the canonical Supabase entities rather than creating parallel data stores. New work should preserve the single-source-of-truth model and be covered by regression tests as the application is hardened for daily operations.
