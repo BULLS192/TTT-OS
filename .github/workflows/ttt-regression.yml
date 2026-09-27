@@ -17,6 +17,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: JavaScript syntax check
+        run: |
+          for file in app.js app-core.js cloud-sync.js core-relational-v05.js; do
+            node --check "$file"
+          done
       - name: Scheduling regression
         run: node tests/scheduling-v09.cjs
       - name: Production-readiness regression
