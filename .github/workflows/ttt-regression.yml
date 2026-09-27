@@ -28,5 +28,7 @@ jobs:
         run: node tests/regression-production-readiness-v01.cjs
       - name: Operational numbering regression
         run: node tests/operational-numbering-v01.cjs
+      - name: Deployment discipline regression
+        run: node tests/deployment-discipline-v01.cjs
       - name: Architecture and catalog regression
         run: node tests/regression-architecture-catalog-v01.cjs
