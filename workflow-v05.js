@@ -1,5 +1,5 @@
 // TTT OS v0.5.1 — DOM-integrated Final Authorization / Work Execution / Change Orders
-// Designed to load after workflow-v03.js, google-sync-v02.js and document-preview-v04.js.
+// Designed to load after workflow-v03.js and the document center.
 (function(){
   const now=()=>new Date().toISOString();
   const num=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -41,13 +41,10 @@
   function mark(j,action,extra={}){
     const at=now();
     j.updatedAt=at;
-    j.syncState='pending';
     j.audit=j.audit||[];
     j.audit.push({at,actor:window.TTTCloud?.profile?.person_id||window.TTTCloud?.userId||'system',action,...extra});
-    // Commit the complete local record before entering the replaceable sync path.
-    // A failed local write must throw before a Google job can be queued.
+    // Persist the local compatibility cache; Supabase adapters remain authoritative.
     localStorage.setItem(DB_KEY,JSON.stringify(db));
-    if(window.TTTSync?.queueJob) window.TTTSync.queueJob(j);
     window.dispatchEvent(new CustomEvent('ttt:job-operational-change',{detail:{jobId:j.id,action}}));
   }
 
