@@ -31,4 +31,4 @@ When an asset is approved, replace the relevant slot globally rather than changi
 
 ## Current implementation
 
-The in-app Document Viewer uses these placeholder slots as of v0.5. Google Docs automation templates should mirror the same slot names as they are updated.
+The in-app Document Center uses these placeholder slots. Future document-generation providers should consume the same provider-neutral slot names so document layout and workflow remain independent of any external platform.
