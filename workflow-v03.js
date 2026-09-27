@@ -1,6 +1,5 @@
 // TTT OS v0.3 — quotation and customer approval workflow
 (function(){
-  const QUOTE_TEMPLATE_URL='https://docs.google.com/document/d/14_fS3C6JBDQ4rwyxTBzjGcmQWEJenpthEUmqYndOijk/edit';
   if(!STATUSES.includes('Awaiting Deposit')) STATUSES.splice(Math.max(STATUSES.indexOf('Scheduled'),0),0,'Awaiting Deposit');
   const LABELS={Lead:'Job Draft',Estimate:'Quote Draft','Awaiting Approval':'Awaiting Approval','Awaiting Deposit':'Awaiting Deposit',Scheduled:'Scheduled','Awaiting Parts':'Awaiting Parts','Ready for Check-In':'Ready for Check-In','Checked In':'Checked In','Awaiting Final Authorization':'Awaiting Final Authorization','In Progress':'In Progress','Waiting on Customer':'Waiting on Customer','Waiting on Parts':'Waiting on Parts',QC:'QC','Ready for Pickup':'Ready for Pickup',Delivered:'Delivered',Closed:'Closed',Declined:'Declined'};
   const displayStatus=s=>LABELS[s]||s;
@@ -10,7 +9,7 @@
   const newApprovalId=()=>`APR-${year()}-${seq('approval')}`;
   const newWorkOrderId=()=>`WO-${year()}-${seq('wo')}`;
 
-  function touch(j,action,extra={}){const at=new Date().toISOString();j.updatedAt=at;j.syncState='pending';j.audit=j.audit||[];j.audit.push({at,actor:'usr_derek',action,...extra});save()}
+  function touch(j,action,extra={}){const at=new Date().toISOString();j.updatedAt=at;j.audit=j.audit||[];j.audit.push({at,actor:'usr_derek',action,...extra});save()}
   function snapshot(j){const c=customer(j.customerId)||{},v=vehicle(j.vehicleId)||{};return{customer:{name:c.name||'',phone:c.phone||'',email:c.email||''},vehicle:{vin:v.vin||'',year:v.year||'',make:v.make||'',model:v.model||'',trim:v.trim||'',color:v.color||''},services:[...(j.services||[])],equipment:(j.equipment||[]).map(x=>({...x})),requestNotes:j.requestNotes||'',estimate:{...(j.estimate||{})},estimateTotal:+j.estimateTotal||0,appointment:j.appointment||'',duration:j.duration||''}}
 
   function prepNewJob(){const f=document.getElementById('jobForm');if(!f)return;const s=f.querySelector('[name="initialStatus"]');if(s){s.innerHTML='<option value="Lead" selected>Job Draft</option>';s.disabled=false}const h=f.querySelector('.form-section:nth-of-type(3) .form-copy h3');if(h)h.textContent='Requested work & draft pricing';const p=f.querySelector('.form-section:nth-of-type(3) .form-copy p');if(p)p.textContent='Capture the customer request and draft pricing. Generate the formal quotation from the job after review.';const note=f.querySelector('.submit-bar span');if(note)note.textContent='Creates a Job Draft. The quotation is generated and approved from the job page.'}
