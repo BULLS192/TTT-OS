@@ -1,63 +1,72 @@
-# TTT CRM + ERP + Catalog Architecture
+# TTT CRM + ERP + Dealer Catalog Architecture
 
-Status: Supabase-first architecture — 2026-09-27
+Status: Supabase-only operational architecture — 2026-09-27
 
 ## System ownership
-- **Supabase is the canonical operational system of record.**
-- **TTT-OS is the primary operating interface.**
-- Browser/local storage is a compatibility cache only where older modules still require it; it is not authoritative.
-- External communication or document providers may be integrated later through provider-neutral references, but no external office suite, spreadsheet, or file service may act as a mirror database or competing source of truth.
+- **Supabase is the authoritative operational system of record.**
+- **TTT OS is the primary user interface.**
+- Business documents, media and attachments are represented through provider-neutral document/storage references.
+- No spreadsheet, browser cache, external document store or integration is permitted to act as a second master database.
+- Browser/local state is compatibility/cache only and must never override newer authoritative relational rows.
 
-## Shared CRM/ERP flow
-Lead → Opportunity → Quote → Customer / Company / Contact → Vehicle → Job → Work Order → Invoice → Payment
+## Shared CRM / Operations / Finance flow
+Lead -> Opportunity -> Quote -> Customer / Company / Contact -> Vehicle -> Job -> Work Order -> Invoice -> Payment
 
-Supplier → Supplier Catalog → Product Master → Inventory → Job Consumption → Actual Job Margin
+Vendor / Supplier -> Supplier Catalog -> Product Master -> Inventory -> Purchase Order -> Receiving -> Job Consumption -> Actual Job Margin
 
-## Product and supplier catalog model
-Supplier catalogs are source/reference commercial records. They are not the Product Master.
+## Product and supplier model
+### products_services
+Canonical TTT item identity. Products, materials, services and labor all receive a stable TTT SKU.
 
-### `products_services`
-Canonical TTT identity for products, materials, services and labor. Each active record receives a stable TTT SKU.
+### supplier_products
+Supplier-specific commercial relationship for a canonical product: dealer SKU, cost, MAP/MSRP, MOQ, lead time, effective dates and preferred supplier.
 
-### Raw Supplier Catalog
-The current reference snapshot contains:
-- 940 raw supplier rows
-- 84 BlackVue rows
-- 856 JL Audio rows
-- 862 unique physical catalog items after deduplication
+### product_price_history
+Append-only history for supplier cost and TTT selling-price changes.
 
-The canonical Product Master currently contains those 862 physical products plus 12 services and 4 labor records, for 878 total pricing records.
+### inventory_items
+Current stock position by product/location: on hand, reserved, reorder point/quantity and average cost.
 
-### `supplier_products`
-Future normalized supplier relationship layer: dealer SKU, dealer cost, MAP/MSRP, MOQ, lead time, effective dates, preferred supplier and source-document reference.
-
-### `product_price_history`
-Append-only price/cost history.
-
-### `inventory_items`
-Current stock position by product/location: on hand, reserved, reorder point, reorder quantity and average cost.
-
-### `inventory_transactions`
+### inventory_transactions
 Movement ledger for receiving, reservation, release, consumption, adjustment, return and transfer.
 
+### companies
+Canonical business-party record used for customers, suppliers, distributors, vendors, partners and other organizations.
+
+### documents
+Provider-neutral references for source evidence and generated business documents. Storage location is an implementation detail and must not determine business ownership.
+
 ## Catalog ingestion rule
-1. Register the supplier source document/reference.
-2. Parse supplier rows into a staging/reference layer.
-3. Validate model, variant, SKU and price alignment.
-4. Match or create the canonical Product Master record.
-5. Assign/retain the TTT SKU.
-6. Promote validated supplier pricing.
+1. Retain the original supplier/dealer source document as source evidence.
+2. Register the source document/reference in Supabase.
+3. Parse/import source rows into staging or supplier reference data.
+4. Validate model / variant / dealer SKU / price alignment.
+5. Match or create the canonical Product Master record and TTT SKU.
+6. Promote validated supplier relationships and prices.
 7. Record price history.
-8. TTT-OS reads authenticated Supabase records for operational pricing and inventory.
+8. TTT OS reads authenticated Supabase records; confidential dealer cost must never depend on a public static bundle.
 
 ## Pricing rule
-Supplier cost is supplier-specific. TTT selling price belongs to the canonical TTT item. Quote lines snapshot unit cost and selling price so later catalog changes never rewrite historical quote/job profitability.
+Supplier cost is supplier-specific. TTT selling price belongs to the canonical TTT item. Quote lines snapshot unit cost and selling price so later catalog changes never rewrite historical quote or Job profitability.
 
 ## Inventory rule
-Inventory quantities should ultimately be transaction-driven. Receiving adds stock; job reservation reserves stock; cancellation releases it; work-order consumption reduces it; adjustments require an auditable inventory transaction.
+Inventory is transaction-driven. Receiving adds stock; Job reservation reserves stock; cancellation releases it; consumption reduces it; returns and adjustments create explicit transactions and audit history.
 
-## Document/reference rule
-Operational records may contain provider-neutral fields such as `document_id`, `document_url`, `storage_file_id`, `storage_url`, or other external-reference IDs. Those references must never turn an external provider into a second operational database.
+## Current catalog reconciliation
+The supplier source snapshot contains **940 raw rows**:
+- BlackVue: 84 raw rows
+- JL Audio: 856 raw rows
+
+After deterministic deduplication there are **862 canonical supplier products**:
+- BlackVue: 84 unique products
+- JL Audio: 778 unique products
+
+The Pricing Master contains **878 active priced records**:
+- 862 products
+- 12 services
+- 4 labor records
+
+These counts intentionally differ because the Pricing Master includes TTT-created service and labor records in addition to supplier products.
 
 ## Coordination rule
-New CRM/ERP work must extend the shared canonical entities rather than creating parallel product, vendor, inventory, quote, purchasing, customer or job databases.
+New CRM/ERP/Operations work must extend these canonical entities rather than create parallel customer, Job, quote, product, inventory, supplier or finance databases.
