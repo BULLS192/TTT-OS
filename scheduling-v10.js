@@ -112,17 +112,17 @@
       const candidate=Object.assign({},op,{start});if(range==='day'&&zone.dataset.dropLane){if(laneMode==='resource')candidate.resourceId=zone.dataset.dropLane;else candidate.technicianId=zone.dataset.dropLane;}
       const windowHours=Core.businessWindow(db,new Date(start));const end=Core.endOf(candidate);if(!windowHours||new Date(start)<windowHours.start||end>windowHours.end){notify('Move blocked · operation falls outside configured shop hours.');render();return;}
       const conflicts=Core.operationConflicts(db,candidate,op.id);if(conflicts.length){notify('Move blocked · '+conflicts.map(c=>c.message).join(' '));render();return;}
-      Object.assign(op,candidate);save();const j=getJob(op.jobId);if(j&&window.TTTSync?.queueJob)TTTSync.queueJob(j);selectedDate=new Date(start);notify('Operation moved to '+fmtDay(start)+' '+fmtTime(start));render();return;
+      Object.assign(op,candidate);save();const j=getJob(op.jobId);selectedDate=new Date(start);notify('Operation moved to '+fmtDay(start)+' '+fmtTime(start));render();return;
     }
     if(payload.kind==='mgmt'){
       const a=getAppointment(payload.id);if(!a)return;a.start=start;save();selectedDate=new Date(start);notify('Management event moved');render();return;
     }
     if(payload.kind==='jobappt'){
-      const j=getJob(payload.id);if(!j)return;const old=j.appointment;j.appointment=start;j.audit=j.audit||[];j.audit.push({at:new Date().toISOString(),actor:'usr_derek',action:'appointment_rescheduled',from:old,to:start});save();if(window.TTTSync?.queueJob)TTTSync.queueJob(j);selectedDate=new Date(start);notify(j.id+' appointment moved');render();
+      const j=getJob(payload.id);if(!j)return;const old=j.appointment;j.appointment=start;j.audit=j.audit||[];j.audit.push({at:new Date().toISOString(),actor:'usr_derek',action:'appointment_rescheduled',from:old,to:start});save();selectedDate=new Date(start);notify(j.id+' appointment moved');render();
     }
   }
 
-  function planJob(id){const j=getJob(id);if(!j)return;const created=Core.generateJobOperations(db,j,{start:j.appointment||selectedDate});save();if(window.TTTSync?.queueJob)TTTSync.queueJob(j);if(created[0])selectedDate=new Date(created[0].start);range='day';mode='shop';notify(created.length+' operation'+(created.length===1?'':'s')+' planned');render();}
+  function planJob(id){const j=getJob(id);if(!j)return;const created=Core.generateJobOperations(db,j,{start:j.appointment||selectedDate});save();if(created[0])selectedDate=new Date(created[0].start);range='day';mode='shop';notify(created.length+' operation'+(created.length===1?'':'s')+' planned');render();}
 
   function openEvent(kind,id){if(kind==='op'){window.TTTSchedulingUI?.openOperationModal?.(id);return;}if(kind==='jobappt'){if(window.openJob)openJob(id);return;}if(kind==='mgmt')openEventModal(id);}
   function closeModal(){document.getElementById('v10ModalBackdrop')?.remove();}
