@@ -84,7 +84,7 @@
     a.op.updatedAt=new Date().toISOString();
     const j=getJob(a.op.jobId);
     if(j){j.audit=j.audit||[];j.audit.push({at:a.op.updatedAt,actor:'usr_derek',action:'operation_duration_resized',operationId:a.op.id,fromMinutes:old,toMinutes:a.op.durationMinutes});}
-    save();if(j&&window.TTTSync?.queueJob)TTTSync.queueJob(j);
+    save();
     notify(a.op.service+' resized · '+minsLabel(old)+' → '+minsLabel(a.op.durationMinutes));
     setTimeout(()=>window.TTTSchedulerV10?.render?.(),0);
   }
@@ -113,7 +113,7 @@
     const root=document.getElementById('schedulingBody');if(root){new MutationObserver(()=>setTimeout(decorate,0)).observe(root,{childList:true,subtree:true});}
     document.addEventListener('click',e=>{if(e.target.closest('[data-view="scheduling"],#opsGoSchedule,[data-range="day"],[data-lane]'))setTimeout(decorate,30);},true);
     setTimeout(decorate,50);
-    window.TTTSchedulerResizeV11={decorate,validateResize,resizeOperation:function(id,newDuration){const op=getOp(id);if(!op)return{ok:false,message:'Operation not found'};const result=validateResize(op,newDuration);if(!result.ok)return result;const old=op.durationMinutes;op.durationMinutes=result.candidate.durationMinutes;save();const j=getJob(op.jobId);if(j&&window.TTTSync?.queueJob)TTTSync.queueJob(j);setTimeout(()=>window.TTTSchedulerV10?.render?.(),0);return{ok:true,from:old,to:op.durationMinutes};},version:'1.1'};
+    window.TTTSchedulerResizeV11={decorate,validateResize,resizeOperation:function(id,newDuration){const op=getOp(id);if(!op)return{ok:false,message:'Operation not found'};const result=validateResize(op,newDuration);if(!result.ok)return result;const old=op.durationMinutes;op.durationMinutes=result.candidate.durationMinutes;save();const j=getJob(op.jobId);setTimeout(()=>window.TTTSchedulerV10?.render?.(),0);return{ok:true,from:old,to:op.durationMinutes};},version:'1.1'};
   }
   install();
 })();
