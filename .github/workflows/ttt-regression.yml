@@ -1,0 +1,23 @@
+name: TTT OS Regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Scheduling regression
+        run: node tests/scheduling-v09.cjs
+      - name: Production-readiness regression
+        run: node tests/regression-production-readiness-v01.cjs
