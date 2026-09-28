@@ -4,7 +4,7 @@
   const PAGE_TITLES={
     dashboard:'Command Center',
     crm:'CRM',
-    tessa:'Tessa Assistant',
+    tessa:'Tessa Assistant',\n    websiteAnalytics:'Website Analytics',
     jobs:'Jobs',
     vehicles:'Vehicles',
     vehicledetail:'Vehicle Details',
@@ -278,8 +278,18 @@
   }
   function buildInsightsNav(){
     const group=groupByTitle('INSIGHTS'),items=group?.querySelector('.nav-group-items');if(!items)return;
-    items.innerHTML=`<div class="nav-coming-soon"><span>Analytics, Reports & Compliance</span><span class="nav-soon-badge">Coming Soon</span></div>`;
+    items.innerHTML=`
+      <button class="nav-item website-analytics-shell-nav" type="button" data-view="websiteAnalytics">Website Analytics</button>
+      <div class="nav-coming-soon"><span>Reports & Compliance</span><span class="nav-soon-badge">Coming Soon</span></div>
+    `;
     group.hidden=false;
+    items.querySelector('.website-analytics-shell-nav')?.addEventListener('click',ev=>{
+      ev.preventDefault();ev.stopPropagation();
+      if(window.TTTWebsiteAnalytics?.show)window.TTTWebsiteAnalytics.show();
+      else if(typeof show==='function')show('websiteAnalytics');
+      markShellActive(items.querySelector('.website-analytics-shell-nav'));
+      const h=document.getElementById('pageTitle');if(h)h.textContent='Website Analytics';
+    });
   }
   function restoreNavigation(){
     ensureShellViews();removeLegacyStandaloneNav();
