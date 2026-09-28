@@ -1,0 +1,1 @@
+-- Public intake is intentionally callable without login, but signed-in TTT users do not need RPC execute access.\nrevoke execute on function public.submit_customer_intake(jsonb,text,uuid) from authenticated;\n
