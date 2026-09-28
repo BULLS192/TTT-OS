@@ -12,6 +12,8 @@ const vehicleOptions=fs.readFileSync('vehicle-options-v01.js','utf8');
 const migration=fs.readFileSync('supabase/migrations/20260928085927_customer_intake_qr_v1.sql','utf8');
 const anonOnly=fs.readFileSync('supabase/migrations/20260928090736_customer_intake_rpc_anon_only.sql','utf8');
 const plateStateMigration=fs.readFileSync('supabase/migrations/20260928094100_plate_state_capture.sql','utf8');
+const housekeepingMigration=fs.readFileSync('supabase/migrations/20260928105343_customer_intake_housekeeping_controls.sql','utf8');
+const deleteGuardMigration=fs.readFileSync('supabase/migrations/20260928105410_customer_intake_delete_archived_only.sql','utf8');
 
 new Function(app);
 new Function(manager);
@@ -42,12 +44,22 @@ assert(coreRelational.includes('plate_state:cleanText(x.plateState)'), 'Relation
 assert(manager.includes("from('customer_intakes')"), 'Internal queue must read customer_intakes.');
 assert(manager.includes("status:'converted'"), 'Intake conversion status update is missing.');
 assert(manager.includes('postgres_changes'), 'Realtime intake subscription is missing.');
+assert(manager.includes('Manage Intakes'), 'Manage Intakes workspace is missing.');
+assert(manager.includes("profile?.role==='owner_admin'"), 'Intake admin UI must respect owner_admin role.');
+assert(manager.includes("status:'archived'"), 'Archive workflow is missing.');
+assert(manager.includes(".delete()"), 'Permanent-delete workflow is missing.');
+assert(manager.includes('Possible duplicate'), 'Duplicate-warning UI is missing.');
+assert(manager.includes('archiveOldIntakes'), 'Bulk age-based cleanup is missing.');
 assert(migration.includes('alter table public.customer_intakes enable row level security'), 'RLS must be enabled.');
 assert(migration.includes('revoke all on table public.customer_intakes from anon, authenticated'), 'Table privileges must be explicit.');
 assert(migration.includes('grant execute on function public.submit_customer_intake(jsonb,text,uuid) to anon, authenticated'), 'Initial scoped intake submit RPC grant is missing.');
 assert(anonOnly.includes('revoke execute on function public.submit_customer_intake(jsonb,text,uuid) from authenticated'), 'Signed-in users should not retain public intake RPC execution.');
 assert(plateStateMigration.includes('add column if not exists plate_state text'), 'Plate-state database columns are missing.');
 assert(plateStateMigration.includes("p_payload->>'plateState'"), 'Public intake RPC must persist plate state.');
-assert(![app,manager,publicApp,publicHtml,indexHtml,appCore,coreRelational,vehicleOptions,migration,anonOnly,plateStateMigration].some(s=>/service[_-]?role|sb_secret_/i.test(s)), 'No server secret may be exposed in customer intake files.');
+assert(housekeepingMigration.includes('archived_reason text'), 'Intake archive metadata is missing.');
+assert(housekeepingMigration.includes('private.is_ttt_admin'), 'Intake housekeeping must enforce admin permissions.');
+assert(deleteGuardMigration.includes("status = 'archived'"), 'Permanent delete must require archived status.');
+assert(deleteGuardMigration.includes('converted_job_id is null'), 'Converted intakes must be protected from delete.');
+assert(![app,manager,publicApp,publicHtml,indexHtml,appCore,coreRelational,vehicleOptions,migration,anonOnly,plateStateMigration,housekeepingMigration,deleteGuardMigration].some(s=>/service[_-]?role|sb_secret_/i.test(s)), 'No server secret may be exposed in customer intake files.');
 
 console.log('Customer intake regression checks passed.');
