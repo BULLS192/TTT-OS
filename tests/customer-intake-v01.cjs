@@ -5,7 +5,7 @@ const app=fs.readFileSync('app.js','utf8');
 const manager=fs.readFileSync('customer-intakes-v01.js','utf8');
 const publicApp=fs.readFileSync('intake/app.js','utf8');
 const publicHtml=fs.readFileSync('intake/index.html','utf8');
-const migration=fs.readFileSync('supabase/migrations/20260928085927_customer_intake_qr_v1.sql','utf8');
+const migration=fs.readFileSync('supabase/migrations/20260928085927_customer_intake_qr_v1.sql','utf8');\nconst anonOnly=fs.readFileSync('supabase/migrations/20260928090736_customer_intake_rpc_anon_only.sql','utf8');
 
 new Function(app);
 new Function(manager);
@@ -21,7 +21,7 @@ assert(manager.includes("status:'converted'"), 'Intake conversion status update 
 assert(manager.includes("postgres_changes"), 'Realtime intake subscription is missing.');
 assert(migration.includes('alter table public.customer_intakes enable row level security'), 'RLS must be enabled.');
 assert(migration.includes('revoke all on table public.customer_intakes from anon, authenticated'), 'Table privileges must be explicit.');
-assert(migration.includes('grant execute on function public.submit_customer_intake(jsonb,text,uuid) to anon, authenticated'), 'Scoped intake submit RPC grant is missing.');
+assert(migration.includes('grant execute on function public.submit_customer_intake(jsonb,text,uuid) to anon, authenticated'), 'Initial scoped intake submit RPC grant is missing.');\nassert(anonOnly.includes('revoke execute on function public.submit_customer_intake(jsonb,text,uuid) from authenticated'), 'Signed-in users should not retain public intake RPC execution.');
 assert(![app,manager,publicApp,publicHtml,migration].some(s=>/service[_-]?role|sb_secret_/i.test(s)), 'No server secret may be exposed in customer intake files.');
 
 console.log('Customer intake regression checks passed.');
