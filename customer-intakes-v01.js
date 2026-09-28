@@ -21,6 +21,7 @@
   let activeSessionToken=null;
   let sessionIntake=null;
   let managerRows=[];
+  let selectedManagerIds=new Set();
 
   function esc(value=''){
     return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -142,6 +143,15 @@
           '<select id="intakeCleanupAge"><option value="30">30+ days</option><option value="60">60+ days</option><option value="90" selected>90+ days</option></select>'+
           '<button class="btn secondary compact" type="button" id="archiveOldIntakesBtn">Archive old unconverted</button>'+
         '</div>'+
+        '<div class="intake-bulk-controls" id="intakeBulkControls">'+
+          '<label class="intake-select-all"><input type="checkbox" id="selectVisibleIntakes"> <span>Select all visible</span></label>'+
+          '<span class="intake-selected-count" id="intakeSelectedCount">0 selected</span>'+
+          '<div class="intake-bulk-actions">'+
+            '<button class="btn secondary compact" type="button" id="clearIntakeSelectionBtn">Clear</button>'+
+            '<button class="btn secondary compact" type="button" id="archiveSelectedIntakesBtn" disabled>Archive Selected</button>'+
+            '<button class="btn danger compact" type="button" id="deleteSelectedIntakesBtn" disabled>Delete Selected</button>'+
+          '</div>'+
+        '</div>'+
         '<div class="intake-admin-note" id="intakeManagerRoleNote"></div>'+
         '<div class="intake-manage-list" id="intakeManageList"><div class="intake-empty">Loading customer intakes…</div></div>'+
       '</div>';
@@ -152,6 +162,10 @@
     document.getElementById('intakeManageSearch').addEventListener('input',renderManagerRows);
     document.getElementById('intakeManageStatus').addEventListener('change',renderManagerRows);
     document.getElementById('archiveOldIntakesBtn').addEventListener('click',archiveOldIntakes);
+    document.getElementById('selectVisibleIntakes').addEventListener('change',event=>toggleSelectVisible(event.target.checked));
+    document.getElementById('clearIntakeSelectionBtn').addEventListener('click',()=>{selectedManagerIds.clear();renderManagerRows();});
+    document.getElementById('archiveSelectedIntakesBtn').addEventListener('click',archiveSelectedIntakes);
+    document.getElementById('deleteSelectedIntakesBtn').addEventListener('click',deleteSelectedIntakes);
   }
 
   function closeQr(){
@@ -201,8 +215,10 @@
   async function openManager(){
     ensureManageModal();
     const cleanup=document.getElementById('intakeCleanupControls');
+    const bulk=document.getElementById('intakeBulkControls');
     const roleNote=document.getElementById('intakeManagerRoleNote');
     if(cleanup)cleanup.hidden=!isAdmin();
+    if(bulk)bulk.hidden=!isAdmin();
     if(roleNote)roleNote.textContent=isAdmin()
       ?'Archive is reversible. Permanent delete is only available for already-archived, unconverted intakes.'
       :'You can review and import intakes. Archive and permanent-delete controls are restricted to the TTT administrator.';
@@ -246,23 +262,14 @@
       return;
     }
     managerRows=data||[];
+    selectedManagerIds=new Set([...selectedManagerIds].filter(id=>managerRows.some(row=>row.id===id&&row.status!=='converted')));
     renderManagerRows();
   }
-  function renderManagerRows(){
-    const list=document.getElementById('intakeManageList');
-    const summary=document.getElementById('intakeManageSummary');
+
+  function filteredManagerRows(){
     const search=String(document.getElementById('intakeManageSearch')?.value||'').trim().toLowerCase();
     const selectedStatus=document.getElementById('intakeManageStatus')?.value||'all';
-    if(!list||!summary)return;
-
-    const counts={new:0,reviewed:0,converted:0,archived:0};
-    managerRows.forEach(row=>{if(Object.prototype.hasOwnProperty.call(counts,row.status))counts[row.status]++;});
-    summary.innerHTML=['new','reviewed','converted','archived'].map(key=>
-      '<div><strong>'+counts[key]+'</strong><span>'+statusLabel(key)+'</span></div>'
-    ).join('');
-
-    const duplicateCounts=duplicateCountMap();
-    const filtered=managerRows.filter(row=>{
+    return managerRows.filter(row=>{
       if(selectedStatus!=='all'&&row.status!==selectedStatus)return false;
       if(!search)return true;
       const hay=[
@@ -273,9 +280,59 @@
       ].filter(Boolean).join(' ').toLowerCase();
       return hay.includes(search);
     });
+  }
+  function selectedManagerRows(){
+    return managerRows.filter(row=>selectedManagerIds.has(row.id)&&row.status!=='converted');
+  }
+  function updateBulkControls(filtered=filteredManagerRows()){
+    const controls=document.getElementById('intakeBulkControls');
+    if(!controls||!isAdmin())return;
+    const eligibleVisible=filtered.filter(row=>row.status!=='converted');
+    const selected=selectedManagerRows();
+    const archivable=selected.filter(row=>row.status==='new'||row.status==='reviewed');
+    const deletable=selected.filter(row=>row.status==='archived'&&!row.converted_job_id);
+    const selectAll=document.getElementById('selectVisibleIntakes');
+    if(selectAll){
+      const selectedVisible=eligibleVisible.filter(row=>selectedManagerIds.has(row.id)).length;
+      selectAll.checked=eligibleVisible.length>0&&selectedVisible===eligibleVisible.length;
+      selectAll.indeterminate=selectedVisible>0&&selectedVisible<eligibleVisible.length;
+      selectAll.disabled=!eligibleVisible.length;
+    }
+    const count=document.getElementById('intakeSelectedCount');
+    if(count)count.textContent=selected.length+' selected · '+archivable.length+' archivable · '+deletable.length+' deletable';
+    const archiveBtn=document.getElementById('archiveSelectedIntakesBtn');
+    if(archiveBtn){archiveBtn.disabled=!archivable.length;archiveBtn.textContent=archivable.length?'Archive Selected ('+archivable.length+')':'Archive Selected';}
+    const deleteBtn=document.getElementById('deleteSelectedIntakesBtn');
+    if(deleteBtn){deleteBtn.disabled=!deletable.length;deleteBtn.textContent=deletable.length?'Delete Selected ('+deletable.length+')':'Delete Selected';}
+    const clearBtn=document.getElementById('clearIntakeSelectionBtn');
+    if(clearBtn)clearBtn.disabled=!selected.length;
+  }
+  function toggleSelectVisible(checked){
+    if(!isAdmin())return;
+    filteredManagerRows().filter(row=>row.status!=='converted').forEach(row=>{
+      if(checked)selectedManagerIds.add(row.id);
+      else selectedManagerIds.delete(row.id);
+    });
+    renderManagerRows();
+  }
+
+  function renderManagerRows(){
+    const list=document.getElementById('intakeManageList');
+    const summary=document.getElementById('intakeManageSummary');
+    if(!list||!summary)return;
+
+    const counts={new:0,reviewed:0,converted:0,archived:0};
+    managerRows.forEach(row=>{if(Object.prototype.hasOwnProperty.call(counts,row.status))counts[row.status]++;});
+    summary.innerHTML=['new','reviewed','converted','archived'].map(key=>
+      '<div><strong>'+counts[key]+'</strong><span>'+statusLabel(key)+'</span></div>'
+    ).join('');
+
+    const duplicateCounts=duplicateCountMap();
+    const filtered=filteredManagerRows();
 
     if(!filtered.length){
       list.innerHTML='<div class="intake-empty">No customer intakes match these filters.</div>';
+      updateBulkControls(filtered);
       return;
     }
 
@@ -285,6 +342,8 @@
       const plate=[row.plate,row.plate_state].filter(Boolean).join(' · ');
       const canUse=row.status==='new'||row.status==='reviewed';
       const admin=isAdmin();
+      const selectable=admin&&row.status!=='converted';
+      const selectBox=selectable?'<label class="intake-row-select" title="Select intake"><input type="checkbox" data-select-intake="'+esc(row.id)+'" '+(selectedManagerIds.has(row.id)?'checked':'')+'><span>Select</span></label>':'';
       let actions='';
       if(canUse)actions+='<button class="btn primary compact" type="button" data-manage-use="'+esc(row.id)+'">Use Intake</button>';
       if(admin&&(row.status==='new'||row.status==='reviewed'))actions+='<button class="btn secondary compact" type="button" data-manage-archive="'+esc(row.id)+'">Archive</button>';
@@ -292,8 +351,8 @@
         actions+='<button class="btn secondary compact" type="button" data-manage-restore="'+esc(row.id)+'">Restore</button>';
         if(!row.converted_job_id)actions+='<button class="btn danger compact" type="button" data-manage-delete="'+esc(row.id)+'">Delete permanently</button>';
       }
-      return '<article class="intake-manage-card">'+
-        '<div class="intake-manage-card-head"><div><strong>'+esc(row.first_name+' '+row.last_name)+'</strong><small>'+esc(row.intake_code||'')+' · '+esc(when(row.created_at))+'</small></div>'+
+      return '<article class="intake-manage-card '+(selectedManagerIds.has(row.id)?'is-selected':'')+'">'+
+        '<div class="intake-manage-card-head"><div class="intake-card-identity">'+selectBox+'<div><strong>'+esc(row.first_name+' '+row.last_name)+'</strong><small>'+esc(row.intake_code||'')+' · '+esc(when(row.created_at))+'</small></div></div>'+
         '<div class="intake-badges"><span class="intake-status status-'+esc(row.status)+'">'+esc(statusLabel(row.status))+'</span>'+(duplicate?'<span class="intake-duplicate">Possible duplicate</span>':'')+'</div></div>'+
         '<div class="intake-manage-grid">'+
           '<div><span>Contact</span><strong>'+esc(row.phone||'—')+'</strong><small>'+esc(row.email||'No email')+'</small></div>'+
@@ -305,6 +364,12 @@
       '</article>';
     }).join('');
 
+    list.querySelectorAll('[data-select-intake]').forEach(box=>box.addEventListener('change',()=>{
+      if(box.checked)selectedManagerIds.add(box.dataset.selectIntake);
+      else selectedManagerIds.delete(box.dataset.selectIntake);
+      renderManagerRows();
+    }));
+    updateBulkControls(filtered);
     list.querySelectorAll('[data-manage-use]').forEach(btn=>btn.addEventListener('click',()=>{
       const row=managerRows.find(x=>x.id===btn.dataset.manageUse);
       if(row){prefill(row);closeManager();}
@@ -319,6 +384,51 @@
       const row=managerRows.find(x=>x.id===btn.dataset.manageDelete);if(row)deleteIntake(row);
     }));
   }
+
+  async function archiveSelectedIntakes(){
+    if(!isAdmin())return;
+    const rows=selectedManagerRows().filter(row=>row.status==='new'||row.status==='reviewed');
+    if(!rows.length)return;
+    const reason=window.prompt('Archive reason for '+rows.length+' selected intake'+(rows.length===1?'':'s')+':','Bulk selected cleanup');
+    if(reason===null)return;
+    const c=cloud(),now=new Date().toISOString(),ids=rows.map(row=>row.id);
+    const {error}=await c.client.from('customer_intakes').update({
+      status:'archived',archived_at:now,archived_by:c.userId,
+      archived_reason:String(reason||'Bulk selected cleanup').trim().slice(0,500),
+      updated_at:now
+    }).eq('organization_id',c.organizationId)
+      .in('id',ids)
+      .in('status',['new','reviewed'])
+      .is('converted_job_id',null);
+    if(error){console.warn('TTT selected intake archive failed',error);status('Selected intakes could not be archived.');return;}
+    await c.audit?.('customer_intake',null,'intake_bulk_selected_archived',{
+      count:rows.length,intake_codes:rows.map(row=>row.intake_code),reason:reason||null
+    });
+    const filter=document.getElementById('intakeManageStatus');
+    if(filter)filter.value='archived';
+    status(rows.length+' selected intake'+(rows.length===1?'':'s')+' archived. Review them before permanent deletion.');
+    await Promise.all([refreshQueue(),loadManagerRows()]);
+  }
+  async function deleteSelectedIntakes(){
+    if(!isAdmin())return;
+    const rows=selectedManagerRows().filter(row=>row.status==='archived'&&!row.converted_job_id);
+    if(!rows.length)return;
+    if(!window.confirm('Permanently delete '+rows.length+' selected archived intake'+(rows.length===1?'':'s')+'? This cannot be undone.'))return;
+    const c=cloud(),ids=rows.map(row=>row.id);
+    const {error}=await c.client.from('customer_intakes').delete()
+      .eq('organization_id',c.organizationId)
+      .in('id',ids)
+      .eq('status','archived')
+      .is('converted_job_id',null);
+    if(error){console.warn('TTT selected intake permanent delete failed',error);status('Selected intakes could not be permanently deleted.');return;}
+    await c.audit?.('customer_intake',null,'intake_bulk_selected_deleted',{
+      count:rows.length,intake_codes:rows.map(row=>row.intake_code)
+    });
+    ids.forEach(id=>selectedManagerIds.delete(id));
+    status(rows.length+' archived intake'+(rows.length===1?'':'s')+' permanently deleted.');
+    await Promise.all([refreshQueue(),loadManagerRows()]);
+  }
+
   async function archiveIntake(row){
     if(!isAdmin()||!row||!['new','reviewed'].includes(row.status))return;
     const reason=window.prompt('Archive reason (optional):','Duplicate / incorrect / obsolete submission');
