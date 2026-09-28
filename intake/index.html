@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#060d19">
+  <title>Customer Check-In | TTT</title>
+  <link rel="icon" type="image/png" href="/favicon-64.png">
+  <link rel="stylesheet" href="/intake/styles.css?v=20260928-1">
+</head>
+<body>
+  <main class="intake-shell">
+    <header class="brand-card">
+      <img src="/ttt-logo.png" alt="Thompson Transportation Technologies">
+      <div>
+        <p>THOMPSON TRANSPORTATION TECHNOLOGIES</p>
+        <h1>Customer Check-In</h1>
+        <span>Tell us about you, your vehicle and what you need. A TTT team member will review everything with you before any work is authorized.</span>
+      </div>
+    </header>
+
+    <div id="intakeAlert" class="alert" hidden></div>
+
+    <form id="customerIntakeForm" novalidate>
+      <input class="hp" tabindex="-1" autocomplete="off" name="companyWebsite" aria-hidden="true">
+
+      <section class="card">
+        <div class="section-number">1</div>
+        <div class="section-copy"><h2>Your information</h2><p>Required fields are marked with *</p></div>
+        <div class="grid two">
+          <label>First name *<input name="firstName" autocomplete="given-name" maxlength="80" required></label>
+          <label>Last name *<input name="lastName" autocomplete="family-name" maxlength="80" required></label>
+          <label>Phone *<input name="phone" type="tel" autocomplete="tel" maxlength="40" required placeholder="(713) 555-0123"></label>
+          <label>Email<input name="email" type="email" autocomplete="email" maxlength="320" placeholder="you@example.com"></label>
+        </div>
+        <details>
+          <summary>Add address <span>optional</span></summary>
+          <div class="grid two details-grid">
+            <label class="span-2">Address<input name="address1" autocomplete="street-address" maxlength="160"></label>
+            <label>City<input name="city" autocomplete="address-level2" maxlength="100"></label>
+            <label>State<select name="state" id="stateSelect"><option value="">Select state</option></select></label>
+            <label>ZIP<input name="postalCode" autocomplete="postal-code" maxlength="24"></label>
+            <label>Country<select name="country"><option value="US">United States</option><option value="Canada">Canada</option><option value="Mexico">Mexico</option><option value="Other">Other</option></select></label>
+          </div>
+        </details>
+      </section>
+
+      <section class="card">
+        <div class="section-number">2</div>
+        <div class="section-copy"><h2>Your vehicle</h2><p>Fill in what you know. TTT will verify it before work begins.</p></div>
+        <div class="grid two">
+          <label>Year<input name="vehicleYear" inputmode="numeric" maxlength="10" placeholder="2024"></label>
+          <label>Make<input name="vehicleMake" maxlength="80" placeholder="Ford"></label>
+          <label>Model<input name="vehicleModel" maxlength="100" placeholder="F-150"></label>
+          <label>Trim<input name="vehicleTrim" maxlength="100"></label>
+          <label>Color<input name="vehicleColor" maxlength="80"></label>
+          <label>Vehicle type<select name="vehicleType"><option value="">Select type</option><option>Sedan</option><option>Coupe</option><option>SUV</option><option>Truck</option><option>Van</option><option>Marine</option><option>Other</option></select></label>
+          <label>License plate<input name="plate" maxlength="40"></label>
+          <label>VIN<input name="vin" id="vinInput" maxlength="17" autocapitalize="characters" placeholder="Optional"></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-number">3</div>
+        <div class="section-copy"><h2>How can we help?</h2><p>Select all that apply.</p></div>
+        <div class="services" id="serviceChoices">
+          <label><input type="checkbox" name="services" value="Window Tint"><span>Window Tint</span></label>
+          <label><input type="checkbox" name="services" value="Audio / Stereo"><span>Audio / Stereo</span></label>
+          <label><input type="checkbox" name="services" value="GPS / Tracking"><span>GPS / Tracking</span></label>
+          <label><input type="checkbox" name="services" value="Kill Switch / Security"><span>Kill Switch / Security</span></label>
+          <label><input type="checkbox" name="services" value="Dash Cam"><span>Dash Cam</span></label>
+          <label><input type="checkbox" name="services" value="SignalTrace Diagnostics"><span>SignalTrace™ Diagnostics</span></label>
+          <label><input type="checkbox" name="services" value="Custom Fabrication"><span>Custom Fabrication</span></label>
+          <label><input type="checkbox" name="services" value="Interior Lighting"><span>Interior Lighting</span></label>
+          <label><input type="checkbox" name="services" value="Exterior Lighting"><span>Exterior Lighting</span></label>
+          <label><input type="checkbox" name="services" value="Truck Accessories"><span>Truck Accessories</span></label>
+          <label><input type="checkbox" name="services" value="Marine Audio"><span>Marine Audio</span></label>
+          <label><input type="checkbox" name="services" value="Other"><span>Other</span></label>
+        </div>
+        <label class="block-label">Tell us what you'd like done
+          <textarea name="requestNotes" maxlength="3000" rows="5" placeholder="Example: ceramic tint on all side windows, diagnose intermittent audio issue, install front and rear dash cam..."></textarea>
+        </label>
+        <label class="block-label">Customer notes <span class="optional">optional</span>
+          <textarea name="customerNotes" maxlength="1000" rows="3" placeholder="Preferred contact method, dealer/company details, timing constraints..."></textarea>
+        </label>
+        <label class="block-label">How did you hear about TTT?
+          <select name="referralSource">
+            <option value="">Select one</option>
+            <option>Google</option><option>Facebook</option><option>Instagram</option>
+            <option>Friend / Referral</option><option>Dealer</option><option>Existing Customer</option>
+            <option>Drove Past</option><option>Event</option><option>Other</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="card consent-card">
+        <label class="consent"><input type="checkbox" name="contactConsent" required><span>I agree that Thompson Transportation Technologies may contact me about this service request. *</span></label>
+        <p>Submitting this form does not authorize repairs, installation or charges. A TTT team member will review the request with you first.</p>
+      </section>
+
+      <button id="submitIntakeBtn" class="submit-btn" type="submit">Submit to TTT</button>
+    </form>
+
+    <section id="intakeSuccess" class="success-card" hidden>
+      <div class="success-icon">✓</div>
+      <h2>You're checked in.</h2>
+      <p>Your information has been sent to TTT. Please let a team member know you've completed the form.</p>
+      <div class="reference">Reference <strong id="intakeReference"></strong></div>
+    </section>
+
+    <footer>Thompson Transportation Technologies · Customer Intake</footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js"></script>
+  <script src="/supabase-config.js?v=20260928-1"></script>
+  <script src="/intake/app.js?v=20260928-1"></script>
+</body>
+</html>

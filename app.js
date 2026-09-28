@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260927-atomic-numbering-v5';
+  const v='20260928-customer-intake-v1';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -25,6 +25,8 @@
   document.write('<script src="/supabase-config.js?v='+v+'"></'+'script>');
   document.write('<script src="/app-core.js?v='+v+'"></'+'script>');
   document.write('<script src="/cloud-sync.js?v='+v+'"></'+'script>');
+  document.write('<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></'+'script>');
+  document.write('<script src="/customer-intakes-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/avatar-service-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/core-relational-v05.js?v='+v+'"></'+'script>');
   document.write('<script src="/media-cloud-v06.js?v='+v+'"></'+'script>');
