@@ -237,6 +237,7 @@
     setValue(form,'color',row.vehicle_color);
     setSelectValue(form,'vehicleType',null,row.vehicle_type,false);
     setValue(form,'plate',row.plate);
+    setSelectValue(form,'plateState',null,row.plate_state,false);
 
     const requested=Array.isArray(row.requested_services)?row.requested_services:[];
     const mapped=[...new Set(requested.map(s=>SERVICE_MAP[s]||'Other'))];

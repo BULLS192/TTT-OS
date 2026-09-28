@@ -76,7 +76,8 @@
       color:cleanText(x.color),
       exterior_finish:cleanText(x.wrap),
       vehicle_type:cleanText(x.type),
-      plate:cleanText(x.plate)
+      plate:cleanText(x.plate),
+      plate_state:cleanText(x.plateState)
     });
   }
 
