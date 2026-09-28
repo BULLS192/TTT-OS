@@ -19,9 +19,11 @@ jobs:
           node-version: 22
       - name: JavaScript syntax check
         run: |
-          for file in app.js app-core.js cloud-sync.js core-relational-v05.js; do
+          for file in app.js app-core.js cloud-sync.js core-relational-v05.js customer-intakes-v01.js intake/app.js; do
             node --check "$file"
           done
+      - name: Customer intake regression
+        run: node tests/customer-intake-v01.cjs
       - name: Scheduling regression
         run: node tests/scheduling-v09.cjs
       - name: Production-readiness regression
