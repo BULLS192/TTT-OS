@@ -135,7 +135,7 @@
 
 <section id="vehicles" class="view">
   <div class="section-head"><div><p class="eyebrow">VEHICLE HISTORY</p><h2>Vehicles</h2><p class="muted">Open a vehicle to view every linked job and work order.</p></div></div>
-  <div class="panel"><div class="table-wrap"><table><thead><tr><th>Vehicle</th><th>Plate</th><th>VIN</th><th>Owner</th><th>Jobs</th><th>Latest status</th><th></th></tr></thead><tbody id="vehiclesBody"></tbody></table></div></div>
+  <div class="panel"><div class="table-wrap"><table><thead><tr><th>Vehicle</th><th>Plate / State</th><th>VIN</th><th>Owner</th><th>Jobs</th><th>Latest status</th><th></th></tr></thead><tbody id="vehiclesBody"></tbody></table></div></div>
 </section>
 
 <section id="vehicledetail" class="view">
@@ -174,7 +174,7 @@
         <div class="form-grid vehicle-details-grid">
           <label>Color<input name="color"></label><label>Wrap / PPF / exterior finish<input name="wrap"></label>
           <label>Vehicle type<select name="vehicleType" id="vehicleTypeSelect"><option value="">Select type</option><option>Sedan</option><option>Coupe</option><option>SUV</option><option>Truck</option><option>Van</option><option>Marine</option><option>Other</option></select></label>
-          <label>Plate / State<input name="plate" placeholder="Optional"></label>
+          <label>License plate<input name="plate" placeholder="Optional"></label><label>Plate state<select name="plateState" id="plateStateSelect"></select></label>
         </div>
       </div>
     </div>

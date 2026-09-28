@@ -14,7 +14,8 @@
   const session=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawSession)?rawSession:null;
   const states='AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split(' ');
   const stateSelect=document.getElementById('stateSelect');
-  states.forEach(s=>stateSelect.insertAdjacentHTML('beforeend','<option>'+s+'</option>'));
+  const plateStateSelect=document.getElementById('plateStateSelect');
+  states.forEach(s=>{stateSelect.insertAdjacentHTML('beforeend','<option>'+s+'</option>');plateStateSelect.insertAdjacentHTML('beforeend','<option>'+s+'</option>');});
   const vin=document.getElementById('vinInput');
   vin.addEventListener('input',()=>{vin.value=String(vin.value||'').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,'').slice(0,17);});
 
@@ -73,6 +74,7 @@
       vehicleColor:value(fd,'vehicleColor'),
       vehicleType:value(fd,'vehicleType'),
       plate:value(fd,'plate'),
+      plateState:value(fd,'plateState'),
       vin:value(fd,'vin'),
       services,
       requestNotes,
