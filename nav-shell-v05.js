@@ -4,6 +4,7 @@
   const PAGE_TITLES={
     dashboard:'Command Center',
     crm:'CRM',
+    tessa:'Tessa Assistant',
     jobs:'Jobs',
     vehicles:'Vehicles',
     vehicledetail:'Vehicle Details',
@@ -205,6 +206,7 @@
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="companies">Companies</button>
       <button class="nav-item sales-customer-nav" type="button" data-view="customers">Customers</button>
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="activity">Activities</button>
+      <button class="nav-item tessa-shell-nav" type="button" data-view="tessa">Tessa Assistant</button>
     `;
     group.classList.add('open');
     items.querySelector('.sales-customer-nav')?.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();if(typeof show==='function')show('customers');});
@@ -216,6 +218,13 @@
       window.TTTCRM?.load?.();
       setCrmNavActive(tab);
     }));
+    items.querySelector('.tessa-shell-nav')?.addEventListener('click',ev=>{
+      ev.preventDefault();ev.stopPropagation();
+      if(window.TTTTessaAdmin?.show)window.TTTTessaAdmin.show();
+      else if(typeof show==='function')show('tessa');
+      markShellActive(items.querySelector('.tessa-shell-nav'));
+      const h=document.getElementById('pageTitle');if(h)h.textContent='Tessa Assistant';
+    });
   }
 
   function buildOperationsNav(){
