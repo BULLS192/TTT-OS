@@ -20,11 +20,16 @@
   let channel=null;
   let activeSessionToken=null;
   let sessionIntake=null;
+  let managerRows=[];
 
   function esc(value=''){
     return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   }
   function cloud(){return window.TTTCloud;}
+  function isAdmin(){
+    const profile=cloud()?.profile;
+    return profile?.role==='owner_admin'||(Array.isArray(profile?.roles)&&profile.roles.includes('owner_admin'));
+  }
   function normPhone(value){return String(value||'').replace(/\D/g,'').slice(-10);}
   function when(value){if(!value)return '—';try{return new Date(value).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch{return '—';}}
   function vehicleLabel(row){return [row.vehicle_year,row.vehicle_make,row.vehicle_model,row.vehicle_trim].filter(Boolean).join(' ')||'Vehicle not entered';}
@@ -60,6 +65,7 @@
         '<div class="intake-manager-actions">'+
           '<button class="btn secondary compact" type="button" id="permanentIntakeQrBtn">Shop QR</button>'+
           '<button class="btn primary compact" type="button" id="newJobIntakeQrBtn">Generate Customer QR</button>'+
+          '<button class="btn secondary compact" type="button" id="manageIntakesBtn">Manage Intakes</button>'+
           '<button class="btn secondary compact" type="button" id="refreshIntakesBtn">Refresh</button>'+
         '</div>'+
       '</div>'+
@@ -72,6 +78,7 @@
     else section.insertBefore(panel,section.querySelector('#jobForm'));
 
     document.getElementById('refreshIntakesBtn').addEventListener('click',refreshQueue);
+    document.getElementById('manageIntakesBtn').addEventListener('click',openManager);
     document.getElementById('permanentIntakeQrBtn').addEventListener('click',()=>openQr('Permanent Shop QR',location.origin+'/intake/?source=shop-qr',null));
     document.getElementById('newJobIntakeQrBtn').addEventListener('click',()=>{
       activeSessionToken=crypto.randomUUID();
@@ -79,6 +86,7 @@
       openQr('Customer QR for This New Job',location.origin+'/intake/?source=new-job&session='+encodeURIComponent(activeSessionToken),activeSessionToken);
     });
     ensureModal();
+    ensureManageModal();
   }
   function ensureModal(){
     if(document.getElementById('intakeQrBackdrop'))return;
@@ -110,6 +118,42 @@
     document.getElementById('printIntakeQrBtn').addEventListener('click',printQr);
     document.getElementById('useSessionIntakeBtn').addEventListener('click',()=>{if(sessionIntake){prefill(sessionIntake);closeQr();}});
   }
+
+  function ensureManageModal(){
+    if(document.getElementById('intakeManageBackdrop'))return;
+    const el=document.createElement('div');
+    el.id='intakeManageBackdrop';
+    el.className='intake-manage-backdrop';
+    el.hidden=true;
+    el.innerHTML=
+      '<div class="intake-manage-modal" role="dialog" aria-modal="true" aria-labelledby="intakeManageTitle">'+
+        '<div class="intake-manage-titlebar">'+
+          '<div><p class="eyebrow">CUSTOMER INTAKES</p><h3 id="intakeManageTitle">Manage Intakes</h3><p>Review submissions, find duplicates and keep the intake queue clean without touching Supabase directly.</p></div>'+
+          '<button class="intake-qr-close" type="button" id="intakeManageClose" aria-label="Close">×</button>'+
+        '</div>'+
+        '<div class="intake-manage-summary" id="intakeManageSummary"></div>'+
+        '<div class="intake-manage-toolbar">'+
+          '<input id="intakeManageSearch" type="search" placeholder="Search name, phone, email, vehicle, plate, intake or job…">'+
+          '<select id="intakeManageStatus"><option value="all">All statuses</option><option value="new">New</option><option value="reviewed">Reviewed</option><option value="converted">Converted</option><option value="archived">Archived</option></select>'+
+          '<button class="btn secondary compact" type="button" id="intakeManageRefresh">Refresh</button>'+
+        '</div>'+
+        '<div class="intake-cleanup-controls" id="intakeCleanupControls">'+
+          '<span>Admin cleanup</span>'+
+          '<select id="intakeCleanupAge"><option value="30">30+ days</option><option value="60">60+ days</option><option value="90" selected>90+ days</option></select>'+
+          '<button class="btn secondary compact" type="button" id="archiveOldIntakesBtn">Archive old unconverted</button>'+
+        '</div>'+
+        '<div class="intake-admin-note" id="intakeManagerRoleNote"></div>'+
+        '<div class="intake-manage-list" id="intakeManageList"><div class="intake-empty">Loading customer intakes…</div></div>'+
+      '</div>';
+    document.body.appendChild(el);
+    el.addEventListener('click',event=>{if(event.target===el)closeManager();});
+    document.getElementById('intakeManageClose').addEventListener('click',closeManager);
+    document.getElementById('intakeManageRefresh').addEventListener('click',loadManagerRows);
+    document.getElementById('intakeManageSearch').addEventListener('input',renderManagerRows);
+    document.getElementById('intakeManageStatus').addEventListener('change',renderManagerRows);
+    document.getElementById('archiveOldIntakesBtn').addEventListener('click',archiveOldIntakes);
+  }
+
   function closeQr(){
     const el=document.getElementById('intakeQrBackdrop');
     if(el)el.hidden=true;
@@ -149,6 +193,202 @@
     const el=document.getElementById('intakeManagerStatus');
     if(el)el.textContent=message||'';
   }
+
+  function closeManager(){
+    const el=document.getElementById('intakeManageBackdrop');
+    if(el)el.hidden=true;
+  }
+  async function openManager(){
+    ensureManageModal();
+    const cleanup=document.getElementById('intakeCleanupControls');
+    const roleNote=document.getElementById('intakeManagerRoleNote');
+    if(cleanup)cleanup.hidden=!isAdmin();
+    if(roleNote)roleNote.textContent=isAdmin()
+      ?'Archive is reversible. Permanent delete is only available for already-archived, unconverted intakes.'
+      :'You can review and import intakes. Archive and permanent-delete controls are restricted to the TTT administrator.';
+    document.getElementById('intakeManageBackdrop').hidden=false;
+    await loadManagerRows();
+  }
+  function statusLabel(value){
+    return ({new:'New',reviewed:'Reviewed',converted:'Converted',archived:'Archived'})[value]||String(value||'Unknown');
+  }
+  function duplicateKeys(row){
+    const keys=[];
+    const email=String(row.email||'').trim().toLowerCase();
+    const phone=normPhone(row.phone);
+    if(email)keys.push('e:'+email);
+    if(phone)keys.push('p:'+phone);
+    return keys;
+  }
+  function duplicateCountMap(){
+    const counts=new Map();
+    managerRows.filter(row=>row.status!=='archived').forEach(row=>{
+      duplicateKeys(row).forEach(key=>counts.set(key,(counts.get(key)||0)+1));
+    });
+    return counts;
+  }
+  function isDuplicate(row,counts){
+    return duplicateKeys(row).some(key=>(counts.get(key)||0)>1);
+  }
+  async function loadManagerRows(){
+    const c=cloud();
+    const list=document.getElementById('intakeManageList');
+    if(!c?.ready||!c.client||!c.organizationId)return;
+    if(list)list.innerHTML='<div class="intake-empty">Loading customer intakes…</div>';
+    const {data,error}=await c.client.from('customer_intakes')
+      .select('*')
+      .eq('organization_id',c.organizationId)
+      .order('created_at',{ascending:false})
+      .limit(500);
+    if(error){
+      console.warn('TTT intake manager load failed',error);
+      if(list)list.innerHTML='<div class="intake-empty">Could not load customer intakes.</div>';
+      return;
+    }
+    managerRows=data||[];
+    renderManagerRows();
+  }
+  function renderManagerRows(){
+    const list=document.getElementById('intakeManageList');
+    const summary=document.getElementById('intakeManageSummary');
+    const search=String(document.getElementById('intakeManageSearch')?.value||'').trim().toLowerCase();
+    const selectedStatus=document.getElementById('intakeManageStatus')?.value||'all';
+    if(!list||!summary)return;
+
+    const counts={new:0,reviewed:0,converted:0,archived:0};
+    managerRows.forEach(row=>{if(Object.prototype.hasOwnProperty.call(counts,row.status))counts[row.status]++;});
+    summary.innerHTML=['new','reviewed','converted','archived'].map(key=>
+      '<div><strong>'+counts[key]+'</strong><span>'+statusLabel(key)+'</span></div>'
+    ).join('');
+
+    const duplicateCounts=duplicateCountMap();
+    const filtered=managerRows.filter(row=>{
+      if(selectedStatus!=='all'&&row.status!==selectedStatus)return false;
+      if(!search)return true;
+      const hay=[
+        row.intake_code,row.first_name,row.middle_name,row.last_name,row.phone,row.email,
+        row.vehicle_year,row.vehicle_make,row.vehicle_model,row.vehicle_trim,row.vehicle_color,
+        row.plate,row.plate_state,row.vin,row.converted_job_id,
+        ...(Array.isArray(row.requested_services)?row.requested_services:[])
+      ].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+
+    if(!filtered.length){
+      list.innerHTML='<div class="intake-empty">No customer intakes match these filters.</div>';
+      return;
+    }
+
+    list.innerHTML=filtered.map(row=>{
+      const duplicate=isDuplicate(row,duplicateCounts);
+      const services=(row.requested_services||[]).join(', ')||'No service selected';
+      const plate=[row.plate,row.plate_state].filter(Boolean).join(' · ');
+      const canUse=row.status==='new'||row.status==='reviewed';
+      const admin=isAdmin();
+      let actions='';
+      if(canUse)actions+='<button class="btn primary compact" type="button" data-manage-use="'+esc(row.id)+'">Use Intake</button>';
+      if(admin&&(row.status==='new'||row.status==='reviewed'))actions+='<button class="btn secondary compact" type="button" data-manage-archive="'+esc(row.id)+'">Archive</button>';
+      if(admin&&row.status==='archived'){
+        actions+='<button class="btn secondary compact" type="button" data-manage-restore="'+esc(row.id)+'">Restore</button>';
+        if(!row.converted_job_id)actions+='<button class="btn danger compact" type="button" data-manage-delete="'+esc(row.id)+'">Delete permanently</button>';
+      }
+      return '<article class="intake-manage-card">'+
+        '<div class="intake-manage-card-head"><div><strong>'+esc(row.first_name+' '+row.last_name)+'</strong><small>'+esc(row.intake_code||'')+' · '+esc(when(row.created_at))+'</small></div>'+
+        '<div class="intake-badges"><span class="intake-status status-'+esc(row.status)+'">'+esc(statusLabel(row.status))+'</span>'+(duplicate?'<span class="intake-duplicate">Possible duplicate</span>':'')+'</div></div>'+
+        '<div class="intake-manage-grid">'+
+          '<div><span>Contact</span><strong>'+esc(row.phone||'—')+'</strong><small>'+esc(row.email||'No email')+'</small></div>'+
+          '<div><span>Vehicle</span><strong>'+esc(vehicleLabel(row))+'</strong><small>'+esc(plate||'No plate')+(row.vin?' · VIN '+esc(row.vin):'')+'</small></div>'+
+          '<div><span>Request</span><strong>'+esc(services)+'</strong><small>'+esc(row.request_notes||'No notes')+'</small></div>'+
+          '<div><span>Source / Result</span><strong>'+esc(sourceLabel(row.source))+'</strong><small>'+(row.converted_job_id?'Job '+esc(row.converted_job_id):row.archived_reason?esc(row.archived_reason):'Not converted')+'</small></div>'+
+        '</div>'+
+        '<div class="intake-manage-actions">'+actions+'</div>'+
+      '</article>';
+    }).join('');
+
+    list.querySelectorAll('[data-manage-use]').forEach(btn=>btn.addEventListener('click',()=>{
+      const row=managerRows.find(x=>x.id===btn.dataset.manageUse);
+      if(row){prefill(row);closeManager();}
+    }));
+    list.querySelectorAll('[data-manage-archive]').forEach(btn=>btn.addEventListener('click',()=>{
+      const row=managerRows.find(x=>x.id===btn.dataset.manageArchive);if(row)archiveIntake(row);
+    }));
+    list.querySelectorAll('[data-manage-restore]').forEach(btn=>btn.addEventListener('click',()=>{
+      const row=managerRows.find(x=>x.id===btn.dataset.manageRestore);if(row)restoreIntake(row);
+    }));
+    list.querySelectorAll('[data-manage-delete]').forEach(btn=>btn.addEventListener('click',()=>{
+      const row=managerRows.find(x=>x.id===btn.dataset.manageDelete);if(row)deleteIntake(row);
+    }));
+  }
+  async function archiveIntake(row){
+    if(!isAdmin()||!row||!['new','reviewed'].includes(row.status))return;
+    const reason=window.prompt('Archive reason (optional):','Duplicate / incorrect / obsolete submission');
+    if(reason===null)return;
+    const c=cloud(),now=new Date().toISOString();
+    const {error}=await c.client.from('customer_intakes').update({
+      status:'archived',archived_at:now,archived_by:c.userId,
+      archived_reason:String(reason||'Archived by admin').trim().slice(0,500),
+      updated_at:now
+    }).eq('organization_id',c.organizationId).eq('id',row.id);
+    if(error){console.warn('TTT intake archive failed',error);status('Intake could not be archived.');return;}
+    await c.audit?.('customer_intake',row.id,'intake_archived',{intake_code:row.intake_code,reason:reason||null});
+    await Promise.all([refreshQueue(),loadManagerRows()]);
+  }
+  async function restoreIntake(row){
+    if(!isAdmin()||!row||row.status!=='archived')return;
+    const c=cloud(),now=new Date().toISOString();
+    const {error}=await c.client.from('customer_intakes').update({
+      status:'reviewed',archived_at:null,archived_by:null,archived_reason:null,
+      reviewed_at:row.reviewed_at||now,reviewed_by:row.reviewed_by||c.userId,updated_at:now
+    }).eq('organization_id',c.organizationId).eq('id',row.id);
+    if(error){console.warn('TTT intake restore failed',error);status('Intake could not be restored.');return;}
+    await c.audit?.('customer_intake',row.id,'intake_restored',{intake_code:row.intake_code});
+    await Promise.all([refreshQueue(),loadManagerRows()]);
+  }
+  async function deleteIntake(row){
+    if(!isAdmin()||!row||row.status!=='archived'||row.converted_job_id)return;
+    if(!window.confirm('Permanently delete '+(row.intake_code||'this intake')+'? This cannot be undone.'))return;
+    const c=cloud();
+    const {error}=await c.client.from('customer_intakes').delete()
+      .eq('organization_id',c.organizationId)
+      .eq('id',row.id)
+      .eq('status','archived')
+      .is('converted_job_id',null);
+    if(error){console.warn('TTT intake permanent delete failed',error);status('Intake could not be permanently deleted.');return;}
+    await c.audit?.('customer_intake',row.id,'intake_deleted_permanently',{
+      intake_code:row.intake_code,name:[row.first_name,row.last_name].filter(Boolean).join(' '),
+      archived_reason:row.archived_reason||null
+    });
+    await Promise.all([refreshQueue(),loadManagerRows()]);
+  }
+  async function archiveOldIntakes(){
+    if(!isAdmin())return;
+    const c=cloud();
+    const days=Number(document.getElementById('intakeCleanupAge')?.value||90);
+    const cutoff=new Date(Date.now()-days*86400000).toISOString();
+    const {data,error}=await c.client.from('customer_intakes')
+      .select('id,intake_code')
+      .eq('organization_id',c.organizationId)
+      .in('status',['new','reviewed'])
+      .is('converted_job_id',null)
+      .lt('created_at',cutoff);
+    if(error){console.warn('TTT intake cleanup scan failed',error);return;}
+    const rows=data||[];
+    if(!rows.length){status('No unconverted intakes are older than '+days+' days.');return;}
+    if(!window.confirm('Archive '+rows.length+' unconverted intake'+(rows.length===1?'':'s')+' older than '+days+' days?'))return;
+    const now=new Date().toISOString();
+    const {error:updateError}=await c.client.from('customer_intakes').update({
+      status:'archived',archived_at:now,archived_by:c.userId,
+      archived_reason:'Bulk cleanup: older than '+days+' days',updated_at:now
+    }).eq('organization_id',c.organizationId)
+      .in('id',rows.map(x=>x.id))
+      .in('status',['new','reviewed'])
+      .is('converted_job_id',null);
+    if(updateError){console.warn('TTT intake bulk archive failed',updateError);status('Old intakes could not be archived.');return;}
+    await c.audit?.('customer_intake',null,'intake_bulk_archived',{count:rows.length,older_than_days:days});
+    status(rows.length+' old intake'+(rows.length===1?'':'s')+' archived.');
+    await Promise.all([refreshQueue(),loadManagerRows()]);
+  }
+
   function renderQueue(){
     const queue=document.getElementById('intakeQueue');
     const count=document.getElementById('intakeCount');
@@ -307,6 +547,7 @@
   }
   function handleRealtime(payload){
     refreshQueue();
+    if(document.getElementById('intakeManageBackdrop')&&!document.getElementById('intakeManageBackdrop').hidden)loadManagerRows();
     const row=payload?.new;
     if(!row||!activeSessionToken||row.session_token!==activeSessionToken)return;
     sessionIntake=row;
@@ -338,5 +579,5 @@
   }
   const timer=setInterval(()=>{if(cloud()?.ready){clearInterval(timer);init();}},250);
   window.addEventListener('ttt:cloud-state-applied',()=>setTimeout(init,50));
-  window.TTTCustomerIntake={refresh:refreshQueue};
+  window.TTTCustomerIntake={refresh:refreshQueue,manage:openManager};
 })();
