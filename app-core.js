@@ -173,7 +173,8 @@ document.getElementById("jobForm").onsubmit=async e=>{
     const jobId=await allocateOperationalNumber("job");
     const estimateId=jobId.replace(/^J-/,"EST-");
     const fd=new FormData(form),now=new Date().toISOString(),full=[fd.get("firstName"),fd.get("middleName"),fd.get("lastName")].filter(Boolean).join(" ");
-    let c=db.customers.find(x=>x.email&&fd.get("email")&&x.email.toLowerCase()===fd.get("email").toLowerCase());
+    const matchEmail=String(fd.get("email")||"").trim().toLowerCase(),matchPhone=String(fd.get("phone")||"").replace(/\D/g,"").slice(-10);
+    let c=db.customers.find(x=>(matchEmail&&String(x.email||"").trim().toLowerCase()===matchEmail)||(matchPhone&&String(x.phone||"").replace(/\D/g,"").slice(-10)===matchPhone));
     if(!c){
       c={id:uid("cus"),firstName:fd.get("firstName"),middleName:fd.get("middleName"),lastName:fd.get("lastName"),name:full,phone:fd.get("phone"),email:fd.get("email"),address1:fd.get("address1"),address2:fd.get("address2"),city:fd.get("city"),state:fd.get("state"),postalCode:fd.get("postalCode"),country:fd.get("country"),notes:fd.get("customerNotes")};
       db.customers.push(c);
