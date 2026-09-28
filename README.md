@@ -21,7 +21,7 @@ Lead → Opportunity → Quote → Customer → Vehicle → Job → Work Order �
 - Customers and vehicle history
 - Jobs and work orders
 - Configurable scheduling bays/resources and service-time templates
-- Check-in, condition documentation, authorization, QC and delivery
+- Check-in, condition documentation, authorization, QC and delivery\n- QR customer intake with a Supabase staging queue and New Job import
 - ERP Inventory and Pricing
 - Supplier Catalog
 - Expenses and multi-Job / Work-Order allocation
