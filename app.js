@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260928-plate-state-v1';
+  const v='20260928-vehicle-selectors-v1';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -23,6 +23,7 @@
   }
   document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js"></'+'script>');
   document.write('<script src="/supabase-config.js?v='+v+'"></'+'script>');
+  document.write('<script src="/vehicle-options-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/app-core.js?v='+v+'"></'+'script>');
   document.write('<script src="/cloud-sync.js?v='+v+'"></'+'script>');
   document.write('<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></'+'script>');

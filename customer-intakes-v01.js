@@ -234,7 +234,7 @@
     setSelectValue(form,'make','makeOther',row.vehicle_make,true);
     setSelectValue(form,'model','modelOther',row.vehicle_model,true);
     setValue(form,'trim',row.vehicle_trim);
-    setValue(form,'color',row.vehicle_color);
+    setSelectValue(form,'color','colorOther',row.vehicle_color,false);
     setSelectValue(form,'vehicleType',null,row.vehicle_type,false);
     setValue(form,'plate',row.plate);
     setSelectValue(form,'plateState',null,row.plate_state,false);

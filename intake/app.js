@@ -16,6 +16,35 @@
   const stateSelect=document.getElementById('stateSelect');
   const plateStateSelect=document.getElementById('plateStateSelect');
   states.forEach(s=>{stateSelect.insertAdjacentHTML('beforeend','<option>'+s+'</option>');plateStateSelect.insertAdjacentHTML('beforeend','<option>'+s+'</option>');});
+  const vehicleCatalog=window.TTTVehicleOptions?.catalog||{};
+  const vehicleColors=window.TTTVehicleOptions?.colors||[];
+  const makeSelect=document.getElementById('vehicleMakeSelect');
+  const modelSelect=document.getElementById('vehicleModelSelect');
+  const colorSelect=document.getElementById('vehicleColorSelect');
+  const makeOther=document.getElementById('vehicleMakeOther');
+  const modelOther=document.getElementById('vehicleModelOther');
+  const colorOther=document.getElementById('vehicleColorOther');
+
+  function fillSelect(select,placeholder,items,otherLabel){
+    select.innerHTML='<option value="">'+placeholder+'</option>'+items.map(x=>'<option>'+x+'</option>').join('')+'<option value="__other">'+otherLabel+'</option>';
+  }
+  function toggleOther(select,input){
+    input.hidden=select.value!=='__other';
+    if(input.hidden)input.value='';
+  }
+  function loadModels(){
+    const make=makeSelect.value;
+    const models=make&&make!=='__other'?(vehicleCatalog[make]||[]):[];
+    fillSelect(modelSelect,'Select model',models,'Other / Not listed');
+    modelOther.hidden=true;
+  }
+  fillSelect(makeSelect,'Select make',Object.keys(vehicleCatalog),'Other / Not listed');
+  fillSelect(colorSelect,'Select color',vehicleColors.filter(x=>x!=='Other / Custom'),'Other / Custom');
+  loadModels();
+  makeSelect.addEventListener('change',()=>{toggleOther(makeSelect,makeOther);loadModels();if(makeSelect.value==='__other'){modelSelect.value='__other';toggleOther(modelSelect,modelOther);}});
+  modelSelect.addEventListener('change',()=>toggleOther(modelSelect,modelOther));
+  colorSelect.addEventListener('change',()=>toggleOther(colorSelect,colorOther));
+
   const vin=document.getElementById('vinInput');
   vin.addEventListener('input',()=>{vin.value=String(vin.value||'').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,'').slice(0,17);});
 
@@ -36,6 +65,10 @@
   }
   function clearError(){alertBox.hidden=true;alertBox.textContent='';}
   function value(fd,name){return String(fd.get(name)||'').trim();}
+  function vehicleValue(fd,name){
+    const selected=value(fd,name);
+    return selected==='__other'?value(fd,name+'Other'):selected;
+  }
   function selectedServices(){return [...form.querySelectorAll('input[name="services"]:checked')].map(el=>el.value);}
 
   form.addEventListener('submit',async(event)=>{
@@ -68,10 +101,10 @@
       country:value(fd,'country')||'US',
       customerNotes:value(fd,'customerNotes'),
       vehicleYear:value(fd,'vehicleYear'),
-      vehicleMake:value(fd,'vehicleMake'),
-      vehicleModel:value(fd,'vehicleModel'),
+      vehicleMake:vehicleValue(fd,'vehicleMake'),
+      vehicleModel:vehicleValue(fd,'vehicleModel'),
       vehicleTrim:value(fd,'vehicleTrim'),
-      vehicleColor:value(fd,'vehicleColor'),
+      vehicleColor:vehicleValue(fd,'vehicleColor'),
       vehicleType:value(fd,'vehicleType'),
       plate:value(fd,'plate'),
       plateState:value(fd,'plateState'),

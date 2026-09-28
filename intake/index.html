@@ -50,10 +50,10 @@
         <div class="section-copy"><h2>Your vehicle</h2><p>Fill in what you know. TTT will verify it before work begins.</p></div>
         <div class="grid two">
           <label>Year<input name="vehicleYear" inputmode="numeric" maxlength="10" placeholder="2024"></label>
-          <label>Make<input name="vehicleMake" maxlength="80" placeholder="Ford"></label>
-          <label>Model<input name="vehicleModel" maxlength="100" placeholder="F-150"></label>
+          <label>Make<select name="vehicleMake" id="vehicleMakeSelect"><option value="">Select make</option></select><input name="vehicleMakeOther" id="vehicleMakeOther" maxlength="80" placeholder="Enter make" hidden></label>
+          <label>Model<select name="vehicleModel" id="vehicleModelSelect"><option value="">Select model</option></select><input name="vehicleModelOther" id="vehicleModelOther" maxlength="100" placeholder="Enter model" hidden></label>
           <label>Trim<input name="vehicleTrim" maxlength="100"></label>
-          <label>Color<input name="vehicleColor" maxlength="80"></label>
+          <label>Color<select name="vehicleColor" id="vehicleColorSelect"><option value="">Select color</option></select><input name="vehicleColorOther" id="vehicleColorOther" maxlength="80" placeholder="Enter color" hidden></label>
           <label>Vehicle type<select name="vehicleType"><option value="">Select type</option><option>Sedan</option><option>Coupe</option><option>SUV</option><option>Truck</option><option>Van</option><option>Marine</option><option>Other</option></select></label>
           <label>License plate<input name="plate" maxlength="40"></label>
           <label>Plate state<select name="plateState" id="plateStateSelect"><option value="">Select state</option></select></label>
@@ -114,6 +114,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.min.js"></script>
   <script src="/supabase-config.js?v=20260928-1"></script>
+  <script src="/vehicle-options-v01.js?v=20260928-vehicle-selectors-v1"></script>
   <script src="/intake/app.js?v=20260928-1"></script>
 </body>
 </html>

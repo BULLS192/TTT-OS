@@ -19,7 +19,7 @@ jobs:
           node-version: 22
       - name: JavaScript syntax check
         run: |
-          for file in app.js app-core.js cloud-sync.js core-relational-v05.js customer-intakes-v01.js intake/app.js; do
+          for file in app.js app-core.js cloud-sync.js core-relational-v05.js customer-intakes-v01.js vehicle-options-v01.js intake/app.js; do
             node --check "$file"
           done
       - name: Customer intake regression
