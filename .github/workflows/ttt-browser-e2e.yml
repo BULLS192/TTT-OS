@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      TTT_E2E_BASE_URL: ${{ github.event_name == 'deployment_status' && github.event.deployment_status.environment_url || 'https://ttt-os.vercel.app' }}
+      TTT_E2E_BASE_URL: https://ttt-os.vercel.app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      TTT_E2E_BASE_URL: ${{ github.event.deployment_status.environment_url || 'https://ttt-os.vercel.app' }}
+      TTT_E2E_BASE_URL: https://ttt-os.vercel.app
       TTT_E2E_EMAIL: ${{ secrets.TTT_E2E_EMAIL }}
       TTT_E2E_PASSWORD: ${{ secrets.TTT_E2E_PASSWORD }}
     steps:

@@ -18,6 +18,7 @@ const tests=[
   ['GitHub regression uses the real production-readiness test path',()=>assert(regression.includes('node tests/regression-production-readiness-v01.cjs'))],
   ['browser E2E runs on deployment status',()=>assert(e2e.includes('deployment_status:'))],
   ['successful deployment status is sufficient to run E2E',()=>assert(e2e.includes("github.event.deployment_status.state == 'success'")&&!e2e.includes("github.event.deployment.ref == 'main'"))],
+  ['post-deploy E2E tests the public production alias, not a protected deployment URL',()=>assert((e2e.match(/TTT_E2E_BASE_URL: https:\/\/ttt-os\.vercel\.app/g)||[]).length>=2&&!e2e.includes('deployment_status.environment_url'))],
   ['browser E2E does not call Vercel deploy',()=>assert(!/vercel\s+(deploy|--prod|promote)/i.test(e2e))],
   ['public smoke verifies current runtime bootstrap',()=>assert(publicSmoke.includes('window.TTTCRM')&&publicSmoke.includes('window.TTTTessaAdmin')&&publicSmoke.includes('window.TTTWebsiteAnalytics'))],
   ['authenticated E2E requires repository secrets',()=>assert(auth.includes('TTT_E2E_EMAIL')&&auth.includes('TTT_E2E_PASSWORD'))],
