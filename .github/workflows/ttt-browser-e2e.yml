@@ -10,8 +10,7 @@ jobs:
     if: >
       github.event_name == 'pull_request' ||
       (github.event_name == 'deployment_status' &&
-       github.event.deployment_status.state == 'success' &&
-       github.event.deployment.ref == 'main')
+       github.event.deployment_status.state == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -40,8 +39,7 @@ jobs:
   authenticated-lifecycle:
     if: >
       github.event_name == 'deployment_status' &&
-      github.event.deployment_status.state == 'success' &&
-      github.event.deployment.ref == 'main'
+      github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

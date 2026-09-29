@@ -24,7 +24,7 @@ jobs:
       - name: Scheduling regression
         run: node tests/scheduling-v09.cjs
       - name: Production-readiness regression
-        run: node tests/production-readiness-v01.cjs
+        run: node tests/regression-production-readiness-v01.cjs
       - name: Operational numbering regression
         run: node tests/operational-numbering-v01.cjs
       - name: Deployment discipline regression
