@@ -196,6 +196,8 @@
   function salesGroup(){return groupByTitle('SALES & CRM');}
 
   function buildSalesNav(){
+    document.getElementById('tessaAdminNav')?.remove();
+    document.querySelectorAll('.nav-item[data-view="tessa"]:not(.tessa-shell-nav)').forEach(el=>el.remove());
     const group=salesGroup(),items=group?.querySelector('.nav-group-items');
     if(!items)return;
     document.querySelectorAll('.nav-item[data-view="crm"]').forEach(el=>{if(!el.closest('.nav-group-items'))el.remove();});
