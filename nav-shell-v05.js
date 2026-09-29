@@ -31,6 +31,23 @@
   };
 
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  let pendingErpTab=null;
+  function openErpTab(tab){
+    const target=tab||'inventory';
+    pendingErpTab=target;
+    if(typeof show==='function')show('pricing-catalog');
+    if(window.TTTProductMaster?.openTab){
+      window.TTTProductMaster.openTab(target);
+      pendingErpTab=null;
+    }
+    const title={inventory:'Inventory',pricing:'Pricing',review:'Review'}[target]||'ERP';
+    const h=document.getElementById('pageTitle');if(h)h.textContent=title;
+  }
+  document.addEventListener('ttt:product-master-loaded',()=>{
+    if(!pendingErpTab||!window.TTTProductMaster?.openTab)return;
+    const target=pendingErpTab;pendingErpTab=null;
+    window.TTTProductMaster.openTab(target);
+  });
   function safeToast(msg){if(typeof toast==='function')toast(msg);else console.log(msg);}
   function cloudRole(){return window.TTTCloud?.profile?.role||'';}
 
@@ -107,8 +124,7 @@
         if(window.TTTSchedulingUI?.openView)window.TTTSchedulingUI.openView(view);
         else if(typeof show==='function')show(view);
       }else if(view==='pricing-catalog'){
-        if(typeof show==='function')show(view);
-        Promise.resolve(window.TTTProductMaster?.reload?.()).then(()=>window.TTTProductMaster?.openTab?.(btn.dataset.erpTab||'inventory'));
+        openErpTab(btn.dataset.erpTab||'inventory');
       }else if(view==='job-costing'){
         if(typeof show==='function')show(view);window.TTTFinanceOps?.reload?.();
       }else if(typeof show==='function')show(view);
@@ -244,21 +260,14 @@
   function buildErpNav(){
     const group=groupByTitle('ERP & INVENTORY'),items=group?.querySelector('.nav-group-items');if(!items)return;
     items.innerHTML=`
-      <button class="nav-item" type="button" data-erp-tab="inventory">Inventory</button>
-      <button class="nav-item" type="button" data-erp-tab="pricing">Pricing</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="inventory">Inventory</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="pricing">Pricing</button>
       <button class="nav-item" type="button" data-shell-view="catalog">Supplier Catalog</button>
-      <button class="nav-item" type="button" data-erp-tab="review">Review</button>
+      <button class="nav-item" type="button" data-shell-view="pricing-catalog" data-erp-tab="review">Review</button>
       <button class="nav-item shell-review-nav" type="button" data-review-key="inventory_archive">Inventory Archive</button>
     `;
     group.hidden=false;
     bindSimpleNav(items);
-    items.querySelectorAll('[data-erp-tab]').forEach(btn=>btn.addEventListener('click',()=>{
-      if(typeof show==='function')show('pricing-catalog');
-      Promise.resolve(window.TTTProductMaster?.reload?.()).then(()=>window.TTTProductMaster?.openTab?.(btn.dataset.erpTab));
-      markShellActive(btn);
-      const title={inventory:'Inventory',pricing:'Pricing',review:'Review'}[btn.dataset.erpTab]||'ERP';
-      const h=document.getElementById('pageTitle');if(h)h.textContent=title;
-    }));
     items.querySelectorAll('[data-review-key]').forEach(btn=>btn.addEventListener('click',()=>{openModuleReview(btn.dataset.reviewKey);markShellActive(btn);}));
   }
   function buildFinanceNav(){
