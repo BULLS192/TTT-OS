@@ -101,7 +101,7 @@ const criticalFiles = [
   'nav-shell-v05.js',
   'crm-v24.js',
   'tessa-admin-v01.js',
-  'erp-product-master-v20.js',
+  'erp-product-master-v21.js',
   'website-analytics-v02.js'
 ];
 
@@ -127,7 +127,7 @@ try {
     'customer-intakes-v01.js',
     'crm-v24.js',
     'tessa-admin-v01.js',
-    'erp-product-master-v20.js',
+    'erp-product-master-v21.js',
     'website-analytics-v02.js'
   ];
   for (const marker of requiredBootstrapMarkers) {
