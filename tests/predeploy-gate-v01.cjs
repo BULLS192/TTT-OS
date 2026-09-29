@@ -102,7 +102,7 @@ const criticalFiles = [
   'crm-v24.js',
   'tessa-admin-v01.js',
   'erp-product-master-v20.js',
-  'website-analytics-v01.js'
+  'website-analytics-v02.js'
 ];
 
 for (const name of criticalFiles) {
@@ -128,7 +128,7 @@ try {
     'crm-v24.js',
     'tessa-admin-v01.js',
     'erp-product-master-v20.js',
-    'website-analytics-v01.js'
+    'website-analytics-v02.js'
   ];
   for (const marker of requiredBootstrapMarkers) {
     assert(app.includes(marker), `app.js no longer bootstraps ${marker}`);
