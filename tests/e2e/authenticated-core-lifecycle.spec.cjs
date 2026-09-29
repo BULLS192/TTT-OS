@@ -26,6 +26,16 @@ test('authenticated core lifecycle: login → job → check-in → work order �
   try {
     await login(page);
 
+    await expect.poll(
+      () => page.evaluate(() => Boolean(
+        window.TTTCRM &&
+        window.TTTTessaAdmin &&
+        window.TTTProductMaster &&
+        window.TTTWebsiteAnalytics
+      )),
+      { timeout: 30000, message: 'Authenticated TTT-OS runtime modules did not bootstrap' }
+    ).toBe(true);
+
     await page.locator('[data-go="newjob"]').first().click();
     await expect(page.locator('#jobForm')).toBeVisible();
 

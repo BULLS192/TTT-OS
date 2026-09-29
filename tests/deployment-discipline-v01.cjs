@@ -20,7 +20,8 @@ const tests=[
   ['successful deployment status is sufficient to run E2E',()=>assert(e2e.includes("github.event.deployment_status.state == 'success'")&&!e2e.includes("github.event.deployment.ref == 'main'"))],
   ['post-deploy E2E tests the public production alias, not a protected deployment URL',()=>assert((e2e.match(/TTT_E2E_BASE_URL: https:\/\/ttt-os\.vercel\.app/g)||[]).length>=2&&!e2e.includes('deployment_status.environment_url'))],
   ['browser E2E does not call Vercel deploy',()=>assert(!/vercel\s+(deploy|--prod|promote)/i.test(e2e))],
-  ['public smoke verifies current runtime bootstrap',()=>assert(publicSmoke.includes('window.TTTCRM')&&publicSmoke.includes('window.TTTTessaAdmin')&&publicSmoke.includes('window.TTTWebsiteAnalytics'))],
+  ['public smoke verifies auth-independent runtime bootstrap',()=>assert(publicSmoke.includes('window.TTTCRM')&&publicSmoke.includes('window.TTTTessaAdmin')&&publicSmoke.includes('window.TTTWebsiteAnalytics')&&!publicSmoke.includes('window.TTTProductMaster'))],
+  ['authenticated E2E verifies cloud-dependent runtime bootstrap',()=>assert(auth.includes('window.TTTCRM')&&auth.includes('window.TTTTessaAdmin')&&auth.includes('window.TTTProductMaster')&&auth.includes('window.TTTWebsiteAnalytics'))],
   ['authenticated E2E requires repository secrets',()=>assert(auth.includes('TTT_E2E_EMAIL')&&auth.includes('TTT_E2E_PASSWORD'))],
   ['authenticated E2E cleans synthetic records by archiving',()=>assert(auth.includes("from('jobs').update({ archived_at: stamp")&&auth.includes("from('work_orders').update({ archived_at: stamp"))]
 ];
