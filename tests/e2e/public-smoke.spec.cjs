@@ -10,6 +10,19 @@ test('public production login smoke', async ({ page }) => {
   await expect(page.locator('#tttLoginEmail')).toBeVisible();
   await expect(page.locator('#tttLoginPassword')).toBeVisible();
 
+  await expect.poll(
+    () => page.evaluate(() => Boolean(
+      window.TTTCRM &&
+      window.TTTTessaAdmin &&
+      window.TTTProductMaster &&
+      window.TTTWebsiteAnalytics
+    )),
+    { timeout: 15000, message: 'Current TTT-OS runtime modules did not bootstrap' }
+  ).toBe(true);
+
+  await expect(page.locator('.crm-shell-nav[data-crm-tab="leads"]')).toHaveCount(1);
+  await expect(page.locator('.tessa-shell-nav')).toHaveCount(1);
+
   const probe = 'regression-probe@example.invalid';
   await page.locator('#tttLoginEmail').fill(probe);
   await expect(page.locator('#tttLoginEmail')).toHaveValue(probe);
