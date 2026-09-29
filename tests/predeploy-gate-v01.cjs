@@ -101,7 +101,7 @@ const criticalFiles = [
   'nav-shell-v05.js',
   'crm-v24.js',
   'tessa-admin-v01.js',
-  'erp-product-master-v21.js',
+  'erp-product-master-v22.js',
   'website-analytics-v02.js'
 ];
 
@@ -127,7 +127,7 @@ try {
     'customer-intakes-v01.js',
     'crm-v24.js',
     'tessa-admin-v01.js',
-    'erp-product-master-v21.js',
+    'erp-product-master-v22.js',
     'website-analytics-v02.js'
   ];
   for (const marker of requiredBootstrapMarkers) {
@@ -137,6 +137,12 @@ try {
   assert(nav.includes('data-crm-tab="leads"'), 'modern CRM shell sentinel is missing');
   assert(nav.includes('tessa-shell-nav'), 'Tessa navigation sentinel is missing');
   assert(nav.includes('websiteAnalytics'), 'Website Analytics navigation sentinel is missing');
+  const erpMaster = fs.readFileSync(path.join(ROOT, 'erp-product-master-v22.js'), 'utf8');
+  assert(erpMaster.includes('async function fetchAllProducts(c,o)'), 'ERP Product Master pagination helper is missing');
+  assert(erpMaster.includes('.range(from,to)'), 'ERP Product Master no longer paginates the catalog query');
+  assert(erpMaster.includes('fetchAllProducts(c,o),'), 'ERP Product Master load path does not use the paginated fetch');
+  const beforePaginationHelper = erpMaster.split('async function fetchAllProducts(c,o)')[0];
+  assert(!beforePaginationHelper.includes('fetchAllProducts(c,o)'), 'ERP Product Master calls pagination before initialization');
 
   assert(!app.includes("');\\n  document.write"), 'app.js contains the escaped-newline bootstrap corruption signature');
   assert(!nav.includes("Assistant',\\n"), 'nav-shell-v05.js contains the escaped-newline corruption signature');
