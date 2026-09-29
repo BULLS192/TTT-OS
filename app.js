@@ -46,7 +46,8 @@
   document.write('<script src="/people-leave-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/product-catalog-v13.js?v='+v+'"></'+'script>');
   document.write('<script src="/crm-v24.js?v='+v+'"></'+'script>');
-  document.write('<script src="/tessa-admin-v01.js?v='+v+'"></'+'script>');\n  document.write('<script src="/website-analytics-v01.js?v='+v+'"></'+'script>');
+  document.write('<script src="/tessa-admin-v01.js?v='+v+'"></'+'script>');
+  document.write('<script src="/website-analytics-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/erp-product-master-v20.js?v='+v+'"></'+'script>');
   document.write('<script src="/finance-ops-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/finance-docs-v04.js?v='+v+'"></'+'script>');

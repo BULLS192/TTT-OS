@@ -4,7 +4,8 @@
   const PAGE_TITLES={
     dashboard:'Command Center',
     crm:'CRM',
-    tessa:'Tessa Assistant',\n    websiteAnalytics:'Website Analytics',
+    tessa:'Tessa Assistant',
+    websiteAnalytics:'Website Analytics',
     jobs:'Jobs',
     vehicles:'Vehicles',
     vehicledetail:'Vehicle Details',
