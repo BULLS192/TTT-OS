@@ -1,6 +1,6 @@
 // TTT OS bootstrap: apply the approved master branding first, then load the original app and additive modules synchronously.
 (function(){
-  const v='20260929-web-analytics-ai-v1';
+  const v='20260929-tessa-conversion-v2';
   const favicon='/favicon-64.png?v='+v;
   document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]').forEach((el)=>el.remove());
   const icon=document.createElement('link');
@@ -47,7 +47,7 @@
   document.write('<script src="/product-catalog-v13.js?v='+v+'"></'+'script>');
   document.write('<script src="/crm-v24.js?v='+v+'"></'+'script>');
   document.write('<script src="/tessa-admin-v01.js?v='+v+'"></'+'script>');
-  document.write('<script src="/website-analytics-v01.js?v='+v+'"></'+'script>');
+  document.write('<script src="/website-analytics-v02.js?v='+v+'"></'+'script>');
   document.write('<script src="/erp-product-master-v20.js?v='+v+'"></'+'script>');
   document.write('<script src="/finance-ops-v01.js?v='+v+'"></'+'script>');
   document.write('<script src="/finance-docs-v04.js?v='+v+'"></'+'script>');
