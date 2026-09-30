@@ -32,7 +32,9 @@ assert(publicHtml.includes('id="vehicleModelSelect"'), 'Public intake model must
 assert(publicHtml.includes('id="vehicleColorSelect"'), 'Public intake color must be a dropdown.');
 assert(indexHtml.includes('id="colorSelect"'), 'New Job color must use the shared dropdown.');
 assert(indexHtml.includes('name="plateState"'), 'New Job must capture plate state separately from the plate.');
-assert(publicApp.includes("rpc('submit_customer_intake'"), 'Public intake must submit through the scoped RPC.');
+assert(publicApp.includes("/functions/v1/ttt-public-api"), 'Public intake must submit through the hardened Edge API.');
+assert(publicApp.includes("action:'customer-intake'"), 'Public intake must use the customer-intake Edge action.');
+assert(!publicApp.includes("rpc('submit_customer_intake'"), 'Public intake must not call the privileged intake RPC directly.');
 assert(publicApp.includes("plateState:value(fd,'plateState')"), 'Public intake payload must include plate state.');
 assert(publicApp.includes('function loadModels()'), 'Public intake must cascade models from make.');
 assert(publicApp.includes("vehicleMake:vehicleValue(fd,'vehicleMake')"), 'Public intake must resolve custom makes.');
