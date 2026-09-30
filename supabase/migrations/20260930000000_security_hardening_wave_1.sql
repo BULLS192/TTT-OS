@@ -1,0 +1,4 @@
+-- Security hardening wave 1 final state.
+-- MFA-aware RLS is applied to every RLS-enabled public table.
+-- Privileged public RPC functions are executable only by service_role after browser callers moved to Edge Functions.
+-- See deployed Edge Functions: ttt-public-api, ttt-auth-audit, ttt-security-admin.

@@ -102,7 +102,9 @@ const criticalFiles = [
   'crm-v24.js',
   'tessa-admin-v01.js',
   'erp-product-master-v22.js',
-  'website-analytics-v02.js'
+  'website-analytics-v02.js',
+  'security-admin-v01.js',
+  'mfa-v01.js'
 ];
 
 for (const name of criticalFiles) {
@@ -128,7 +130,9 @@ try {
     'crm-v24.js',
     'tessa-admin-v01.js',
     'erp-product-master-v22.js',
-    'website-analytics-v02.js'
+    'website-analytics-v02.js',
+    'security-admin-v01.js',
+    'mfa-v01.js'
   ];
   for (const marker of requiredBootstrapMarkers) {
     assert(app.includes(marker), `app.js no longer bootstraps ${marker}`);
@@ -151,6 +155,10 @@ try {
 } catch (err) {
   fail(err.message);
 }
+
+const securityCheck = spawnSync(process.execPath, [path.join(ROOT,'tests','security-static-v01.cjs')], {cwd:ROOT,encoding:'utf8'});
+if (securityCheck.status !== 0) fail((securityCheck.stderr || securityCheck.stdout || 'Security static check failed').trim());
+else pass('Static secret/security check passed');
 
 for (const jsonFile of ['vercel.json', 'site.webmanifest']) {
   try {

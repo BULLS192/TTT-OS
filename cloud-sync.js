@@ -102,7 +102,7 @@
     bar.innerHTML='<span id="tttCloudStatus" data-state="">Cloud offline</span><span id="tttCloudUser"></span><button id="tttCloudLogout" type="button">Log out</button>';
     document.body.appendChild(bar);
     byId('tttCloudLogout').addEventListener('click',async()=>{
-      await client.auth.signOut();
+      await client.auth.signOut({scope:'local'});
       location.reload();
     });
   }
@@ -119,6 +119,71 @@
     overlay.style.display='flex';
   }
   function hideOverlay(){const el=byId('tttAuthOverlay');if(el)el.style.display='none';}
+
+  function securityDeviceId(){
+    const key='ttt_security_device_id_v1';
+    let id=localStorage.getItem(key);
+    if(!id){id=(crypto?.randomUUID?.()||('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)));localStorage.setItem(key,id);}
+    return id;
+  }
+  function reportFailedLogin(email,error){
+    fetch(cfg.url+'/functions/v1/ttt-auth-audit',{
+      method:'POST',
+      headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},
+      body:JSON.stringify({email,errorCode:error?.code||'',clientDeviceId:securityDeviceId()})
+    }).catch(()=>{});
+  }
+  async function ensureMfaSatisfied(user){
+    try{
+      const {data,error}=await client.auth.mfa.getAuthenticatorAssuranceLevel();
+      if(error)throw error;
+      if(data?.nextLevel==='aal2'&&data?.currentLevel!=='aal2'){
+        showMfaChallenge(user);
+        setSyncStatus('MFA required','busy');
+        return false;
+      }
+      return true;
+    }catch(error){
+      console.error('TTT MFA assurance check failed',error);
+      showOverlay('<h2>Security check unavailable</h2><p>TTT OS could not verify the authentication assurance level. Please sign out and try again.</p><div class="ttt-auth-actions"><button class="btn secondary" id="tttMfaFailLogout" type="button">Sign out</button></div>');
+      byId('tttMfaFailLogout')?.addEventListener('click',async()=>{await client.auth.signOut({scope:'local'});location.reload();});
+      setSyncStatus('Security check failed','error');
+      return false;
+    }
+  }
+  function showMfaChallenge(user){
+    ready=false;
+    showOverlay(`
+      <h2>Authenticator verification</h2>
+      <p>Enter the 6-digit code from your authenticator app to continue to TTT OS.</p>
+      <form id="tttMfaForm" class="ttt-auth-form">
+        <label>Verification code<input id="tttMfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required></label>
+        <p id="tttMfaError" class="ttt-auth-error"></p>
+        <div class="ttt-auth-actions"><button class="btn primary" type="submit">Verify</button><button class="btn secondary" id="tttMfaLogout" type="button">Sign out</button></div>
+      </form>
+      <p class="ttt-auth-meta">MFA is required because this account has an enrolled second factor.</p>
+    `);
+    byId('tttMfaForm')?.addEventListener('submit',async(e)=>{
+      e.preventDefault();
+      const err=byId('tttMfaError');err.style.display='none';
+      try{
+        const factors=await client.auth.mfa.listFactors();
+        if(factors.error)throw factors.error;
+        const factor=(factors.data?.totp||[]).find(x=>x.status==='verified')||(factors.data?.totp||[])[0];
+        if(!factor)throw new Error('No verified authenticator factor was found.');
+        const challenge=await client.auth.mfa.challenge({factorId:factor.id});
+        if(challenge.error)throw challenge.error;
+        const verify=await client.auth.mfa.verify({factorId:factor.id,challengeId:challenge.data.id,code:byId('tttMfaCode').value.trim()});
+        if(verify.error)throw verify.error;
+        await client.auth.refreshSession();
+        await bootstrap(user);
+      }catch(error){
+        err.textContent=error?.message||'The verification code could not be confirmed.';
+        err.style.display='block';
+      }
+    });
+    byId('tttMfaLogout')?.addEventListener('click',async()=>{await client.auth.signOut({scope:'local'});location.reload();});
+  }
 
   function showLogin(message){
     ready=false;
@@ -140,7 +205,7 @@
       const email=byId('tttLoginEmail').value.trim();
       const password=byId('tttLoginPassword').value;
       const {error}=await client.auth.signInWithPassword({email,password});
-      if(error){errorEl.textContent=error.message;errorEl.style.display='block';}
+      if(error){reportFailedLogin(email,error);errorEl.textContent=error.message;errorEl.style.display='block';}
     });
     byId('tttResetPassword').addEventListener('click',async()=>{
       const email=byId('tttLoginEmail').value.trim();
@@ -160,7 +225,7 @@
       <div class="ttt-cloud-init"><strong>${email||'Signed-in user'}</strong><span>A TTT administrator must link this login to a personnel record and assign an access role.</span></div>
       <div class="ttt-auth-actions"><button class="btn secondary" id="tttPendingLogout" type="button">Log out</button></div>
     `);
-    byId('tttPendingLogout').addEventListener('click',async()=>{await client.auth.signOut();location.reload();});
+    byId('tttPendingLogout').addEventListener('click',async()=>{await client.auth.signOut({scope:'local'});location.reload();});
   }
 
   function showCloudUnavailable(){
@@ -171,13 +236,14 @@
       <p class="ttt-auth-meta">Please contact the TTT OS administrator before making changes.</p>
       <div class="ttt-auth-actions"><button class="btn secondary" id="tttCloudUnavailableLogout" type="button">Log out</button></div>
     `);
-    byId('tttCloudUnavailableLogout').addEventListener('click',async()=>{await client.auth.signOut();location.reload();});
+    byId('tttCloudUnavailableLogout').addEventListener('click',async()=>{await client.auth.signOut({scope:'local'});location.reload();});
   }
 
   async function bootstrap(user){
     currentUser=user;
     ensureBar();
     setSyncStatus('Connecting…','busy');
+    if(!(await ensureMfaSatisfied(user)))return;
     const {data:p,error}=await client.from('profiles')
       .select('user_id,organization_id,person_id,display_name,email,role,roles,active')
       .eq('user_id',user.id)

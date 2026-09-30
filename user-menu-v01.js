@@ -35,7 +35,7 @@
   async function signOut(){
     const c=cloud(); if(!c?.client)return;
     byId('sidebarSignOut').disabled=true;
-    await c.client.auth.signOut();
+    await c.client.auth.signOut({scope:'local'});
     location.reload();
   }
   function syncStatus(){

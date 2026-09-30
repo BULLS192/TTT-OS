@@ -1,0 +1,1 @@
+node_modules\n.env*\n!.env.example\n.vercel\nplaywright-report\ntest-results\n.DS_Store\nnpm-debug.log*\n

@@ -1,167 +1,22 @@
 (function(){
-  'use strict';
-  const state={rows:[],range:'7',user:'all',search:''};
-  const byId=id=>document.getElementById(id);
-  const cloud=()=>window.TTTCloud;
-  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  function deviceId(){
-    const key='ttt_security_device_id_v1';
-    let id=localStorage.getItem(key);
-    if(!id){id=(crypto?.randomUUID?.()||('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)));localStorage.setItem(key,id);}
-    return id;
-  }
-  function sessionKey(session){
-    try{
-      const p=JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-      return p.session_id||p.sid||session.user?.id+':'+session.expires_at;
-    }catch{return session.user?.id+':'+session.expires_at;}
-  }
-  async function recordSession(session,eventType){
-    if(!session?.access_token)return;
-    const sk='ttt_security_recorded_'+eventType+'_'+sessionKey(session);
-    if(eventType==='login'&&localStorage.getItem(sk))return;
-    try{
-      const response=await fetch('/api/security-event',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-        body:JSON.stringify({
-          eventType:eventType||'login',
-          clientDeviceId:deviceId(),
-          language:navigator.language||'',
-          screen:(window.screen?.width||'')+'x'+(window.screen?.height||''),
-          clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone||''
-        })
-      });
-      if(response.ok){
-        if(eventType==='login')localStorage.setItem(sk,new Date().toISOString());
-        window.dispatchEvent(new CustomEvent('ttt:security-event-recorded'));
-      }
-    }catch(err){console.warn('TTT Security event capture failed',err);}
-  }
-  function injectStyles(){
-    if(byId('tttSecurityStyles'))return;
-    const s=document.createElement('style');s.id='tttSecurityStyles';s.textContent=`
-      .security-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}.security-head h2{margin:2px 0 6px}.security-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}.security-stat{padding:16px}.security-stat strong{display:block;font-size:25px;color:#142033;margin-top:5px}.security-stat span{font-size:11px;color:#68788c;text-transform:uppercase;letter-spacing:.06em;font-weight:800}.security-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:14px}.security-toolbar label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#53657a}.security-toolbar select,.security-toolbar input{min-height:38px;border:1px solid #d6deea;border-radius:9px;padding:7px 10px;background:#fff;color:#142033}.security-toolbar .security-search{min-width:250px}.security-table td{vertical-align:top}.security-user strong,.security-place strong{display:block}.security-sub{display:block;color:#718198;font-size:11px;margin-top:3px}.security-ip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}.security-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:850}.security-badge.ok{background:#ecfdf3;color:#027a48}.security-badge.review{background:#fff7ed;color:#c2410c}.security-badge.high{background:#fef2f2;color:#b42318}.security-note{margin-top:12px;padding:12px 14px;border:1px solid #dde6f0;border-radius:11px;background:#f8fafc;color:#5d6d80;font-size:12px;line-height:1.5}.security-empty{padding:34px;text-align:center;color:#6c7b8f}.security-refreshing{opacity:.6}.security-architecture{margin-top:16px}.security-architecture .checklist div{margin-bottom:7px}
-      @media(max-width:950px){.security-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:680px){.security-grid{grid-template-columns:1fr}.security-toolbar>*{width:100%}.security-toolbar .security-search{min-width:0}.security-head{display:block}}
-    `;document.head.appendChild(s);
-  }
-  function formatTime(row){
-    const d=new Date(row.occurred_at);
-    const zone=row.timezone||undefined;
-    try{return new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:zone}).format(d)+(zone?' · '+zone:'');}
-    catch{return d.toLocaleString();}
-  }
-  function locationText(row){
-    const parts=[row.city,row.region,row.country_code].filter(Boolean);
-    return [...new Set(parts)].join(', ')||'Location unavailable';
-  }
-  function ensureView(){
-    const section=byId('settings');if(!section||cloud()?.profile?.role!=='owner_admin')return;
-    if(byId('securityAdminRoot'))return;
-    section.innerHTML=`
-      <div id="securityAdminRoot">
-        <div class="security-head">
-          <div><p class="eyebrow">ADMINISTRATION</p><h2>Security Center</h2><p class="muted">Login activity for TTT-OS accounts. Location is approximate and derived from the public IP address.</p></div>
-          <button class="btn secondary" type="button" id="securityRefresh">Refresh</button>
-        </div>
-        <div class="security-grid">
-          <article class="panel security-stat"><span>Successful logins</span><strong id="securityLoginCount">—</strong></article>
-          <article class="panel security-stat"><span>Users active</span><strong id="securityUserCount">—</strong></article>
-          <article class="panel security-stat"><span>Unique IPs</span><strong id="securityIpCount">—</strong></article>
-          <article class="panel security-stat"><span>Needs review</span><strong id="securityReviewCount">—</strong></article>
-        </div>
-        <article class="panel">
-          <div class="panel-head"><div><h3>Login Activity</h3><p class="muted">Historical data starts with the available Supabase authentication logs from September 25, 2026.</p></div></div>
-          <div class="security-toolbar">
-            <label>Period<select id="securityRange"><option value="1">Last 24 hours</option><option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option><option value="all">All retained</option></select></label>
-            <label>User<select id="securityUser"><option value="all">All users</option></select></label>
-            <label class="security-search">Search<input id="securitySearch" placeholder="IP, city, device, email…"></label>
-          </div>
-          <div class="table-wrap"><table class="security-table"><thead><tr><th>Date / time</th><th>User</th><th>Result</th><th>Approx. location</th><th>IP address</th><th>Device</th><th>Network</th><th>Risk</th></tr></thead><tbody id="securityBody"></tbody></table></div>
-          <div class="security-note">IP geolocation can be affected by VPNs, mobile carriers and ISP routing. A location change is a review signal, not proof of unauthorized access.</div>
-        </article>
-        <article class="panel security-architecture">
-          <div class="panel-head"><div><h3>Security controls</h3><p class="muted">TTT-OS login events are retained separately from temporary platform logs.</p></div></div>
-          <div class="checklist"><div>✓ Admin-only organization-wide login history</div><div>✓ IP address, approximate location, timestamp and browser/device capture</div><div>✓ New-country / new-device review signals for future sign-ins</div><div>✓ Row-level security prevents Derek or Amjad from reading other users' activity</div><div>✓ Supabase remains the authentication authority; no passwords are stored in this ledger</div></div>
-        </article>
-      </div>`;
-    byId('securityRefresh')?.addEventListener('click',load);
-    byId('securityRange')?.addEventListener('change',e=>{state.range=e.target.value;load();});
-    byId('securityUser')?.addEventListener('change',e=>{state.user=e.target.value;render();});
-    byId('securitySearch')?.addEventListener('input',e=>{state.search=e.target.value.trim().toLowerCase();render();});
-    load();
-  }
-  async function load(){
-    const c=cloud();if(!c?.client||c.profile?.role!=='owner_admin')return;
-    const root=byId('securityAdminRoot');if(root)root.classList.add('security-refreshing');
-    let q=c.client.from('login_activity').select('id,user_id,user_email,display_name,event_type,result,occurred_at,ip_address,city,region,country_code,timezone,user_agent,device_label,network,client_device_id,source,risk_level,risk_reason').order('occurred_at',{ascending:false}).limit(500);
-    if(state.range!=='all'){
-      const days=Number(state.range||7);
-      q=q.gte('occurred_at',new Date(Date.now()-days*86400000).toISOString());
-    }
-    const {data,error}=await q;
-    if(root)root.classList.remove('security-refreshing');
-    if(error){
-      const body=byId('securityBody');if(body)body.innerHTML='<tr><td colspan="8" class="security-empty">Could not load security activity: '+esc(error.message)+'</td></tr>';
-      return;
-    }
-    state.rows=data||[];
-    rebuildUserFilter();
-    render();
-  }
-  function rebuildUserFilter(){
-    const sel=byId('securityUser');if(!sel)return;
-    const current=state.user;
-    const users=[...new Map(state.rows.map(r=>[r.user_id,{id:r.user_id,name:r.display_name||r.user_email,email:r.user_email}])).values()].sort((a,b)=>a.name.localeCompare(b.name));
-    sel.innerHTML='<option value="all">All users</option>'+users.map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>').join('');
-    if(users.some(u=>u.id===current))sel.value=current;else{state.user='all';sel.value='all';}
-  }
-  function filtered(){
-    const term=state.search;
-    return state.rows.filter(r=>{
-      if(state.user!=='all'&&r.user_id!==state.user)return false;
-      if(!term)return true;
-      return [r.display_name,r.user_email,r.ip_address,r.city,r.region,r.country_code,r.device_label,r.network,r.risk_reason].some(v=>String(v||'').toLowerCase().includes(term));
-    });
-  }
-  function render(){
-    const rows=filtered();
-    const all=state.rows;
-    if(byId('securityLoginCount'))byId('securityLoginCount').textContent=all.filter(r=>r.event_type==='login'&&r.result==='success').length;
-    if(byId('securityUserCount'))byId('securityUserCount').textContent=new Set(all.map(r=>r.user_id)).size;
-    if(byId('securityIpCount'))byId('securityIpCount').textContent=new Set(all.map(r=>r.ip_address).filter(Boolean)).size;
-    if(byId('securityReviewCount'))byId('securityReviewCount').textContent=all.filter(r=>r.risk_level!=='normal').length;
-    const body=byId('securityBody');if(!body)return;
-    if(!rows.length){body.innerHTML='<tr><td colspan="8" class="security-empty">No login activity matches these filters.</td></tr>';return;}
-    body.innerHTML=rows.map(r=>{
-      const risk=r.risk_level||'normal';
-      return '<tr>'+
-        '<td><strong>'+esc(formatTime(r))+'</strong><span class="security-sub">'+esc(new Date(r.occurred_at).toISOString())+'</span></td>'+
-        '<td class="security-user"><strong>'+esc(r.display_name||r.user_email)+'</strong><span class="security-sub">'+esc(r.user_email)+'</span></td>'+
-        '<td><span class="security-badge ok">'+esc(r.result==='success'?'Successful':'Failed')+'</span><span class="security-sub">'+esc(r.event_type.replaceAll('_',' '))+'</span></td>'+
-        '<td class="security-place"><strong>'+esc(locationText(r))+'</strong><span class="security-sub">'+esc(r.timezone||'')+'</span></td>'+
-        '<td><span class="security-ip">'+esc(r.ip_address||'Unavailable')+'</span></td>'+
-        '<td title="'+esc(r.user_agent||'')+'"><strong>'+esc(r.device_label||'Unknown')+'</strong></td>'+
-        '<td>'+esc(r.network||'—')+'</td>'+
-        '<td><span class="security-badge '+(risk==='normal'?'ok':risk==='high'?'high':'review')+'">'+esc(risk==='normal'?'Normal':risk==='high'?'High':'Review')+'</span><span class="security-sub">'+esc(r.risk_reason||'')+'</span></td>'+
-      '</tr>';
-    }).join('');
-  }
-  function bindAuth(){
-    const c=cloud();if(!c?.client)return false;
-    if(window.__tttSecurityAuthBound)return true;
-    window.__tttSecurityAuthBound=true;
-    c.client.auth.onAuthStateChange((event,session)=>{
-      if(event==='SIGNED_IN'&&session)setTimeout(()=>recordSession(session,'login'),0);
-    });
-    return true;
-  }
-  function init(){
-    injectStyles();ensureView();bindAuth();
-    window.addEventListener('ttt:cloud-state-applied',()=>{ensureView();bindAuth();});
-    window.addEventListener('ttt:security-event-recorded',()=>{if(byId('securityAdminRoot'))load();});
-    let tries=0;const timer=setInterval(()=>{tries++;ensureView();if(bindAuth()&&cloud()?.profile){clearInterval(timer);}else if(tries>80)clearInterval(timer);},250);
-  }
-  window.TTTSecurity={load,recordLogin:session=>recordSession(session,'login')};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+'use strict';
+const state={rows:[],range:'7',user:'all',search:'',snapshot:null},byId=id=>document.getElementById(id),cloud=()=>window.TTTCloud,cfg=()=>window.TTTSupabaseConfig,esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function deviceId(){const k='ttt_security_device_id_v1';let id=localStorage.getItem(k);if(!id){id=(crypto?.randomUUID?.()||('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)));localStorage.setItem(k,id);}return id;}
+function sessionKey(s){try{const p=JSON.parse(atob(s.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return p.session_id||p.sid||s.user?.id+':'+s.expires_at;}catch{return s.user?.id+':'+s.expires_at;}}
+async function recordSession(s,t){if(!s?.access_token)return;const k='ttt_security_recorded_'+t+'_'+sessionKey(s);if(t==='login'&&localStorage.getItem(k))return;try{const r=await fetch('/api/security-event',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.access_token},body:JSON.stringify({eventType:t||'login',clientDeviceId:deviceId(),language:navigator.language||'',screen:(screen?.width||'')+'x'+(screen?.height||''),clientTimeZone:Intl.DateTimeFormat().resolvedOptions().timeZone||''})});if(r.ok){if(t==='login')localStorage.setItem(k,new Date().toISOString());window.dispatchEvent(new CustomEvent('ttt:security-event-recorded'));}}catch{}}
+function deviceLabel(ua){ua=String(ua||'');let os='Unknown',b='Browser',m;if(/iPad/i.test(ua))os='iPad';else if(/iPhone/i.test(ua))os='iPhone';else if(/Windows NT/i.test(ua))os='Windows';else if(/Macintosh|Mac OS X/i.test(ua))os='macOS';else if(/Android/i.test(ua))os='Android';if((m=ua.match(/CriOS\/([\d.]+)/i)))b='Chrome '+m[1].split('.').slice(0,2).join('.');else if((m=ua.match(/Chrome\/([\d.]+)/i)))b='Chrome '+m[1].split('.').slice(0,2).join('.');else if((m=ua.match(/Version\/([\d.]+).*Safari/i)))b='Safari '+m[1].split('.').slice(0,3).join('.');return os+' · '+b;}
+function styles(){if(byId('tttSecurityStyles'))return;const s=document.createElement('style');s.id='tttSecurityStyles';s.textContent=`.security-head{display:flex;justify-content:space-between;gap:18px;margin-bottom:18px}.security-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.security-stat{padding:16px}.security-stat strong{display:block;font-size:25px}.security-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.security-toolbar label{display:grid;gap:5px;font-size:11px;font-weight:800}.security-toolbar select,.security-toolbar input{min-height:38px;border:1px solid #d6deea;border-radius:9px;padding:7px 10px}.security-search{min-width:250px}.security-sub{display:block;color:#718198;font-size:11px;margin-top:3px}.security-ip{font-family:ui-monospace,monospace;font-size:11px}.security-badge{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:850}.security-badge.ok{background:#ecfdf3;color:#027a48}.security-badge.review{background:#fff7ed;color:#c2410c}.security-badge.high{background:#fef2f2;color:#b42318}.security-empty{padding:28px;text-align:center;color:#6c7b8f}.security-section{margin-top:16px}.security-posture{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.security-posture>div{border:1px solid #e1e8f0;border-radius:10px;padding:12px}.security-posture strong{display:block;font-size:20px}@media(max-width:900px){.security-grid{grid-template-columns:repeat(2,1fr)}.security-posture{grid-template-columns:1fr}}@media(max-width:680px){.security-grid{grid-template-columns:1fr}.security-head{display:block}.security-toolbar>*{width:100%}.security-search{min-width:0}}`;document.head.appendChild(s);}
+function fmt(ts){if(!ts)return'—';try{return new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short'}).format(new Date(ts));}catch{return ts;}}
+function loginTime(r){const d=new Date(r.occurred_at),z=r.timezone||undefined;try{return new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:z}).format(d)+(z?' · '+z:'');}catch{return d.toLocaleString();}}
+function location(r){return [...new Set([r.city,r.region,r.country_code].filter(Boolean))].join(', ')||'Location unavailable';}
+function ensureView(){const sec=byId('settings');if(!sec||cloud()?.profile?.role!=='owner_admin'||byId('securityAdminRoot'))return;sec.innerHTML=`<div id="securityAdminRoot"><div class="security-head"><div><p class="eyebrow">ADMINISTRATION</p><h2>Security Center</h2><p class="muted">Authentication, active sessions, MFA and live database posture.</p></div><button class="btn secondary" id="securityRefresh" type="button">Refresh</button></div><div class="security-grid"><article class="panel security-stat"><span>Successful logins</span><strong id="securityLoginCount">—</strong></article><article class="panel security-stat"><span>Users active</span><strong id="securityUserCount">—</strong></article><article class="panel security-stat"><span>Unique IPs</span><strong id="securityIpCount">—</strong></article><article class="panel security-stat"><span>Needs review</span><strong id="securityReviewCount">—</strong></article></div><article class="panel"><div class="panel-head"><div><h3>Login Activity</h3><p class="muted">Successful and failed authentication events.</p></div></div><div class="security-toolbar"><label>Period<select id="securityRange"><option value="1">Last 24 hours</option><option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option><option value="all">All retained</option></select></label><label>User<select id="securityUser"><option value="all">All users</option></select></label><label class="security-search">Search<input id="securitySearch" placeholder="IP, city, device, email…"></label></div><div class="table-wrap"><table><thead><tr><th>Date / time</th><th>User</th><th>Result</th><th>Location</th><th>IP</th><th>Device</th><th>Risk</th></tr></thead><tbody id="securityBody"></tbody></table></div></article><article class="panel security-section"><div class="panel-head"><div><h3>Active Sessions</h3><p class="muted">Revoke any session except the one you are currently using.</p></div></div><div class="table-wrap"><table><thead><tr><th>User</th><th>Device</th><th>IP</th><th>Created</th><th>Last active</th><th></th></tr></thead><tbody id="securitySessionsBody"></tbody></table></div></article><article class="panel security-section"><div class="panel-head"><div><h3>MFA Status</h3></div></div><div class="table-wrap"><table><thead><tr><th>User</th><th>Role</th><th>Verified factors</th><th>Status</th></tr></thead><tbody id="securityMfaBody"></tbody></table></div></article><article class="panel security-section"><div class="panel-head"><div><h3>Database Security Posture</h3></div></div><div class="security-posture" id="securityPosture"></div></article></div>`;byId('securityRefresh').onclick=load;byId('securityRange').onchange=e=>{state.range=e.target.value;load()};byId('securityUser').onchange=e=>{state.user=e.target.value;render()};byId('securitySearch').oninput=e=>{state.search=e.target.value.trim().toLowerCase();render()};load();}
+async function api(action,payload={}){const c=cloud(),s=(await c.client.auth.getSession()).data?.session;if(!s)throw new Error('No active session');const r=await fetch(cfg().url+'/functions/v1/ttt-security-admin',{method:'POST',headers:{apikey:cfg().publishableKey,Authorization:'Bearer '+s.access_token,'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});const j=await r.json().catch(()=>null);if(!r.ok||!j?.ok)throw new Error(j?.error||'Security request failed');return j.data;}
+async function snapshot(){try{state.snapshot=await api('snapshot');renderSnapshot()}catch(e){byId('securitySessionsBody').innerHTML='<tr><td colspan="6" class="security-empty">'+esc(e.message==='mfa_required'?'MFA verification is required.':e.message)+'</td></tr>';}}
+async function revoke(id){if(!confirm('Revoke this session?'))return;try{await api('revoke-session',{sessionId:id});await snapshot()}catch(e){alert(e.message)}}
+async function load(){const c=cloud();if(!c?.client||c.profile?.role!=='owner_admin')return;let q=c.client.from('login_activity').select('*').order('occurred_at',{ascending:false}).limit(500);if(state.range!=='all')q=q.gte('occurred_at',new Date(Date.now()-Number(state.range)*86400000).toISOString());const [{data,error}]=await Promise.all([q,snapshot()]);if(error){byId('securityBody').innerHTML='<tr><td colspan="7" class="security-empty">'+esc(error.message)+'</td></tr>';return}state.rows=data||[];users();render();}
+function users(){const s=byId('securityUser'),cur=state.user,u=[...new Map(state.rows.filter(r=>r.user_id).map(r=>[r.user_id,{id:r.user_id,name:r.display_name||r.user_email}])).values()];s.innerHTML='<option value="all">All users</option>'+u.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');if(u.some(x=>x.id===cur))s.value=cur;else state.user='all';}
+function render(){const all=state.rows,rows=all.filter(r=>(state.user==='all'||r.user_id===state.user)&&(!state.search||[r.display_name,r.user_email,r.ip_address,r.city,r.region,r.country_code,r.device_label,r.risk_reason].some(v=>String(v||'').toLowerCase().includes(state.search))));byId('securityLoginCount').textContent=all.filter(r=>r.event_type==='login'&&r.result==='success').length;byId('securityUserCount').textContent=new Set(all.map(r=>r.user_id).filter(Boolean)).size;byId('securityIpCount').textContent=new Set(all.map(r=>r.ip_address).filter(Boolean)).size;byId('securityReviewCount').textContent=all.filter(r=>r.result==='failed'||r.risk_level!=='normal').length;byId('securityBody').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(loginTime(r))+'</td><td><strong>'+esc(r.display_name||r.user_email)+'</strong><span class="security-sub">'+esc(r.user_email)+'</span></td><td><span class="security-badge '+(r.result==='failed'?'high':'ok')+'">'+esc(r.result)+'</span></td><td>'+esc(location(r))+'</td><td class="security-ip">'+esc(r.ip_address||'—')+'</td><td>'+esc(r.device_label||'Unknown')+'</td><td><span class="security-badge '+(r.risk_level==='high'?'high':r.risk_level==='review'?'review':'ok')+'">'+esc(r.risk_level||'normal')+'</span><span class="security-sub">'+esc(r.risk_reason||'')+'</span></td></tr>').join(''):'<tr><td colspan="7" class="security-empty">No matching activity.</td></tr>';}
+function renderSnapshot(){const s=state.snapshot||{},sessions=s.sessions||[],current=s.current_session_id;byId('securitySessionsBody').innerHTML=sessions.length?sessions.map(x=>'<tr><td><strong>'+esc(x.display_name||x.email)+'</strong><span class="security-sub">'+esc(x.email)+'</span></td><td>'+esc(deviceLabel(x.user_agent))+(x.session_id===current?'<span class="security-sub">Current session</span>':'')+'</td><td class="security-ip">'+esc(x.ip||'—')+'</td><td>'+esc(fmt(x.created_at))+'</td><td>'+esc(fmt(x.updated_at))+'</td><td>'+(x.session_id===current?'—':'<button class="btn secondary compact" data-revoke="'+esc(x.session_id)+'">Revoke</button>')+'</td></tr>').join(''):'<tr><td colspan="6" class="security-empty">No active sessions.</td></tr>';document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>revoke(b.dataset.revoke));byId('securityMfaBody').innerHTML=(s.mfa||[]).map(x=>'<tr><td><strong>'+esc(x.display_name||x.email)+'</strong><span class="security-sub">'+esc(x.email)+'</span></td><td>'+esc(String(x.role||'').replaceAll('_',' '))+'</td><td>'+Number(x.verified_factors||0)+'</td><td><span class="security-badge '+(Number(x.verified_factors||0)>0?'ok':x.role==='owner_admin'?'review':'ok')+'">'+(Number(x.verified_factors||0)>0?'Enabled':x.role==='owner_admin'?'Setup required':'Not enrolled')+'</span></td></tr>').join('');const r=s.rls||{},st=s.storage||{};byId('securityPosture').innerHTML='<div><span class="muted">Tables with RLS</span><strong>'+esc(r.rls_enabled)+' / '+esc(r.total_tables)+'</strong></div><div><span class="muted">RLS disabled</span><strong>'+esc(r.rls_disabled)+'</strong><span class="security-sub">'+esc((r.disabled_tables||[]).join(', ')||'None')+'</span></div><div><span class="muted">Public storage buckets</span><strong>'+esc(st.public_bucket_count)+'</strong><span class="security-sub">'+esc((st.public_buckets||[]).join(', ')||'None')+'</span></div>';}
+function bind(){const c=cloud();if(!c?.client)return false;if(window.__tttSecurityAuthBound)return true;window.__tttSecurityAuthBound=true;c.client.auth.onAuthStateChange((e,s)=>{if(e==='SIGNED_IN'&&s)setTimeout(()=>recordSession(s,'login'),0)});return true;}
+function init(){styles();ensureView();bind();window.addEventListener('ttt:cloud-state-applied',()=>{ensureView();bind()});window.addEventListener('ttt:security-event-recorded',()=>{if(byId('securityAdminRoot'))load()});let n=0,t=setInterval(()=>{n++;ensureView();if(bind()&&cloud()?.profile)clearInterval(t);else if(n>80)clearInterval(t)},250)}window.TTTSecurity={load,recordLogin:s=>recordSession(s,'login')};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

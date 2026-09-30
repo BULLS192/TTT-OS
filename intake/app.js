@@ -48,15 +48,11 @@
   const vin=document.getElementById('vinInput');
   vin.addEventListener('input',()=>{vin.value=String(vin.value||'').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,'').slice(0,17);});
 
-  if(!cfg||!window.supabase){
+  if(!cfg){
     showError('Customer check-in is temporarily unavailable. Please speak with a TTT team member.');
     submitBtn.disabled=true;
     return;
   }
-
-  const client=window.supabase.createClient(cfg.url,cfg.publishableKey,{
-    auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'ttt-public-intake'}
-  });
 
   function showError(message){
     alertBox.textContent=message;
@@ -118,12 +114,14 @@
     submitBtn.disabled=true;
     submitBtn.textContent='Sending to TTT…';
     try{
-      const {data,error}=await client.rpc('submit_customer_intake',{
-        p_payload:payload,
-        p_source:source,
-        p_session_token:session
+      const response=await fetch(cfg.url+'/functions/v1/ttt-public-api',{
+        method:'POST',
+        headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},
+        body:JSON.stringify({action:'customer-intake',payload:{p_payload:payload,p_source:source,p_session_token:session}})
       });
-      if(error)throw error;
+      const result=await response.json().catch(()=>null);
+      if(!response.ok||!result?.ok)throw new Error(result?.error||'Submission failed');
+      const data=result.data;
       reference.textContent=data?.intake_code||'Received';
       form.hidden=true;
       success.hidden=false;
