@@ -148,7 +148,11 @@ create policy document_requirements_admin_insert on public.document_requirements
 drop policy if exists document_requirements_admin_update on public.document_requirements;
 create policy document_requirements_admin_update on public.document_requirements for update to authenticated using (private.is_ttt_admin(organization_id)) with check (private.is_ttt_admin(organization_id));
 
--- PDF/storage objects are intentionally not provisioned by SQL here.\n-- Signed/generated PDFs can use Drive references immediately; a private Storage bucket may be\n-- provisioned later through the Storage API when automated binary PDF generation is enabled.\n\ndo $$
+-- PDF/storage objects are intentionally not provisioned by SQL here.
+-- Signed/generated PDFs can use Drive references immediately; a private Storage bucket may be
+-- provisioned later through the Storage API when automated binary PDF generation is enabled.
+
+do $$
 begin
   if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='document_records') then
     alter publication supabase_realtime add table public.document_records;
