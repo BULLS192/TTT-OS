@@ -27,7 +27,8 @@
     'job-costing':'Job Costing',
     invoices:'Invoices',
     'quotes-estimates':'Quotes & Estimates',
-    customerdetail:'Customer Details'
+    customerdetail:'Customer Details',
+    compliance:'Compliance'
   };
 
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -292,9 +293,11 @@
     const group=groupByTitle('INSIGHTS'),items=group?.querySelector('.nav-group-items');if(!items)return;
     items.innerHTML=`
       <button class="nav-item website-analytics-shell-nav" type="button" data-view="websiteAnalytics">Website Analytics</button>
-      <div class="nav-coming-soon"><span>Reports & Compliance</span><span class="nav-soon-badge">Coming Soon</span></div>
+      <button class="nav-item compliance-shell-nav" type="button" data-shell-view="compliance">Compliance</button>
+      <div class="nav-coming-soon"><span>Reports</span><span class="nav-soon-badge">Coming Soon</span></div>
     `;
-    group.hidden=false;
+    group.hidden=false;bindSimpleNav(items);
+    items.querySelector('.compliance-shell-nav')?.addEventListener('click',()=>{window.TTTCompliance?.loadLive?.();const h=document.getElementById('pageTitle');if(h)h.textContent='Compliance';});
     items.querySelector('.website-analytics-shell-nav')?.addEventListener('click',ev=>{
       ev.preventDefault();ev.stopPropagation();
       if(window.TTTWebsiteAnalytics?.show)window.TTTWebsiteAnalytics.show();
