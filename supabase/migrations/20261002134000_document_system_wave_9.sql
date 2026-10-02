@@ -148,22 +148,7 @@ create policy document_requirements_admin_insert on public.document_requirements
 drop policy if exists document_requirements_admin_update on public.document_requirements;
 create policy document_requirements_admin_update on public.document_requirements for update to authenticated using (private.is_ttt_admin(organization_id)) with check (private.is_ttt_admin(organization_id));
 
-insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
-values('documents','documents',false,20971520,array['application/pdf','image/png','image/jpeg','application/octet-stream'])
-on conflict (id) do update set public=excluded.public,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
-
-drop policy if exists "ttt documents select" on storage.objects;
-create policy "ttt documents select" on storage.objects for select to authenticated
-using (bucket_id='documents' and exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.active=true and p.organization_id::text=(storage.foldername(name))[1]));
-drop policy if exists "ttt documents insert" on storage.objects;
-create policy "ttt documents insert" on storage.objects for insert to authenticated
-with check (bucket_id='documents' and exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.active=true and p.organization_id::text=(storage.foldername(name))[1]));
-drop policy if exists "ttt documents update" on storage.objects;
-create policy "ttt documents update" on storage.objects for update to authenticated
-using (bucket_id='documents' and exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.active=true and p.organization_id::text=(storage.foldername(name))[1]))
-with check (bucket_id='documents' and exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.active=true and p.organization_id::text=(storage.foldername(name))[1]));
-
-do $$
+-- PDF/storage objects are intentionally not provisioned by SQL here.\n-- Signed/generated PDFs can use Drive references immediately; a private Storage bucket may be\n-- provisioned later through the Storage API when automated binary PDF generation is enabled.\n\ndo $$
 begin
   if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='document_records') then
     alter publication supabase_realtime add table public.document_records;
@@ -184,14 +169,18 @@ create table if not exists public.document_number_counters (
   primary key (organization_id,document_code,year)
 );
 alter table public.document_number_counters enable row level security;
-grant select on public.document_number_counters to authenticated;
+grant select,insert,update on public.document_number_counters to authenticated;
 drop policy if exists document_number_counters_member_select on public.document_number_counters;
 create policy document_number_counters_member_select on public.document_number_counters for select to authenticated using (private.is_ttt_member(organization_id));
+drop policy if exists document_number_counters_member_insert on public.document_number_counters;
+create policy document_number_counters_member_insert on public.document_number_counters for insert to authenticated with check (private.is_ttt_member(organization_id));
+drop policy if exists document_number_counters_member_update on public.document_number_counters;
+create policy document_number_counters_member_update on public.document_number_counters for update to authenticated using (private.is_ttt_member(organization_id)) with check (private.is_ttt_member(organization_id));
 
 create or replace function public.allocate_document_number(p_code text)
 returns text
 language plpgsql
-security definer
+security invoker
 set search_path=public,private,pg_temp
 as $$
 declare
