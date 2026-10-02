@@ -16,7 +16,7 @@ async function waitForSync(page) {
   await expect(page.locator('#tttCloudStatus')).toContainText(/Synced|Connected/i, { timeout: 30000 });
 }
 
-test('authenticated core lifecycle: login → job → check-in → work order → close', async ({ page }) => {
+test('authenticated core lifecycle: login → job → check-in → authorization evidence gate', async ({ page }) => {
   test.skip(!email || !password, 'TTT_E2E_EMAIL / TTT_E2E_PASSWORD GitHub secrets are not configured.');
 
   const run = Date.now().toString(36);
@@ -67,28 +67,59 @@ test('authenticated core lifecycle: login → job → check-in → work order �
 
     await page.locator('#checkInForm [name="odometer"]').fill('1000');
     await page.locator('#checkInForm [name="keys"]').fill('1');
+
+    // Customer Authorization is now gated by six minimum condition views.
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+    const requiredPhotos = [
+      ['exterior::Front', 'front.png'],
+      ['exterior::Rear', 'rear.png'],
+      ['exterior::Driver Side / Left', 'driver.png'],
+      ['exterior::Passenger Side / Right', 'passenger.png'],
+      ['interior::Front Interior', 'interior.png'],
+      ['interior::Dashboard / Mileage', 'cluster.png']
+    ];
+    for (const [area, name] of requiredPhotos) {
+      await page.locator('[data-checkin-photo="' + area + '"]').setInputFiles({ name, mimeType: 'image/png', buffer: png });
+    }
+
     await page.getByRole('button', { name: 'Complete Check-In' }).click();
     await waitForSync(page);
 
     await page.getByRole('button', { name: 'Review Final Scope' }).click();
-    await page.locator('#finalAuthCheck').check();
-    await page.locator('#finalAuthName').fill('E2E Regression');
-    await page.getByRole('button', { name: 'Authorize & Create Work Order' }).click();
-    await waitForSync(page);
 
-    ids = await page.evaluate(jobId => {
-      const j = window.db?.jobs?.find(x => x.id === jobId);
-      return j ? { jobId: j.id, customerId: j.customerId, vehicleId: j.vehicleId, workOrderId: j.workOrderId } : null;
-    }, ids.jobId);
-    expect(ids?.workOrderId).toMatch(/^WO-\d{6}-\d{3}$/);
+    const legacyCheck = page.locator('#finalAuthCheck');
+    if (await legacyCheck.count()) await legacyCheck.check();
+    const legacyName = page.locator('#finalAuthName');
+    if (await legacyName.count()) await legacyName.fill('E2E Regression');
 
-    for (const label of ['Send to QC', 'Ready for Pickup', 'Mark Delivered', 'Close Job']) {
-      await page.getByRole('button', { name: label }).click();
-      await waitForSync(page);
-    }
+    const v05Check = page.locator('#v05FinalAuthCheck');
+    if (await v05Check.count()) await v05Check.check();
+    const v05Name = page.locator('#v05FinalAuthName');
+    if (await v05Name.count()) await v05Name.fill('E2E Regression');
 
-    const finalStatus = await page.evaluate(jobId => window.db?.jobs?.find(x => x.id === jobId)?.status, ids.jobId);
-    expect(finalStatus).toBe('Closed');
+    const authorize = page.locator('#v05AuthorizeBtn:visible, #authorizeBtn:visible').first();
+    await authorize.click();
+
+    await expect(page.locator('#docsysModal')).toHaveClass(/open/, { timeout: 15000 });
+    await expect(page.locator('#docsysModal')).toContainText('Customer Authorization');
+    await expect(page.locator('#docsysModal .docsys-photo-grid figure')).toHaveCount(6);
+
+    const signer = page.locator('#docsysSignerName');
+    await signer.fill('E2E Regression');
+    const canvas = page.locator('#docsysSignature');
+    const box = await canvas.boundingBox();
+    expect(box).toBeTruthy();
+    await page.mouse.move(box.x + 30, box.y + 70);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 140, box.y + 100, { steps: 6 });
+    await page.mouse.move(box.x + 260, box.y + 55, { steps: 6 });
+    await page.mouse.up();
+    // Do not finalize in production-backed E2E: finalized documents are intentionally immutable
+    // and would leave permanent test paperwork. Proving the modal, exact photo set and signature pad
+    // is sufficient here; lifecycle finalization is covered by static/database contract checks.
+    await expect(canvas).toBeVisible();
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.locator('#docsysModal')).not.toHaveClass(/open/, { timeout: 15000 });
   } finally {
     if (ids?.jobId) {
       await page.evaluate(async ids => {
@@ -96,6 +127,11 @@ test('authenticated core lifecycle: login → job → check-in → work order �
         if (!cloud?.ready || !cloud?.client || !cloud?.organizationId) return;
         const stamp = new Date().toISOString();
         const org = cloud.organizationId;
+        const media = await cloud.client.from('job_media').select('storage_path').eq('organization_id', org).eq('job_id', ids.jobId);
+        const paths = (media.data || []).map(x => x.storage_path).filter(Boolean);
+        if (paths.length) await cloud.client.storage.from('job-media').remove(paths).catch(() => {});
+        await cloud.client.from('job_media').delete().eq('organization_id', org).eq('job_id', ids.jobId).catch(() => {});
+        await cloud.client.from('documents').delete().eq('organization_id', org).eq('job_id', ids.jobId).catch(() => {});
         if (ids.workOrderId) {
           await cloud.client.from('work_orders').update({ archived_at: stamp, updated_at: stamp, updated_by: cloud.userId })
             .eq('organization_id', org).eq('id', ids.workOrderId);
