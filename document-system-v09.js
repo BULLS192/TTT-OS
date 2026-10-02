@@ -195,7 +195,7 @@
   async function finalizeRecord(record,j,signature){
     const t=templates.find(x=>x.code===record.document_code);
     const blocked=gate(t,j); if(blocked){toast(blocked);return;}
-    const frozen=snapshot(j,t);
+    const frozen={...(record.snapshot||{}),...snapshot(j,t)};
     const finalizedAt=now();
     frozen.record={documentNumber:record.document_number,finalizedAt};
     const contentHash=await sha256(JSON.stringify(frozen));
