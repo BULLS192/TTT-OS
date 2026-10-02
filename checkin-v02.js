@@ -222,6 +222,7 @@
     });
     save();
     render();
+    Promise.resolve(window.TTTDocumentSystem?.recordCheckIn?.(j)).catch(error=>console.error('Check-In document record failed',error));
     toast('Vehicle checked in · ' + photos.length + ' photos · ' + videos.length + ' videos stored');
   };
 })();
