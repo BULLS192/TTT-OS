@@ -309,12 +309,12 @@ async function openDoc(d,j){
 function closeDoc(){const m=document.getElementById('docsysModal');if(m){m.classList.remove('open');m.setAttribute('aria-hidden','true')}document.body.classList.remove('doc-modal-open')}
 
 async function requireAuthorizationDocument(e){
-  const b=e.target?.closest?.('#v05AuthorizeBtn');if(!b)return;
+  const b=e.target?.closest?.('#v05AuthorizeBtn, #authorizeBtn');if(!b)return;
   const j=getJob();if(!j)return;
   if(state.authBypassJob===j.id){state.authBypassJob=null;return}
   if(finalized(j,'AUTH'))return;
   e.preventDefault();e.stopImmediatePropagation();
-  if(!j.checkIn){toast('Complete vehicle check-in before customer authorization');return}
+  if(!j.checkIn){toast('Complete vehicle check-in before customer authorization');return}\n  const photos=j.checkIn.photos||[];\n  const needed=['Front','Rear','Driver Side / Left','Passenger Side / Right','Front Interior','Dashboard / Mileage'];\n  const areas=new Set(photos.map(p=>p.area));\n  const missing=needed.filter(x=>!areas.has(x));\n  if(missing.length){toast('Complete required check-in photos before authorization: '+missing.join(', '));return}
   let d=latest(j,'AUTH');try{if(!d)d=await createDocument('AUTH',j);await openDoc(d,j)}catch(err){console.error(err);toast('Customer Authorization could not be opened: '+(err.message||err))}
 }
 
