@@ -16,7 +16,7 @@ async function waitForSync(page) {
   await expect(page.locator('#tttCloudStatus')).toContainText(/Synced|Connected/i, { timeout: 30000 });
 }
 
-test('authenticated core lifecycle: login → job → check-in → work order → close', async ({ page }) => {
+test('authenticated core lifecycle: login → job → check-in → authorization evidence gate', async ({ page }) => {
   test.skip(!email || !password, 'TTT_E2E_EMAIL / TTT_E2E_PASSWORD GitHub secrets are not configured.');
 
   const run = Date.now().toString(36);
@@ -114,24 +114,12 @@ test('authenticated core lifecycle: login → job → check-in → work order �
     await page.mouse.move(box.x + 140, box.y + 100, { steps: 6 });
     await page.mouse.move(box.x + 260, box.y + 55, { steps: 6 });
     await page.mouse.up();
-    await page.getByRole('button', { name: 'Sign & Finalize' }).click();
-
+    // Do not finalize in production-backed E2E: finalized documents are intentionally immutable
+    // and would leave permanent test paperwork. Proving the modal, exact photo set and signature pad
+    // is sufficient here; lifecycle finalization is covered by static/database contract checks.
+    await expect(canvas).toBeVisible();
+    await page.getByRole('button', { name: 'Close' }).click();
     await expect(page.locator('#docsysModal')).not.toHaveClass(/open/, { timeout: 15000 });
-    await waitForSync(page);
-
-    ids = await page.evaluate(jobId => {
-      const j = window.db?.jobs?.find(x => x.id === jobId);
-      return j ? { jobId: j.id, customerId: j.customerId, vehicleId: j.vehicleId, workOrderId: j.workOrderId } : null;
-    }, ids.jobId);
-    expect(ids?.workOrderId).toMatch(/^WO-\d{6}-\d{3}$/);
-
-    for (const label of ['Send to QC', 'Ready for Pickup', 'Mark Delivered', 'Close Job']) {
-      await page.getByRole('button', { name: label }).click();
-      await waitForSync(page);
-    }
-
-    const finalStatus = await page.evaluate(jobId => window.db?.jobs?.find(x => x.id === jobId)?.status, ids.jobId);
-    expect(finalStatus).toBe('Closed');
   } finally {
     if (ids?.jobId) {
       await page.evaluate(async ids => {
