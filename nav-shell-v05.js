@@ -292,15 +292,24 @@
     const group=groupByTitle('INSIGHTS'),items=group?.querySelector('.nav-group-items');if(!items)return;
     items.innerHTML=`
       <button class="nav-item website-analytics-shell-nav" type="button" data-view="websiteAnalytics">Website Analytics</button>
-      <div class="nav-coming-soon"><span>Reports & Compliance</span><span class="nav-soon-badge">Coming Soon</span></div>
+      <button class="nav-item workflow-compliance-shell-nav" type="button" data-wa-compliance="1">Compliance & Workflow</button>
     `;
     group.hidden=false;
-    items.querySelector('.website-analytics-shell-nav')?.addEventListener('click',ev=>{
+    const analyticsBtn=items.querySelector('.website-analytics-shell-nav');
+    analyticsBtn?.addEventListener('click',ev=>{
       ev.preventDefault();ev.stopPropagation();
       if(window.TTTWebsiteAnalytics?.show)window.TTTWebsiteAnalytics.show();
       else if(typeof show==='function')show('websiteAnalytics');
-      markShellActive(items.querySelector('.website-analytics-shell-nav'));
+      markShellActive(analyticsBtn);
       const h=document.getElementById('pageTitle');if(h)h.textContent='Website Analytics';
+    });
+    const complianceBtn=items.querySelector('.workflow-compliance-shell-nav');
+    complianceBtn?.addEventListener('click',ev=>{
+      ev.preventDefault();ev.stopPropagation();
+      if(window.TTTWorkflowAutomation?.openCompliance)window.TTTWorkflowAutomation.openCompliance();
+      else if(typeof show==='function')show('workflow-compliance');
+      markShellActive(complianceBtn);
+      const h=document.getElementById('pageTitle');if(h)h.textContent='Compliance & Workflow';
     });
   }
   function restoreNavigation(){
