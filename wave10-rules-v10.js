@@ -37,13 +37,19 @@
     return out;
   }
   function requiredForStage(job){
-    const out=['Q'];
+    const out=['Q'],f=flags(job);
     if(atLeast(job?.status,'Checked In'))out.push('CHK','AUTH');
     if(atLeast(job?.status,'In Progress'))out.push('WO');
     if(atLeast(job?.status,'QC'))out.push('QC');
     if(atLeast(job?.status,'Ready for Pickup'))out.push('INV','COMP');
     if(atLeast(job?.status,'Delivered'))out.push('RCPT','WAR');
-    return [...new Set([...out,...serviceDocumentCodes(job)])];
+    if(f.diagnostic){out.push('DIA');if(atLeast(job?.status,'QC'))out.push('DFR');}
+    if(f.customerSupplied)out.push('CSE');
+    if(f.tint&&atLeast(job?.status,'Checked In'))out.push('TINT');
+    if(f.connected&&atLeast(job?.status,'Ready for Pickup'))out.push('DEV','SUB');
+    if(f.security&&atLeast(job?.status,'Ready for Pickup'))out.push('SEC');
+    if(f.commercial&&atLeast(job?.status,'Scheduled'))out.push('FWA','DRO');
+    return [...new Set(out)];
   }
   function financialSummary(invoice,payments=[]){
     const total=Number(invoice?.total||0);
