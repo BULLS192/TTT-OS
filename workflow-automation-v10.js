@@ -400,7 +400,7 @@
   }
 
   async function reconcileAll(){
-    for(const j of state.jobs)await reconcileJob(j);
+    for(const j of state.jobs.filter(x=>!isClosedStatus(x.status)))await reconcileJob(j);
     await reconcilePurchasing();
     await reconcileFinance();
     await refreshDocuments();
@@ -474,8 +474,15 @@
         else if(lower(local.status)==='delivered')action='close';
       }
       if(!action)return;
+      if(btn.dataset.waGateBypass==='1'){
+        delete btn.dataset.waGateBypass;
+        return;
+      }
       e.preventDefault();e.stopImmediatePropagation();
-      if(await gateJobAction(row,action))btn.click();
+      if(await gateJobAction(row,action)){
+        btn.dataset.waGateBypass='1';
+        btn.click();
+      }
     },true);
   }
 
