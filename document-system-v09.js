@@ -147,7 +147,7 @@
     const payload={
       organization_id:org(),job_id:j.id,customer_id:j.customerId||null,vehicle_id:j.vehicleId||null,
       work_order_id:j.workOrderId||null,document_type:'job_document_register',title:t.title,
-      document_code:'JDR',document_number:number,document_status:'generated',
+      document_code:'JDR',document_number:number,document_status:'draft',
       template_version:t.current_version,template_url:t.template_url,generated_at:now(),
       snapshot:{jobId:j.id,documents:records.map(r=>({code:r.document_code,number:r.document_number,status:r.document_status,hash:r.content_hash}))},
       metadata:{system_native:true,wave:9}
@@ -165,7 +165,7 @@
     const payload={
       organization_id:org(),job_id:j.id,customer_id:j.customerId||null,vehicle_id:j.vehicleId||null,
       work_order_id:j.workOrderId||null,document_type:String(t.title).toLowerCase().replace(/[^a-z0-9]+/g,'_'),
-      title:t.title,document_code:code,document_number:number,document_status:'generated',
+      title:t.title,document_code:code,document_number:number,document_status:t.requires_signature?'pending_signature':'draft',
       template_version:t.current_version,template_url:t.template_url,generated_at:now(),
       snapshot:snapshot(j,t),metadata:{wave:t.wave,required:state.required,reason:state.reason,photo_ids:(j.checkIn?.photos||[]).map(p=>p.id)}
     };
@@ -250,7 +250,7 @@
   async function openRecord(record,j){
     let modal=document.getElementById('docV09Modal');
     if(!modal){
-      document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal" id="docV09Modal"><div class="doc09-backdrop" data-doc09-close></div><div class="doc09-shell"><div class="doc09-toolbar"><strong id="doc09Title"></strong><div><button class="btn secondary" id="doc09Template">Master Template</button><button class="btn secondary" id="doc09Print">Print / Save PDF</button><button class="btn primary" data-doc09-close>Close</button></div></div><div id="doc09Body" class="doc09-body"></div></div></div>');
+      document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal" id="docV09Modal"><div class="doc09-backdrop" data-doc09-close></div><div class="doc09-shell"><div class="doc09-toolbar"><strong id="doc09Title"></strong><div><button class="btn secondary" id="doc09Template">Master Template</button><button class="btn secondary" id="doc09Deliver">Email / Delivery</button><button class="btn secondary" id="doc09Print">Print / Save PDF</button><button class="btn primary" data-doc09-close>Close</button></div></div><div id="doc09Body" class="doc09-body"></div></div></div>');
       modal=document.getElementById('docV09Modal');
       modal.querySelectorAll('[data-doc09-close]').forEach(x=>x.onclick=()=>modal.classList.remove('open'));
     }
@@ -258,6 +258,7 @@
     const snap=record.snapshot||{};
     document.getElementById('doc09Title').textContent=record.document_number+' · '+record.title;
     document.getElementById('doc09Template').onclick=()=>window.open(record.template_url||t.template_url,'_blank','noopener');
+    document.getElementById('doc09Deliver').onclick=()=>window.TTTWorkflowAutomation?.deliverDocument?.(record,j);
     document.getElementById('doc09Print').onclick=()=>{const w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><title>'+escHtml(record.document_number)+'</title><link rel="stylesheet" href="document-system-v09.css"></head><body class="doc09-print">'+document.getElementById('doc09Body').innerHTML+'</body></html>');w.document.close();setTimeout(()=>w.print(),250);};
     const photos=record.document_code==='AUTH'?await signedPhotoUrls(j):[];
     const photoHtml=photos.length?'<section><h3>Vehicle Condition Photos</h3><div class="doc09-photo-grid">'+photos.map(p=>'<figure>'+(p.url?'<img src="'+escHtml(p.url)+'">':'')+'<figcaption><strong>'+escHtml(p.area||p.group||'Check-in photo')+'</strong><span>'+escHtml(p.capturedAt||j.checkIn?.capturedAt||'')+'</span></figcaption></figure>').join('')+'</div></section>':'';
@@ -303,7 +304,7 @@
   function recordStatusLabel(r,state){
     if(r?.finalized_at) return '<span class="doc09-status final">Finalized</span>';
     if(r?.signed_at) return '<span class="doc09-status final">Signed</span>';
-    if(r) return '<span class="doc09-status generated">'+escHtml(r.document_status||'Generated')+'</span>';
+    if(r) return '<span class="doc09-status generated">'+escHtml(r.document_status==='pending_signature'?'Pending signature':'Draft')+'</span>';
     if(state.required) return '<span class="doc09-status required">Required</span>';
     return '<span class="doc09-status optional">Available</span>';
   }
@@ -363,7 +364,7 @@
       try{ number=await nextNumber(t.code); }catch(e){ toast('Could not allocate document number'); return; }
       const payload={
         organization_id:org(),document_type:String(t.title).toLowerCase().replace(/[^a-z0-9]+/g,'_'),
-        title:t.title,document_code:t.code,document_number:number,document_status:'generated',
+        title:t.title,document_code:t.code,document_number:number,document_status:t.requires_signature?'pending_signature':'draft',
         template_version:t.current_version,template_url:t.template_url,generated_at:now(),
         notes:notes||null,
         snapshot:{capturedAt:now(),template:{code:t.code,title:t.title,version:t.current_version,url:t.template_url,wave:t.wave},entity:{type:t.scope_type,id:entityId||null},source:'TTT-OS'},

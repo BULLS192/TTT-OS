@@ -1,0 +1,27 @@
+/* TTT OS Workflow Automation v1.0 */
+.wa-panel{border-left:4px solid #1557c0}
+.wa-blockers{display:grid;gap:7px}
+.wa-block{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;background:#f7f9fc;border:1px solid #e4e9f0;font-size:11px}
+.wa-block strong{min-width:42px;color:#1557c0}
+.wa-block.blocking{background:#fff1f1;border-color:#f3c7c7}.wa-block.blocking strong{color:#a12d2d}
+.wa-block.warning{background:#fff8e9;border-color:#f1dfb3}.wa-block.warning strong{color:#936000}
+.wa-clear{padding:10px 12px;border-radius:9px;background:#eaf7ef;color:#17683a;font-size:11px;font-weight:700}
+.wa-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wa-form label{font-size:10px;font-weight:800;color:#5e6d81}
+.wa-form textarea{width:100%;box-sizing:border-box;min-height:88px;margin-top:4px}
+.wa-form .wa-wide{grid-column:1/-1}
+.wa-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.wa-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:14px 0}
+.wa-kpis>div{background:#fff;border:1px solid #dfe6ee;border-radius:10px;padding:12px;display:grid;gap:3px}
+.wa-kpis span{font-size:9px;text-transform:uppercase;color:#78879a;letter-spacing:.05em}
+.wa-kpis strong{font-size:22px}
+.wa-chip{display:inline-flex;border-radius:999px;padding:3px 6px;font-size:9px;font-weight:800;background:#eef2f7;color:#59697d}
+.wa-chip.blocking{background:#fff0f0;color:#a32626}.wa-chip.warning{background:#fff7e7;color:#8d5d00}
+.wa-lower{margin-top:14px}
+.wa-modal{position:fixed;inset:0;z-index:1500;display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px}
+.wa-backdrop{position:absolute;inset:0;background:rgba(7,14,27,.74);backdrop-filter:blur(4px)}
+.wa-dialog{position:relative;width:min(720px,100%);background:#fff;border-radius:14px;padding:20px;display:grid;gap:12px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.wa-dialog label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#5c6a7d}
+.wa-dialog input,.wa-dialog textarea,.wa-dialog select{width:100%;box-sizing:border-box}
+@media(max-width:1100px){.wa-kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.wa-form,.wa-kpis{grid-template-columns:1fr}.wa-form .wa-wide{grid-column:auto}.wa-actions{display:grid}.wa-actions .btn{width:100%}}
