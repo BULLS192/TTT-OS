@@ -172,3 +172,47 @@ begin
     alter publication supabase_realtime add table public.document_events;
   end if;
 end $$;
+
+
+-- Concurrency-safe document numbering by organization and document code.
+create table if not exists public.document_number_counters (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  document_code text not null,
+  year integer not null,
+  last_number integer not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (organization_id,document_code,year)
+);
+alter table public.document_number_counters enable row level security;
+grant select on public.document_number_counters to authenticated;
+drop policy if exists document_number_counters_member_select on public.document_number_counters;
+create policy document_number_counters_member_select on public.document_number_counters for select to authenticated using (private.is_ttt_member(organization_id));
+
+create or replace function public.allocate_document_number(p_code text)
+returns text
+language plpgsql
+security definer
+set search_path=public,private,pg_temp
+as $$
+declare
+  v_org uuid;
+  v_year integer := extract(year from now())::integer;
+  v_num integer;
+begin
+  select p.organization_id into v_org
+  from public.profiles p
+  where p.user_id=(select auth.uid()) and p.active=true
+  limit 1;
+  if v_org is null then raise exception 'Active TTT organization membership required'; end if;
+  if p_code is null or p_code !~ '^[A-Z0-9-]{2,12}$' then raise exception 'Invalid document code'; end if;
+
+  insert into public.document_number_counters(organization_id,document_code,year,last_number,updated_at)
+  values(v_org,p_code,v_year,1,now())
+  on conflict (organization_id,document_code,year)
+  do update set last_number=public.document_number_counters.last_number+1,updated_at=now()
+  returning last_number into v_num;
+
+  return p_code || '-' || v_year::text || '-' || lpad(v_num::text,4,'0');
+end $$;
+revoke all on function public.allocate_document_number(text) from public,anon;
+grant execute on function public.allocate_document_number(text) to authenticated;
