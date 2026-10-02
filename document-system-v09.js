@@ -351,6 +351,34 @@
     renderLibrary();
   }
 
+  async function createGlobalRecord(t){
+    document.getElementById('doc09GlobalModal')?.remove();
+    document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal open" id="doc09GlobalModal"><div class="doc09-backdrop"></div><div class="doc09-sign-shell"><div class="panel-head"><div><p class="eyebrow">CONTROLLED DOCUMENT</p><h3>'+escHtml(t.code+' · '+t.title)+'</h3><p class="muted">Wave '+t.wave+' · '+escHtml(t.scope_type)+' · trigger: '+escHtml(t.trigger_stage)+'</p></div><button class="btn secondary" id="doc09GlobalCancel">Cancel</button></div><label>Related record / entity ID<input id="doc09GlobalEntity" placeholder="Optional job, vendor, account, PO, employee or other record ID"></label><label>Record notes<textarea id="doc09GlobalNotes" placeholder="Purpose, context or source reference for this controlled record"></textarea></label><button class="btn primary large" id="doc09GlobalCreate">Create Controlled Record</button></div></div>');
+    const m=document.getElementById('doc09GlobalModal');
+    document.getElementById('doc09GlobalCancel').onclick=()=>m.remove();
+    document.getElementById('doc09GlobalCreate').onclick=async()=>{
+      const entityId=document.getElementById('doc09GlobalEntity').value.trim();
+      const notes=document.getElementById('doc09GlobalNotes').value.trim();
+      let number;
+      try{ number=await nextNumber(t.code); }catch(e){ toast('Could not allocate document number'); return; }
+      const payload={
+        organization_id:org(),document_type:String(t.title).toLowerCase().replace(/[^a-z0-9]+/g,'_'),
+        title:t.title,document_code:t.code,document_number:number,document_status:'generated',
+        template_version:t.current_version,template_url:t.template_url,generated_at:now(),
+        notes:notes||null,
+        snapshot:{capturedAt:now(),template:{code:t.code,title:t.title,version:t.current_version,url:t.template_url,wave:t.wave},entity:{type:t.scope_type,id:entityId||null},source:'TTT-OS'},
+        metadata:{wave:t.wave,scope_type:t.scope_type,trigger_stage:t.trigger_stage,entity_id:entityId||null}
+      };
+      const {data,error}=await cloud().from('documents').insert(payload).select('*').single();
+      if(error){console.error(error);toast('Could not create controlled record');return;}
+      toast(number+' created');
+      m.remove();
+      renderLibrary();
+      const shell={id:null,customerId:null,vehicleId:null,checkIn:null};
+      openRecord(data,shell);
+    };
+  }
+
   function showLibrary(){
     document.querySelectorAll('.view.active').forEach(x=>x.classList.remove('active'));
     document.getElementById('documentsControl')?.classList.add('active');
@@ -363,7 +391,11 @@
   function renderLibrary(){
     const host=document.getElementById('doc09Library');if(!host||!templates.length)return;
     host.innerHTML='<div class="doc09-library-summary"><div><strong>'+templates.length+'</strong><span>controlled templates</span></div><div><strong>9</strong><span>document waves</span></div><div><strong>'+templates.filter(t=>t.legal_review_required).length+'</strong><span>legal-review flagged</span></div><div><strong>'+templates.filter(t=>t.requires_signature).length+'</strong><span>signature-controlled</span></div></div>'+
-      [1,2,3,4,5,6,7,8,9].map(w=>'<article class="panel doc09-library-wave"><div class="panel-head"><div><p class="eyebrow">WAVE '+w+'</p><h3>'+escHtml(waveName(w))+'</h3></div><span class="badge">'+templates.filter(t=>t.wave===w).length+' templates</span></div><div class="doc09-library-table">'+templates.filter(t=>t.wave===w).map(t=>'<div class="doc09-library-row"><div><strong>'+escHtml(t.code)+' · '+escHtml(t.title)+'</strong><small>'+escHtml(t.scope_type)+' · trigger: '+escHtml(t.trigger_stage)+' · version '+escHtml(t.current_version)+'</small></div><div>'+(t.legal_review_required?'<span class="doc09-flag legal">Legal review</span>':'')+(t.requires_signature?'<span class="doc09-flag">Signature</span>':'')+(t.customer_facing?'<span class="doc09-flag customer">Customer-facing</span>':'')+'<a class="btn secondary compact" href="'+escHtml(t.template_url)+'" target="_blank" rel="noopener">Open</a></div></div>').join('')+'</div></article>').join('');
+      [1,2,3,4,5,6,7,8,9].map(w=>'<article class="panel doc09-library-wave"><div class="panel-head"><div><p class="eyebrow">WAVE '+w+'</p><h3>'+escHtml(waveName(w))+'</h3></div><span class="badge">'+templates.filter(t=>t.wave===w).length+' templates</span></div><div class="doc09-library-table">'+templates.filter(t=>t.wave===w).map(t=>'<div class="doc09-library-row"><div><strong>'+escHtml(t.code)+' · '+escHtml(t.title)+'</strong><small>'+escHtml(t.scope_type)+' · trigger: '+escHtml(t.trigger_stage)+' · version '+escHtml(t.current_version)+'</small></div><div>'+(t.legal_review_required?'<span class="doc09-flag legal">Legal review</span>':'')+(t.requires_signature?'<span class="doc09-flag">Signature</span>':'')+(t.customer_facing?'<span class="doc09-flag customer">Customer-facing</span>':'')+'<button class="btn primary compact" data-doc09-create-global="'+escHtml(t.code)+'">Create Record</button><a class="btn secondary compact" href="'+escHtml(t.template_url)+'" target="_blank" rel="noopener">Open</a></div></div>').join('')+'</div></article>').join('');
+    host.querySelectorAll('[data-doc09-create-global]').forEach(b=>b.onclick=()=>{
+      const t=templates.find(x=>x.code===b.dataset.doc09CreateGlobal);
+      if(t) createGlobalRecord(t);
+    });
   }
 
   function waveName(w){return {1:'Core Customer Job Pack',2:'Diagnostics & Pre-Repair Authorization',3:'Customer Protection & Legal',4:'Exceptions, Claims & Risk',5:'Purchasing & Inventory',6:'Finance & Accounting',7:'Connected Electronics & Security',8:'B2B, Dealer & Fleet',9:'Governance & Audit'}[w]||'';}
