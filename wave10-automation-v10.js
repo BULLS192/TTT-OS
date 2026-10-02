@@ -320,11 +320,22 @@
   }
 
   function observe(){
+    const jobView=document.getElementById('jobdetail');
+    const complianceView=document.getElementById('workflow-compliance');
+    const watched=[jobView,complianceView].filter(Boolean);
+    if(!watched.length)return;
+    let queued=false;
+    const renderActiveViews=()=>{
+      queued=false;
+      if(jobView?.classList.contains('active'))installJobPanel();
+      if(complianceView?.classList.contains('active'))enhanceCompliance();
+    };
     const obs=new MutationObserver(()=>{
-      if(document.getElementById('jobdetail')?.classList.contains('active'))installJobPanel();
-      if(document.getElementById('workflow-compliance')?.classList.contains('active'))enhanceCompliance();
+      if(queued)return;
+      queued=true;
+      requestAnimationFrame(renderActiveViews);
     });
-    obs.observe(document.body,{childList:true,subtree:true});
+    watched.forEach(view=>obs.observe(view,{attributes:true,attributeFilter:['class']}));
   }
 
   window.TTTWave10={
