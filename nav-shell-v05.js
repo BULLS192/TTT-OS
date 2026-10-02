@@ -6,6 +6,7 @@
     crm:'CRM',
     tessa:'Tessa Assistant',
     websiteAnalytics:'Website Analytics',
+    documents:'Documents & Compliance',
     jobs:'Jobs',
     vehicles:'Vehicles',
     vehicledetail:'Vehicle Details',
@@ -292,15 +293,20 @@
     const group=groupByTitle('INSIGHTS'),items=group?.querySelector('.nav-group-items');if(!items)return;
     items.innerHTML=`
       <button class="nav-item website-analytics-shell-nav" type="button" data-view="websiteAnalytics">Website Analytics</button>
-      <div class="nav-coming-soon"><span>Reports & Compliance</span><span class="nav-soon-badge">Coming Soon</span></div>
+      <button class="nav-item document-system-shell-nav" type="button" data-shell-view="documents">Documents & Compliance</button>
     `;
     group.hidden=false;
+    bindSimpleNav(items);
     items.querySelector('.website-analytics-shell-nav')?.addEventListener('click',ev=>{
       ev.preventDefault();ev.stopPropagation();
       if(window.TTTWebsiteAnalytics?.show)window.TTTWebsiteAnalytics.show();
       else if(typeof show==='function')show('websiteAnalytics');
       markShellActive(items.querySelector('.website-analytics-shell-nav'));
       const h=document.getElementById('pageTitle');if(h)h.textContent='Website Analytics';
+    });
+    items.querySelector('.document-system-shell-nav')?.addEventListener('click',()=>{
+      window.TTTDocumentSystem?.load?.();
+      window.TTTDocumentSystem?.renderGlobal?.();
     });
   }
   function restoreNavigation(){
