@@ -232,6 +232,21 @@
     return out.data;
   }
 
+  async function refreshJobRegister(j){
+    const r=existingSource('JDR','job_register',j.id);
+    if(!r||r.finalized_at)return;
+    const snapshot=entitySnapshot(j,{document_register:docsForJob(j.id).filter(x=>x.document_code!=='JDR').map(x=>({
+      code:x.document_code,number:x.document_number,status:x.document_status,version:x.template_version,
+      signed_at:x.signed_at,finalized_at:x.finalized_at,hash:x.content_hash,source_type:x.source_entity_type,source_id:x.source_entity_id
+    }))});
+    const out=await cloud().from('documents').update({snapshot,updated_at:now(),updated_by:uid()})
+      .eq('organization_id',org()).eq('id',r.id).is('finalized_at',null).select('*').single();
+    if(!out.error){
+      const i=state.documents.findIndex(x=>x.id===r.id);
+      if(i>=0)state.documents[i]=out.data;
+    }
+  }
+
   async function reconcileJob(j){
     if(!j||isClosedStatus(j.status)&&!j.work_order_id&&!j.primary_quote_id)return;
     const q=quoteForJob(j.id);
@@ -350,6 +365,7 @@
         code:'JDR',job:j,sourceType:'job_register',sourceId:j.id,
         snapshot:entitySnapshot(j,{document_register:docsForJob(j.id).map(x=>({code:x.document_code,number:x.document_number,status:x.document_status,finalized_at:x.finalized_at,hash:x.content_hash}))})
       });
+      await refreshJobRegister(j);
     }
   }
 
@@ -391,9 +407,10 @@
 
   async function reconcileFinance(){
     for(const exp of state.expenses){
+      const expenseJob=state.jobs.find(x=>x.id===exp.job_ref);
       await ensureDocument({
         code:'EXP',sourceType:'expense',sourceId:exp.id,
-        links:{job_id:exp.job_ref||null,customer_id:exp.customer_id||null,vehicle_id:exp.vehicle_id||null,work_order_id:exp.work_order_id||null},
+        links:{job_id:expenseJob?.id||null,customer_id:exp.customer_id||null,vehicle_id:exp.vehicle_id||null,work_order_id:exp.work_order_id||null},
         snapshot:{captured_at:now(),expense:exp,source:'TTT-OS expense ledger'}
       });
     }
@@ -495,8 +512,11 @@
       root_cause_classification:val('waDiagRoot'),findings:val('waDiagFindings'),recommended_action:val('waDiagAction'),
       estimate_next_authorization:val('waDiagEstimate'),updated_at:now(),updated_by:uid()
     };
+    if(['start','findings','resolve'].includes(mode)&&!finalized(jobId,'DIA',d.id)){
+      toastMsg('Finalize the Diagnostic Authorization before diagnostic work or findings can be completed.');
+      return;
+    }
     if(mode==='start'){
-      if(!finalized(jobId,'DIA',d.id)){toastMsg('Finalize the Diagnostic Authorization before diagnostics begin.');return;}
       patch.status='in_progress';patch.started_at=d.started_at||now();
     }else if(mode==='findings'){
       patch.status='findings_ready';patch.started_at=d.started_at||now();
