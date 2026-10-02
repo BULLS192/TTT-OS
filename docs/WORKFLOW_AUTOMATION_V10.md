@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This module turns the Waves 1-9 controlled document registry into an operational workflow engine. Supabase remains the system of record; Google Drive remains the controlled master-template library.
+This module turns the Waves 1-9 controlled document registry into an operational workflow engine. Supabase remains the system of record; The controlled external template library remains the source for master document layouts.
 
 ## Automated source mappings
 
