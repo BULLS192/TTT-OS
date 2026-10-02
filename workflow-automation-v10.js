@@ -112,7 +112,7 @@
       Object.assign(state,{templates,documents,jobs,quotes,workOrders,changeOrders,invoices,payments,
         purchaseOrders,purchaseOrderLines,inventoryTransactions,expenses,warranties,jobMedia,
         diagnostics,exceptions,deliveries,loadedAt:now()});
-      if(options.reconcile!==false)await reconcileAll();
+      if(options.reconcile===true)await reconcileAll();
       ensureViews();
       renderCompliance();
       injectJobPanel();
@@ -235,10 +235,13 @@
   async function refreshJobRegister(j){
     const r=existingSource('JDR','job_register',j.id);
     if(!r||r.finalized_at)return;
-    const snapshot=entitySnapshot(j,{document_register:docsForJob(j.id).filter(x=>x.document_code!=='JDR').map(x=>({
+    const register=docsForJob(j.id).filter(x=>x.document_code!=='JDR').map(x=>({
       code:x.document_code,number:x.document_number,status:x.document_status,version:x.template_version,
       signed_at:x.signed_at,finalized_at:x.finalized_at,hash:x.content_hash,source_type:x.source_entity_type,source_id:x.source_entity_id
-    }))});
+    }));
+    const currentRegister=Array.isArray(r.snapshot?.document_register)?r.snapshot.document_register:[];
+    if(JSON.stringify(currentRegister)===JSON.stringify(register))return;
+    const snapshot=entitySnapshot(j,{document_register:register});
     const out=await cloud().from('documents').update({snapshot,updated_at:now(),updated_by:uid()})
       .eq('organization_id',org()).eq('id',r.id).is('finalized_at',null).select('*').single();
     if(!out.error){
@@ -604,9 +607,9 @@
     const insights=[...document.querySelectorAll('.nav-group')].find(g=>g.querySelector('.nav-group-toggle')?.textContent.includes('INSIGHTS'));
     const items=insights?.querySelector('.nav-group-items');
     if(items&&!items.querySelector('[data-wa-compliance]')){
-      items.innerHTML='';
       const b=document.createElement('button');b.className='nav-item';b.type='button';b.dataset.waCompliance='1';b.textContent='Compliance & Workflow';
-      items.appendChild(b);
+      const analytics=items.querySelector('[data-view="websiteAnalytics"]');
+      if(analytics?.nextSibling)items.insertBefore(b,analytics.nextSibling);else items.appendChild(b);
       b.onclick=()=>openCompliance();
     }
   }
@@ -630,7 +633,7 @@
     const diagOpen=state.diagnostics.filter(x=>!['resolved','closed'].includes(x.status)&&!x.archived_at).length;
     const poPending=state.purchaseOrders.filter(x=>!['received','closed','cancelled','canceled'].includes(lower(x.status))).length;
     body.innerHTML=
-      '<div class="section-head"><div><p class="eyebrow">OPERATIONS CONTROL</p><h2>Compliance & Workflow</h2><p class="muted">Live controls generated from Jobs, Documents, Diagnostics, Purchasing and Finance.</p></div><button class="btn secondary" id="waRefresh">Refresh & Reconcile</button></div>'+
+      '<div class="section-head"><div><p class="eyebrow">OPERATIONS CONTROL</p><h2>Compliance & Workflow</h2><p class="muted">Live controls generated from Jobs, Documents, Diagnostics, Purchasing and Finance.</p></div><div class="wa-actions"><button class="btn secondary" id="workflowComplianceRefresh">Refresh Data</button><button class="btn secondary" id="workflowComplianceReconcile">Refresh & Reconcile</button></div></div>'+
       '<div class="wa-kpis"><div><span>Blocking controls</span><strong>'+blocking+'</strong></div><div><span>Pending signatures</span><strong>'+pendingSig+'</strong></div><div><span>Open exceptions</span><strong>'+openEx+'</strong></div><div><span>Open diagnostics</span><strong>'+diagOpen+'</strong></div><div><span>POs pending receipt</span><strong>'+poPending+'</strong></div><div><span>Legal-review drafts</span><strong>'+legalDrafts+'</strong></div></div>'+
       '<article class="panel"><div class="panel-head"><div><h3>Jobs needing attention</h3><p class="muted">Only active Jobs with outstanding document/workflow controls appear here.</p></div></div>'+
       '<div class="table-wrap"><table><thead><tr><th>Job</th><th>Status</th><th>Controls</th><th>Blocking</th><th></th></tr></thead><tbody>'+
@@ -639,7 +642,8 @@
       '<div class="grid two wa-lower">'+
       '<article class="panel"><div class="panel-head"><h3>Document lifecycle</h3></div><div class="checklist"><div>Draft: '+state.documents.filter(x=>x.document_status==='draft').length+'</div><div>Pending signature: '+pendingSig+'</div><div>Finalized: '+state.documents.filter(x=>x.finalized_at).length+'</div><div>Delivery events logged: '+state.deliveries.length+'</div></div></article>'+
       '<article class="panel"><div class="panel-head"><h3>System controls</h3></div><div class="checklist"><div>✓ Customer Authorization requires check-in evidence</div><div>✓ QC blocks vehicle release until finalized</div><div>✓ Handover blocks delivery until signed</div><div>✓ Atomic document numbering</div><div>✓ Finalized records immutable</div><div>✓ SignalTrace structured case workflow</div></div></article></div>';
-    document.getElementById('waRefresh')?.addEventListener('click',()=>loadAll({reconcile:true}));
+    document.getElementById('workflowComplianceRefresh')?.addEventListener('click',()=>loadAll({reconcile:false}));
+    document.getElementById('workflowComplianceReconcile')?.addEventListener('click',()=>loadAll({reconcile:true}));
     body.querySelectorAll('[data-wa-open-job]').forEach(b=>b.onclick=()=>{if(typeof window.openJob==='function')window.openJob(b.dataset.waOpenJob);});
   }
 
@@ -694,14 +698,23 @@
 
   function scheduleReload(){
     clearTimeout(reconcileTimer);
-    reconcileTimer=setTimeout(()=>loadAll({reconcile:true}),700);
+    reconcileTimer=setTimeout(()=>loadAll({reconcile:false}),700);
   }
 
   function observe(){
+    const jobView=document.getElementById('jobdetail');
+    if(!jobView)return;
+    let queued=false;
+    const renderOnActivate=()=>{
+      queued=false;
+      if(jobView.classList.contains('active'))injectJobPanel();
+    };
     const obs=new MutationObserver(()=>{
-      if(document.getElementById('jobdetail')?.classList.contains('active'))injectJobPanel();
+      if(queued)return;
+      queued=true;
+      requestAnimationFrame(renderOnActivate);
     });
-    obs.observe(document.body,{childList:true,subtree:true});
+    obs.observe(jobView,{attributes:true,attributeFilter:['class']});
   }
 
   window.TTTWorkflowAutomation={
@@ -711,7 +724,7 @@
 
   installGates();
   observe();
-  window.addEventListener('ttt:cloud-state-applied',()=>loadAll({reconcile:true}));
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>loadAll({reconcile:true}),{once:true});
-  else loadAll({reconcile:true});
+  window.addEventListener('ttt:cloud-state-applied',()=>loadAll({reconcile:false}));
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>loadAll({reconcile:false}),{once:true});
+  else loadAll({reconcile:false});
 })();
