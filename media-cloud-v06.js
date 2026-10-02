@@ -144,6 +144,30 @@
     else window.location.href=data.signedUrl;
   }
 
+  async function getSignedUrl(path,expiresIn=900){
+    if(!ready||!path)return null;
+    const {data,error}=await client.storage.from(BUCKET).createSignedUrl(path,expiresIn);
+    if(error||!data?.signedUrl)return null;
+    return data.signedUrl;
+  }
+
+  async function hydrateSignedImages(root=document){
+    if(!ready||!root)return;
+    const images=[...root.querySelectorAll('img[data-job-media-img]')];
+    await Promise.all(images.map(async img=>{
+      const path=img.dataset.jobMediaImg;
+      if(!path||img.dataset.mediaHydrated==='1')return;
+      img.dataset.mediaHydrated='1';
+      const url=await getSignedUrl(path,900);
+      if(url)img.src=url;
+      else{
+        img.removeAttribute('src');
+        img.alt=(img.alt||'Condition photo')+' (unavailable)';
+        img.dataset.mediaHydrated='0';
+      }
+    }));
+  }
+
   function bindClicks(){
     document.addEventListener('click',event=>{
       const button=event.target.closest('[data-job-media-path]');
@@ -172,7 +196,9 @@
   window.TTTMedia={
     get ready(){return ready;},
     uploadCheckInFiles,
-    openStoredMedia
+    openStoredMedia,
+    getSignedUrl,
+    hydrateSignedImages
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
