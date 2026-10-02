@@ -1,0 +1,36 @@
+/* TTT Document System v0.9 — Waves 1-9 */
+.docsys-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
+.docsys-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 20px}
+.docsys-metric{background:#fff;border:1px solid #dfe6ee;border-radius:11px;padding:13px;display:grid;gap:4px}
+.docsys-metric span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#748297;font-weight:800}
+.docsys-metric strong{font-size:22px;color:#162338}
+.docsys-wave{margin:14px 0;border:1px solid #dfe6ee;border-radius:12px;background:#fff;overflow:hidden}
+.docsys-wave-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 15px;background:#f6f9fc;border-bottom:1px solid #e5ebf2}
+.docsys-wave-head h3{margin:0;font-size:14px}.docsys-wave-head span{font-size:10px;color:#748297}
+.docsys-table{width:100%;border-collapse:collapse}.docsys-table th,.docsys-table td{padding:9px 12px;border-bottom:1px solid #edf1f5;text-align:left;font-size:11px;vertical-align:top}
+.docsys-table th{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#728196;background:#fbfcfe}
+.docsys-table tr:last-child td{border-bottom:0}.docsys-code{font-weight:850;color:#1557c0}.docsys-title{font-weight:750;color:#1b293a}
+.docsys-sub{display:block;color:#7b8899;margin-top:2px;font-size:9px}.docsys-actions{display:flex;gap:6px;flex-wrap:wrap}
+.docsys-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:800;border:1px solid #d8e0ea;background:#f7f9fc;color:#647489;white-space:nowrap}
+.docsys-badge.ok{background:#edf8f0;border-color:#cfe8d5;color:#28753b}.docsys-badge.warn{background:#fff7e8;border-color:#f0dbaf;color:#8a6417}.docsys-badge.blue{background:#edf5ff;border-color:#cbdcf4;color:#245b9f}.docsys-badge.dark{background:#eef1f5;color:#35465c}
+.docsys-legal{color:#8a6417;font-size:9px;font-weight:800}.docsys-empty{padding:24px;text-align:center;color:#748297}
+.docsys-job-panel{border-left:4px solid #1557c0}.docsys-job-list{display:grid;gap:7px;margin-top:12px}
+.docsys-job-row{display:grid;grid-template-columns:60px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid #e2e8ef;border-radius:9px;padding:9px 10px;background:#fff}
+.docsys-job-row.required{border-left:3px solid #1557c0}.docsys-job-row.blocked{border-left:3px solid #b75d32;background:#fffaf7}
+.docsys-job-row strong{font-size:11px}.docsys-job-row small{display:block;color:#7b8899;font-size:9px;margin-top:2px}
+.docsys-job-row-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.docsys-gate{margin:10px 0;padding:10px 12px;border-radius:9px;background:#fff7e8;border:1px solid #ead2a0;font-size:11px;color:#76571b}
+.docsys-gate.ok{background:#edf8f0;border-color:#cbe6d1;color:#286a38}
+.docsys-filter{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.docsys-filter button.active{background:#1557c0;color:#fff;border-color:#1557c0}
+.auth-condition-review{margin:15px 0;padding:12px;border:1px solid #dbe4ee;border-radius:12px;background:#f8fafc}
+.auth-condition-review h4{margin:0 0 4px}.auth-condition-review>p{margin:0 0 10px;color:#6f7d8e;font-size:11px}
+.auth-condition-photo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.auth-condition-photo{border:1px solid #dbe3ec;border-radius:9px;background:#fff;overflow:hidden;min-width:0}
+.auth-condition-photo img{width:100%;height:115px;display:block;object-fit:cover;background:#eaf0f6}
+.auth-condition-photo div{padding:7px}.auth-condition-photo strong{display:block;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.auth-condition-photo small{display:block;color:#7c899a;font-size:8px;margin-top:2px}
+.auth-signature-wrap{margin-top:13px}.auth-signature-pad{border:1px solid #cbd6e2;border-radius:10px;background:#fff;padding:8px}
+.auth-signature-pad canvas{display:block;width:100%;height:145px;touch-action:none;background:#fff;border-radius:6px}
+.auth-signature-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}.auth-signature-tools small{color:#7a8797}
+.docsys-registry-note{font-size:10px;color:#6e7c8e;margin-top:10px}
+@media(max-width:900px){.docsys-summary{grid-template-columns:1fr 1fr}.auth-condition-photo-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.docsys-summary{grid-template-columns:1fr}.docsys-table th:nth-child(3),.docsys-table td:nth-child(3){display:none}.docsys-job-row{grid-template-columns:52px 1fr}.docsys-job-row-actions{grid-column:1/-1;justify-content:flex-start}.auth-condition-photo-grid{grid-template-columns:1fr}}
