@@ -29,5 +29,7 @@ jobs:
         run: node tests/operational-numbering-v01.cjs
       - name: Deployment discipline regression
         run: node tests/deployment-discipline-v01.cjs
+      - name: Wave 1-9 document system regression
+        run: node tests/document-system-wave9-v01.cjs
       - name: Architecture and catalog regression
         run: node tests/regression-architecture-catalog-v01.cjs
