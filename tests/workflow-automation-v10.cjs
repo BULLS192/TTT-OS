@@ -8,6 +8,7 @@ const automation=fs.readFileSync('workflow-automation-v10.js','utf8');
 const documents=fs.readFileSync('document-system-v09.js','utf8');
 const migration=fs.readFileSync('supabase/migrations/20261002073620_workflow_automation_depth_v1.sql','utf8');
 const uniqueness=fs.readFileSync('supabase/migrations/20261002073902_document_source_uniqueness_v1.sql','utf8');
+const leastPrivilege=fs.readFileSync('supabase/migrations/20261002075215_workflow_automation_least_privilege_v1.sql','utf8');
 
 const checks=[
   ['workflow automation JS is loaded',()=>assert(index.includes('workflow-automation-v10.js'))],
@@ -29,7 +30,8 @@ const checks=[
   ['new tables have RLS',()=>assert((migration.match(/enable row level security/g)||[]).length>=3)],
   ['new tables have explicit authenticated grants',()=>assert((migration.match(/grant select,insert,update/g)||[]).length>=3)],
   ['anon access is revoked',()=>assert((migration.match(/revoke all .* from anon/g)||[]).length>=3)],
-  ['document source uniqueness is enforced',()=>assert(uniqueness.includes('documents_source_unique_uq'))]
+  ['document source uniqueness is enforced',()=>assert(uniqueness.includes('documents_source_unique_uq'))],
+  ['authenticated workflow grants are least privilege',()=>assert(leastPrivilege.includes('revoke all on public.diagnostic_cases from authenticated')&&leastPrivilege.includes('grant select,insert,update on public.diagnostic_cases to authenticated'))]
 ];
 
 let passed=0;
