@@ -14,7 +14,9 @@ test('public production login smoke', async ({ page }) => {
     () => page.evaluate(() => Boolean(
       window.TTTCRM &&
       window.TTTTessaAdmin &&
-      window.TTTWebsiteAnalytics
+      window.TTTWebsiteAnalytics &&
+      window.TTTDocumentSystem &&
+      window.TTTWorkflowAutomation
     )),
     { timeout: 15000, message: 'Current TTT-OS runtime modules did not bootstrap' }
   ).toBe(true);
