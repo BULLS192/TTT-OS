@@ -31,7 +31,7 @@ const controls=[
 {id:'TTT-END-001',level:1,domain:'Protect',title:'Company devices patched, locked and encrypted',status:'review',evidence:'Manual device evidence required.',milestone:'L1-M4'},
 {id:'TTT-NET-001',level:1,domain:'Protect',title:'Separate business and guest Wi-Fi',status:'review',evidence:'Shop network evidence required when facility network is live.',milestone:'L1-M4'},
 {id:'TTT-RET-001',level:1,domain:'Govern',title:'Data retention and secure destruction schedule',status:'fail',evidence:'Retention matrix and deletion procedure not yet approved.',milestone:'L1-M4'},
-{id:'TTT-VEN-001',level:1,domain:'Govern',title:'Maintain critical vendor register',status:'review',evidence:'Include Google, Supabase, Vercel, GitHub, POS/payment, email/SMS and backup vendors.',milestone:'L1-M4'},
+{id:'TTT-VEN-001',level:1,domain:'Govern',title:'Maintain critical vendor register',status:'review',evidence:'Include productivity/email, database, hosting, source-control, POS/payment, messaging and backup providers.',milestone:'L1-M4'},
 
 {id:'TTT-IAM-101',level:2,domain:'Protect',title:'Phishing-resistant MFA/passkeys where supported',status:'planned',evidence:'Level 2 target.',milestone:'L2-M1'},
 {id:'TTT-IAM-102',level:2,domain:'Govern',title:'Quarterly access and privilege reviews',status:'planned',evidence:'Level 2 target.',milestone:'L2-M1'},
