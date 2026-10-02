@@ -70,6 +70,56 @@
     {key:'training_competency',code:'TCR',wave:9,title:'Training / Competency Record',category:'Governance',stage:'People',system:true}
   ];
 
+  const DRIVE_URLS={
+    quotation:'https://docs.google.com/document/d/1sr3qMPc9lkSPuUqzH475TmOpLQwI3DYFAScFbIbBQKY/edit',
+    vehicle_checkin:'https://docs.google.com/document/d/1FdcsEA5m3KD_VjgOYGLNiefH8ozSXIvldHpYAZCf3Yk/edit',
+    customer_authorization:'https://docs.google.com/document/d/1zXChkG_5TAUHpt-ieTLcmPrOl1onBsaW1ciQxb8jSPk/edit',
+    work_order:'https://docs.google.com/document/d/1nJLvpqB3slcmyDoQmFJ1Fg7Fk5uKxzxVxpTm3OsP_9U/edit',
+    change_order:'https://docs.google.com/document/d/1n0A8bJyw6clvuDt4KwnhnOSj23DSUYh0SNDqt3Yz_7w/edit',
+    qc_final:'https://docs.google.com/document/d/10GrvbMQfDQoDnvSXAPHpDlcxbo9pWYEzRqfpGJvUPHA/edit',
+    invoice:'https://docs.google.com/document/d/1hKX5OzWPwdZXJLXVKVhmxm9S85EUmXf5tyadnRDeqH8/edit',
+    payment_receipt:'https://docs.google.com/document/d/1urW5H-My00iIXliVUNnZQwWOBbltfK7d6plv5I8o6nM/edit',
+    handover:'https://docs.google.com/document/d/1VUA-G5G8vpx3x8dVTl8dprdTrbuiwYnlOb9zGfEidB4/edit',
+    warranty_certificate:'https://docs.google.com/document/d/1VFSnfIv2GkFKDP0yhxWkVntRiBWV6Zf-gYcSQgD9OYw/edit',
+    diagnostic_authorization:'https://docs.google.com/document/d/1n7Fr-Hm7oyGNzliJsFvbDX_kmZVRq90gDKMt6p6gTK0/edit',
+    diagnostic_findings:'https://docs.google.com/document/d/1xBHDMS83__NoO6V8nt6yvroQisVe8ffc-5yAve59Nb8/edit',
+    terms_conditions:'https://docs.google.com/document/d/134T5i238cnPFRAF6Dl6hmh1fDq7h2zZn6DGrufiE8n0/edit',
+    privacy_notice:'https://docs.google.com/document/d/1QM_5kyRSosDfxTT0xg_W-rhC84xFg0KdznHJCD_PQjo/edit',
+    media_release:'https://docs.google.com/document/d/1zbiwSNJL61s8lwB7R8qm-wKTEs9Q5Oc-sTXCT_J8Bao/edit',
+    customer_supplied_equipment:'https://docs.google.com/document/d/1x5LQ3vV_j0rIyeQ93c8ktidneQGr7CB8cWSdyWCs5cE/edit',
+    tint_compliance:'https://docs.google.com/document/d/1-iL0fSahd09ZpnvLrT_Nekr-CXkkMiR0BkoClI6CYWc/edit',
+    vehicle_release_authorization:'https://docs.google.com/document/d/1RR0KSXnNGaf5r6G8AllzM0PAAfXorjmj5jb6FdON0rE/edit',
+    incident_damage:'https://docs.google.com/document/d/14TAksZ6wHhRSr8vEZsaHK4Nd5WnV86wPUTrYTAxaJXI/edit',
+    warranty_claim:'https://docs.google.com/document/d/1KpWisTJ_-NeefPtDFztKdo0c24rJwsonanvHS7eZkKQ/edit',
+    complaint_resolution:'https://docs.google.com/document/d/1UfXkf4UCWORHtNodJZOkct1M1oz5qpz-AWMSMsUDIwU/edit',
+    declined_recommendation:'https://docs.google.com/document/d/18mN4orymcv5is3W_LQL4rEZYBkp2yF_PetiBTtFfTSg/edit',
+    uncollected_vehicle:'https://docs.google.com/document/d/1A0flVoecD26loOBTM_OgNf0g4LtGGlHT-HslxJxcX0Q/edit',
+    purchase_order:'https://docs.google.com/document/d/1_pnttZEMkOxDmgmiVU_e9wO2WcEqviALSjXGCwscXSE/edit',
+    goods_receiving:'https://docs.google.com/document/d/1VInT3ZQu4hPNg1XK6EbMxXxG3MyQIk2oM5hNIFxIfHo/edit',
+    vendor_rma:'https://docs.google.com/document/d/1luhV5Gwm__NbO66qQfegNPvxsX6TGH4Srl8wTYMJ6Ww/edit',
+    inventory_adjustment:'https://docs.google.com/document/d/14QJQt7lR-Nzwz7h_azUMYiDj65mvIXWnmiXZTWcwtHk/edit',
+    stock_transfer:'https://docs.google.com/document/d/1Xv1hs4_YJt18J8dUVrVn6uSncvLLW50-A9QnV7wCnBI/edit',
+    credit_memo:'https://docs.google.com/document/d/1yOue5HlU2hhkAO7nc3pidLPeQHedbebTgcYP1TGxMYE/edit',
+    deposit_receipt:'https://docs.google.com/document/d/1LPGeW0uKFNA3WUA839kwkI3V6YavgQj7slzqSHW8OM0/edit',
+    account_statement:'https://docs.google.com/document/d/1G_Vxz_UTGzVooXX-oHNMVqwNJJ5t3ndh-W1j4P-tkJc/edit',
+    vendor_bill_ap:'https://docs.google.com/document/d/1KhB6cNapz7uGs_rHpvlfXfuwDt8f7hxK-XPUOf7joI0/edit',
+    expense_report:'https://docs.google.com/document/d/1e01w_J7fCHaif1wuhuuznIrn1F6cVNRhy4zhqADw_rw/edit',
+    device_credential_handoff:'https://docs.google.com/document/d/1Wh-GFaWdfONsLqTLCLYBp7pQ0hJ5d3Fd27-UvroThE4/edit',
+    security_handoff:'https://docs.google.com/document/d/1NMjqxrwCJl6Pqvt9WZzM3VD_riw2cmExcU3KjEjXMcw/edit',
+    subscription_ack:'https://docs.google.com/document/d/1LMuZG64gGLzcxT4bYFgMYd7i9-NBmfgxDSij_wJdvws/edit',
+    master_service_agreement:'https://docs.google.com/document/d/1g4AO9Kthwei6QwMCY7OTVWhkYj8_XrruA-kE-PA48BU/edit',
+    commercial_credit_application:'https://docs.google.com/document/d/1B2VnfMp27j2UrYKpbD2s_N2BrpA0GvxEaQj6yIRF3pU/edit',
+    fleet_work_authorization:'https://docs.google.com/document/d/1ZIo11pSXopXKgFJKV1pWcZu5haYstrSvWeOh1iAqymg/edit',
+    dealer_ro_reference:'https://docs.google.com/document/d/1cKqcC8Wkre4e761XAwtT2rXdCDWrNUv9I0Xzlx33sSc/edit',
+    consolidated_invoice:'https://docs.google.com/document/d/1Mp5MiKlvxQ8zvIlaiTiuCA2KJ-CJz38qxjqkdejE3rs/edit',
+    service_level_agreement:'https://docs.google.com/document/d/1D0AjWA6eKDZ-fHxGY4eKLTEftKn3HIT618b9NzoHa6w/edit',
+    job_document_register:'https://docs.google.com/document/d/1Sdyejsh3qk4BTErgz7Vf_HmCEt-Zl3Tn-uqKpd7WuSs/edit',
+    template_version_register:'https://docs.google.com/document/d/1DiR3mWwgn94hZqKr4_BGWtbaBw-PkEBZ7lr5SZE79t4/edit',
+    technician_signoff:'https://docs.google.com/document/d/1XYf-EXxMU4gXxT1NOAcIa5WIRSsQJxygF6YbqnVXONg/edit',
+    safety_exception:'https://docs.google.com/document/d/1xISJ19FVsmAyA8GOzFeJKbaVw96lvWYbo9P-d7Spisk/edit',
+    training_competency:'https://docs.google.com/document/d/1eOBYPu4oLJxM6-uORf0jaO03w2Ocw1hymvQ0QWWVmBg/edit'
+  };
+
   const FIELD_SETS={
     diagnostic_authorization:['Customer/vehicle and complaint','Authorized diagnostic activities','Road-test / scan / disassembly permissions','Diagnostic fee / time authorization','Check-in photo acknowledgement','T&C acknowledgement'],
     diagnostic_findings:['Reported symptom','Tests performed','Evidence / measurements','Root-cause classification','Findings','Recommended corrective action','Estimate / next authorization'],
@@ -122,7 +172,7 @@
       organization_id:org(),template_key:t.key,document_code:t.code,title:t.title,wave:t.wave,category:t.category,
       version:'1.0',status:'active',customer_facing:!!t.customer,signature_required:!!t.signature,
       immutable_on_sign:!!t.lock,required_stage:t.stage||null,applies_when:{required:t.required||null,conditional:t.conditional||null,system:!!t.system},
-      source_json:t,updated_by:user()
+      drive_template_url:DRIVE_URLS[t.key]||null,source_json:{...t,drive_template_url:DRIVE_URLS[t.key]||null},updated_by:user()
     }));
     const {error}=await client().from('document_templates').upsert(rows,{onConflict:'organization_id,template_key'});
     if(error){console.warn('TTT documents: template seed unavailable until migration is applied',error);return;}
@@ -282,8 +332,8 @@
   function docCard(t,j){
     const s=j?statusFor(t,j):(t.system?'system':'template');
     const r=j?recordFor(j.id,t.key):null;
-    const action=j&&applicable(t,j)&&!r&&!existingSatisfied(j,t.key)?'<button class="btn secondary compact" data-docsys-create="'+esc(t.key)+'">Create record</button>':'';
-    return '<article class="docsys-card" data-wave="'+t.wave+'"><div class="docsys-card-head"><span class="docsys-code">'+esc(t.code)+'</span><span class="docsys-status '+esc(s)+'">'+esc(s.replaceAll('-',' '))+'</span></div><strong>'+esc(t.title)+'</strong><small>'+esc(t.category)+' · '+(t.customer?'Customer-facing':'Internal')+(t.signature?' · Signature':'')+'</small>'+(r?'<div class="docsys-number">'+esc(r.document_number||r.id)+'</div>':'')+action+'</article>';
+    const action=j&&applicable(t,j)&&!r&&!existingSatisfied(j,t.key)?'<button class="btn secondary compact" data-docsys-create="'+esc(t.key)+'">Create record</button>':'';\n    const drive=DRIVE_URLS[t.key]?'<a class="docsys-template-link" href="'+esc(DRIVE_URLS[t.key])+'" target="_blank" rel="noopener">Drive template</a>':'';
+    return '<article class="docsys-card" data-wave="'+t.wave+'"><div class="docsys-card-head"><span class="docsys-code">'+esc(t.code)+'</span><span class="docsys-status '+esc(s)+'">'+esc(s.replaceAll('-',' '))+'</span></div><strong>'+esc(t.title)+'</strong><small>'+esc(t.category)+' · '+(t.customer?'Customer-facing':'Internal')+(t.signature?' · Signature':'')+'</small>'+(r?'<div class="docsys-number">'+esc(r.document_number||r.id)+'</div>':'')+drive+action+'</article>';
   }
 
   function ensureCenter(){
