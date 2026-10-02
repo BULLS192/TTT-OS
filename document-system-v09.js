@@ -250,7 +250,7 @@
   async function openRecord(record,j){
     let modal=document.getElementById('docV09Modal');
     if(!modal){
-      document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal" id="docV09Modal"><div class="doc09-backdrop" data-doc09-close></div><div class="doc09-shell"><div class="doc09-toolbar"><strong id="doc09Title"></strong><div><button class="btn secondary" id="doc09Template">Master Template</button><button class="btn secondary" id="doc09Print">Print / Save PDF</button><button class="btn primary" data-doc09-close>Close</button></div></div><div id="doc09Body" class="doc09-body"></div></div></div>');
+      document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal" id="docV09Modal"><div class="doc09-backdrop" data-doc09-close></div><div class="doc09-shell"><div class="doc09-toolbar"><strong id="doc09Title"></strong><div><button class="btn secondary" id="doc09Template">Master Template</button><button class="btn secondary" id="doc09Deliver">Email / Delivery</button><button class="btn secondary" id="doc09Print">Print / Save PDF</button><button class="btn primary" data-doc09-close>Close</button></div></div><div id="doc09Body" class="doc09-body"></div></div></div>');
       modal=document.getElementById('docV09Modal');
       modal.querySelectorAll('[data-doc09-close]').forEach(x=>x.onclick=()=>modal.classList.remove('open'));
     }
@@ -258,6 +258,7 @@
     const snap=record.snapshot||{};
     document.getElementById('doc09Title').textContent=record.document_number+' · '+record.title;
     document.getElementById('doc09Template').onclick=()=>window.open(record.template_url||t.template_url,'_blank','noopener');
+    document.getElementById('doc09Deliver').onclick=()=>window.TTTWorkflowAutomation?.deliverDocument?.(record,j);
     document.getElementById('doc09Print').onclick=()=>{const w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><title>'+escHtml(record.document_number)+'</title><link rel="stylesheet" href="document-system-v09.css"></head><body class="doc09-print">'+document.getElementById('doc09Body').innerHTML+'</body></html>');w.document.close();setTimeout(()=>w.print(),250);};
     const photos=record.document_code==='AUTH'?await signedPhotoUrls(j):[];
     const photoHtml=photos.length?'<section><h3>Vehicle Condition Photos</h3><div class="doc09-photo-grid">'+photos.map(p=>'<figure>'+(p.url?'<img src="'+escHtml(p.url)+'">':'')+'<figcaption><strong>'+escHtml(p.area||p.group||'Check-in photo')+'</strong><span>'+escHtml(p.capturedAt||j.checkIn?.capturedAt||'')+'</span></figcaption></figure>').join('')+'</div></section>':'';
