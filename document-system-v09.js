@@ -106,13 +106,15 @@
   }
 
   async function nextNumber(code){
-    const year=new Date().getFullYear();
-    const {data}=await cloud().from('documents').select('document_number')
-      .eq('organization_id',org()).eq('document_code',code)
-      .like('document_number',code+'-'+year+'-%');
-    let max=0;
-    (data||[]).forEach(x=>{const m=String(x.document_number||'').match(/-(\d+)$/);if(m)max=Math.max(max,+m[1]);});
-    return code+'-'+year+'-'+String(max+1).padStart(4,'0');
+    const {data,error}=await cloud().rpc('next_ttt_document_number',{
+      p_organization_id:org(),
+      p_document_code:code
+    });
+    if(error){
+      console.error('Atomic document number allocation failed',error);
+      throw error;
+    }
+    return data;
   }
 
   function snapshot(j,t){
@@ -197,7 +199,7 @@
     frozen.record={documentNumber:record.document_number,finalizedAt:now()};
     const contentHash=await sha256(JSON.stringify(frozen));
     const update={
-      document_status:t.requires_signature?'signed':'finalized',
+      document_status:'finalized',
       snapshot:frozen,content_hash:contentHash,finalized_at:now(),
       generated_at:record.generated_at||now(),
       metadata:{...(record.metadata||{}),immutable:true,photo_ids:(j.checkIn?.photos||[]).map(p=>p.id)}
