@@ -1,0 +1,15 @@
+/* Wave 10 — End-to-End Automation */
+.w10-panel{border-left:4px solid #0e4f9d}
+.w10-fin{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:center;padding:11px;border:1px solid #e1e7ef;border-radius:10px;background:#f8fafc}
+.w10-fin span{font-size:9px;color:#77869a;text-transform:uppercase;letter-spacing:.04em}.w10-fin strong{font-size:14px}.w10-fin .due{color:#a64522}.w10-fin .paid{color:#187142}
+.w10-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.w10-ex-list{display:grid;gap:6px;margin-top:11px}.w10-ex-list>div{display:grid;grid-template-columns:130px 1fr auto;gap:8px;padding:8px;border:1px solid #f0d9b2;background:#fff9ef;border-radius:8px;font-size:10px}.w10-ex-list em{color:#936000}
+.w10-modal{position:fixed;inset:0;z-index:1600;display:flex;align-items:flex-start;justify-content:center;padding:7vh 14px}.w10-backdrop{position:absolute;inset:0;background:rgba(5,12,24,.76);backdrop-filter:blur(4px)}
+.w10-dialog{position:relative;width:min(720px,100%);max-height:86vh;overflow:auto;background:#fff;border-radius:14px;padding:20px;display:grid;gap:12px;box-shadow:0 24px 70px rgba(0,0,0,.28)}.w10-dialog.wide{width:min(920px,100%)}
+.w10-dialog label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#59687c}.w10-dialog textarea{min-height:100px}
+.w10-package-list{display:grid;gap:7px}.w10-package-list>div{display:grid;grid-template-columns:1fr 150px auto;align-items:center;gap:8px;padding:9px;border:1px solid #e3e8ef;border-radius:9px}.w10-package-list span{font-size:10px;color:#748298}
+.w10-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:12px 0}.w10-kpis>div{background:#fff;border:1px solid #e0e6ee;border-radius:9px;padding:11px;display:grid;gap:2px}.w10-kpis span{font-size:8px;color:#77869a;text-transform:uppercase}.w10-kpis strong{font-size:20px}
+.w10-queue{display:grid}.w10-queue>div{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 0;border-top:1px solid #edf0f4}.w10-queue>div:first-child{border-top:0}.w10-queue>div>div{display:grid;gap:2px}.w10-queue small{color:#748298}
+.w10-provider-note{font-size:10px;line-height:1.45;color:#69778a;background:#f5f7fa;border-radius:8px;padding:10px}
+@media(max-width:1000px){.w10-kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.w10-fin{grid-template-columns:1fr 1fr}.w10-actions{display:grid}.w10-actions .btn{width:100%}.w10-kpis{grid-template-columns:1fr 1fr}.w10-package-list>div{grid-template-columns:1fr}.w10-ex-list>div{grid-template-columns:1fr}}

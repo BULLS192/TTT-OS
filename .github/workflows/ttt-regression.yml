@@ -29,5 +29,9 @@ jobs:
         run: node tests/operational-numbering-v01.cjs
       - name: Deployment discipline regression
         run: node tests/deployment-discipline-v01.cjs
+      - name: Workflow automation regression
+        run: node tests/workflow-automation-v10.cjs
+      - name: Wave 10 end-to-end simulations
+        run: node tests/wave10-end-to-end-v10.cjs
       - name: Architecture and catalog regression
         run: node tests/regression-architecture-catalog-v01.cjs

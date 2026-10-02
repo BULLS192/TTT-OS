@@ -448,8 +448,14 @@
 
   async function gateJobAction(j,action){
     await refreshDocuments();
+    const override=code=>window.TTTWave10?.approvedOverride?.(j.id,code)===true;
     if(action==='authorize'){
-      if(!finalized(j.id,'AUTH')){
+      const wf10=window.TTTWave10Rules;
+      if(wf10?.flags?.(j)?.customerSupplied&&!finalized(j.id,'CSE')&&!override('AUTH_OVERRIDE')){
+        toastMsg('Customer-supplied equipment acknowledgement must be finalized before work authorization.');
+        return false;
+      }
+      if(!finalized(j.id,'AUTH')&&!override('AUTH_OVERRIDE')){
         await reconcileJob(j);
         await refreshDocuments();
         window.TTTDocumentSystem?.refreshJobCenter?.(localJob(j.id),true);
@@ -458,19 +464,25 @@
         return false;
       }
     }
-    if(action==='leave_qc'&&!finalized(j.id,'QC')){
+    if(action==='leave_qc'&&!finalized(j.id,'QC')&&!override('QC_OVERRIDE')){
       await reconcileJob(j);await refreshDocuments();
       window.TTTDocumentSystem?.refreshJobCenter?.(localJob(j.id),true);
       toastMsg('QC & Final Inspection must be finalized before the vehicle can move to pickup.');
       return false;
     }
-    if(action==='deliver'){
+    if(action==='deliver'&&!override('DELIVERY_OVERRIDE')){
       const inv=invoicesForJob(j.id)[0];
       if(!inv){toastMsg('Create the final Invoice before vehicle handover.');return false;}
       if(!finalized(j.id,'INV',inv.id)){toastMsg('Finalize the Invoice before vehicle handover.');return false;}
       if(!finalized(j.id,'COMP')){await reconcileJob(j);await refreshDocuments();window.TTTDocumentSystem?.refreshJobCenter?.(localJob(j.id),true);toastMsg('Customer Handover acceptance must be signed before marking the vehicle delivered.');return false;}
+      const serviceCodes=(window.TTTWave10Rules?.requiredForStage?.(j)||[]).filter(code=>['TINT','DEV','SUB','SEC','FWA','DRO'].includes(code));
+      const missingService=serviceCodes.find(code=>!finalized(j.id,code));
+      if(missingService){
+        toastMsg((templates.find(x=>x.code===missingService)?.title||missingService)+' must be finalized before vehicle delivery.');
+        return false;
+      }
     }
-    if(action==='close'&&!finalized(j.id,'COMP')){
+    if(action==='close'&&!finalized(j.id,'COMP')&&!override('CLOSE_OVERRIDE')){
       toastMsg('Finalized Job Completion & Handover is required before closing the Job.');
       return false;
     }

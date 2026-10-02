@@ -79,7 +79,7 @@
   async function loadTemplates(){
     if(!await waitCloud()) return;
     const {data,error}=await cloud().from('document_templates')
-      .select('code,title,wave,category,scope_type,trigger_stage,current_version,template_url,legal_review_required,customer_facing,requires_signature,active,metadata')
+      .select('code,title,wave,category,scope_type,trigger_stage,current_version,template_url,legal_review_required,customer_facing,requires_signature,active,metadata,release_status,effective_from,effective_until')
       .eq('organization_id',org()).eq('active',true)
       .order('wave').order('code');
     if(error){console.error('Document template registry load failed',error);return;}
@@ -195,21 +195,26 @@
   async function finalizeRecord(record,j,signature){
     const t=templates.find(x=>x.code===record.document_code);
     const blocked=gate(t,j); if(blocked){toast(blocked);return;}
-    const frozen=snapshot(j,t);
-    frozen.record={documentNumber:record.document_number,finalizedAt:now()};
+    const frozen={...(record.snapshot||{}),...snapshot(j,t)};
+    const finalizedAt=now();
+    frozen.record={documentNumber:record.document_number,finalizedAt};
     const contentHash=await sha256(JSON.stringify(frozen));
     const update={
       document_status:'finalized',
-      snapshot:frozen,content_hash:contentHash,finalized_at:now(),
-      generated_at:record.generated_at||now(),
+      snapshot:frozen,content_hash:contentHash,finalized_at:finalizedAt,
+      generated_at:record.generated_at||finalizedAt,
+      presented_at:record.presented_at||signature?.presentedAt||finalizedAt,
+      approval_acknowledged_at:signature?.acknowledgedAt||null,
+      approval_context:signature?.context||{},
       metadata:{...(record.metadata||{}),immutable:true,photo_ids:(j.checkIn?.photos||[]).map(p=>p.id)}
     };
     if(t.requires_signature){
       update.signer_name=signature?.name||'';
       update.signature_method=signature?.method||'TTT-OS digital signature';
-      update.signed_at=now();
+      update.signed_at=finalizedAt;
       update.metadata.signature_image=signature?.dataUrl||null;
       if(!update.signer_name){toast('Signer name is required');return;}
+      if(!signature?.acknowledgedAt){toast('Customer acknowledgement is required before signature finalization');return;}
     }
     const {error}=await cloud().from('documents').update(update)
       .eq('organization_id',org()).eq('id',record.id);
@@ -218,6 +223,9 @@
     await ensureJDRUpdate(j);
     toast(record.document_number+' finalized');
     await refreshJobCenter(j,true);
+    if(window.TTTWave10?.ensureCanonicalPdf){
+      window.TTTWave10.ensureCanonicalPdf(record.id,false).catch(err=>console.error('Canonical PDF generation failed',err));
+    }
   }
 
   async function ensureJDRUpdate(j){
@@ -250,7 +258,7 @@
   async function openRecord(record,j){
     let modal=document.getElementById('docV09Modal');
     if(!modal){
-      document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal" id="docV09Modal"><div class="doc09-backdrop" data-doc09-close></div><div class="doc09-shell"><div class="doc09-toolbar"><strong id="doc09Title"></strong><div><button class="btn secondary" id="doc09Template">Master Template</button><button class="btn secondary" id="doc09Deliver">Email / Delivery</button><button class="btn secondary" id="doc09Print">Print / Save PDF</button><button class="btn primary" data-doc09-close>Close</button></div></div><div id="doc09Body" class="doc09-body"></div></div></div>');
+      document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal" id="docV09Modal"><div class="doc09-backdrop" data-doc09-close></div><div class="doc09-shell"><div class="doc09-toolbar"><strong id="doc09Title"></strong><div><button class="btn secondary" id="doc09Template">Master Template</button><button class="btn secondary" id="doc09CanonicalPdf">Canonical PDF</button><button class="btn secondary" id="doc09Deliver">Email / Delivery</button><button class="btn secondary" id="doc09Print">Print / Save PDF</button><button class="btn primary" data-doc09-close>Close</button></div></div><div id="doc09Body" class="doc09-body"></div></div></div>');
       modal=document.getElementById('docV09Modal');
       modal.querySelectorAll('[data-doc09-close]').forEach(x=>x.onclick=()=>modal.classList.remove('open'));
     }
@@ -258,6 +266,10 @@
     const snap=record.snapshot||{};
     document.getElementById('doc09Title').textContent=record.document_number+' · '+record.title;
     document.getElementById('doc09Template').onclick=()=>window.open(record.template_url||t.template_url,'_blank','noopener');
+    const pdfBtn=document.getElementById('doc09CanonicalPdf');
+    pdfBtn.disabled=!record.finalized_at;
+    pdfBtn.title=record.finalized_at?'Open the immutable server-generated PDF':'Finalize this record before generating the canonical PDF';
+    pdfBtn.onclick=()=>window.TTTWave10?.ensureCanonicalPdf?.(record.id,true);
     document.getElementById('doc09Deliver').onclick=()=>window.TTTWorkflowAutomation?.deliverDocument?.(record,j);
     document.getElementById('doc09Print').onclick=()=>{const w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><title>'+escHtml(record.document_number)+'</title><link rel="stylesheet" href="document-system-v09.css"></head><body class="doc09-print">'+document.getElementById('doc09Body').innerHTML+'</body></html>');w.document.close();setTimeout(()=>w.print(),250);};
     const photos=record.document_code==='AUTH'?await signedPhotoUrls(j):[];
@@ -274,12 +286,33 @@
     modal.classList.add('open');
   }
 
-  function signatureModal(record,j){
+  async function signatureModal(record,j){
     const t=templates.find(x=>x.code===record.document_code);
     const blocked=gate(t,j); if(blocked){toast(blocked);return;}
-    if(!t.requires_signature){finalizeRecord(record,j,null);return;}
+    if(!t.requires_signature){await finalizeRecord(record,j,null);return;}
+    const photos=record.document_code==='AUTH'?await signedPhotoUrls(j):[];
+    const customer=typeof window.customer==='function'?window.customer(j.customerId):null;
+    const vehicle=typeof window.vehicle==='function'?window.vehicle(j.vehicleId):null;
+    const amount=record.snapshot?.invoice?.total||record.snapshot?.quote?.total||j.estimateTotal||0;
+    const releaseWarning=['draft','legal_review'].includes(t?.release_status)
+      ? '<div class="doc09-approval-warning"><strong>Template status: '+escHtml(t.release_status)+'</strong><span>This document is still flagged for legal review and should not be treated as a released production legal form.</span></div>'
+      : '';
+    const gallery=photos.length
+      ? '<div class="doc09-approval-photos">'+photos.map(p=>'<figure>'+(p.url?'<img src="'+escHtml(p.url)+'" alt="'+escHtml(p.area||'Vehicle condition')+'">':'')+'<figcaption>'+escHtml(p.area||p.group||'Condition photo')+' · '+escHtml(p.capturedAt||j.checkIn?.capturedAt||'')+'</figcaption></figure>').join('')+'</div>'
+      : '';
     document.getElementById('doc09SigModal')?.remove();
-    document.body.insertAdjacentHTML('beforeend','<div class="doc09-modal open" id="doc09SigModal"><div class="doc09-backdrop"></div><div class="doc09-sign-shell"><div class="panel-head"><div><p class="eyebrow">CONTROLLED SIGN-OFF</p><h3>'+escHtml(record.title)+'</h3><p class="muted">'+escHtml(record.document_number)+'</p></div><button class="btn secondary" id="doc09SigCancel">Cancel</button></div><label>Signer name<input id="doc09Signer" value="'+escHtml((typeof window.customer==='function'?window.customer(j.customerId)?.name:'')||'')+'"></label><label>Signature method<select id="doc09SigMethod"><option>In-person digital signature</option><option>Printed signed copy</option><option>Email / written approval</option><option>Internal TTT sign-off</option></select></label><div class="doc09-canvas-wrap"><span>Sign below</span><canvas id="doc09SigCanvas" width="700" height="180"></canvas><button class="link-btn" id="doc09SigClear">Clear signature</button></div><button class="btn primary large" id="doc09SigFinalize">Finalize & Freeze Record</button></div></div>');
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="doc09-modal open" id="doc09SigModal"><div class="doc09-backdrop"></div><div class="doc09-sign-shell doc09-approval-shell">'+
+      '<div class="panel-head"><div><p class="eyebrow">CUSTOMER REVIEW & SIGN-OFF</p><h3>'+escHtml(record.title)+'</h3><p class="muted">'+escHtml(record.document_number)+' · Template '+escHtml(record.template_version||t.current_version||'')+'</p></div><button class="btn secondary" id="doc09SigCancel">Cancel</button></div>'+
+      releaseWarning+
+      '<div class="doc09-approval-summary"><div><span>Customer</span><strong>'+escHtml(customer?.name||record.snapshot?.customer?.name||'—')+'</strong></div><div><span>Vehicle</span><strong>'+escHtml(vehicleLabel(vehicle)||record.snapshot?.vehicle?.label||'—')+'</strong></div><div><span>Job</span><strong>'+escHtml(j.id||record.job_id||'—')+'</strong></div><div><span>Current amount</span><strong>'+escHtml(amount?('$'+Number(amount).toFixed(2)):'—')+'</strong></div></div>'+
+      '<div class="doc09-approval-copy"><strong>Review before signing</strong><p>'+escHtml(record.snapshot?.job?.requestNotes||j.requestNotes||'Review the scope, vehicle condition record, photographs and acknowledgements shown in this controlled record before signing.')+'</p>'+(photos.length?'<p><strong>'+photos.length+' vehicle condition photograph(s)</strong> are part of this authorization.</p>':'')+'</div>'+
+      gallery+
+      '<label class="doc09-ack"><input type="checkbox" id="doc09ApprovalAck"> I confirm that I reviewed the information, scope and any photographs displayed above and authorize/sign this record.</label>'+
+      '<label>Signer name<input id="doc09Signer" value="'+escHtml(customer?.name||'')+'"></label>'+
+      '<label>Signature method<select id="doc09SigMethod"><option>In-person digital signature</option><option>Printed signed copy</option><option>Email / written approval</option><option>Internal TTT sign-off</option></select></label>'+
+      '<div class="doc09-canvas-wrap"><span>Sign below</span><canvas id="doc09SigCanvas" width="700" height="180"></canvas><button class="link-btn" id="doc09SigClear">Clear signature</button></div>'+
+      '<button class="btn primary large" id="doc09SigFinalize">Finalize, Freeze & Generate Canonical PDF</button></div></div>');
     const m=document.getElementById('doc09SigModal'),canvas=document.getElementById('doc09SigCanvas'),ctx=canvas.getContext('2d');
     ctx.lineWidth=2;ctx.lineCap='round';let drawing=false,hasInk=false;
     function pos(e){const r=canvas.getBoundingClientRect(),p=e.touches?.[0]||e;return {x:(p.clientX-r.left)*(canvas.width/r.width),y:(p.clientY-r.top)*(canvas.height/r.height)};}
@@ -294,10 +327,16 @@
     document.getElementById('doc09SigFinalize').onclick=async()=>{
       const name=document.getElementById('doc09Signer').value.trim();
       const method=document.getElementById('doc09SigMethod').value;
+      const ack=document.getElementById('doc09ApprovalAck').checked;
+      if(!ack){toast('The signer must confirm the review acknowledgement');return;}
       if(!name){toast('Signer name is required');return;}
       if(method==='In-person digital signature'&&!hasInk){toast('Capture the customer / representative signature');return;}
       const dataUrl=hasInk?canvas.toDataURL('image/png'):null;
-      await finalizeRecord(record,j,{name,method,dataUrl});m.remove();
+      await finalizeRecord(record,j,{
+        name,method,dataUrl,presentedAt:now(),acknowledgedAt:now(),
+        context:{surface:'TTT-OS approval center',photo_count:photos.length,template_release_status:t?.release_status||'unknown'}
+      });
+      m.remove();
     };
   }
 
@@ -392,7 +431,7 @@
   function renderLibrary(){
     const host=document.getElementById('doc09Library');if(!host||!templates.length)return;
     host.innerHTML='<div class="doc09-library-summary"><div><strong>'+templates.length+'</strong><span>controlled templates</span></div><div><strong>9</strong><span>document waves</span></div><div><strong>'+templates.filter(t=>t.legal_review_required).length+'</strong><span>legal-review flagged</span></div><div><strong>'+templates.filter(t=>t.requires_signature).length+'</strong><span>signature-controlled</span></div></div>'+
-      [1,2,3,4,5,6,7,8,9].map(w=>'<article class="panel doc09-library-wave"><div class="panel-head"><div><p class="eyebrow">WAVE '+w+'</p><h3>'+escHtml(waveName(w))+'</h3></div><span class="badge">'+templates.filter(t=>t.wave===w).length+' templates</span></div><div class="doc09-library-table">'+templates.filter(t=>t.wave===w).map(t=>'<div class="doc09-library-row"><div><strong>'+escHtml(t.code)+' · '+escHtml(t.title)+'</strong><small>'+escHtml(t.scope_type)+' · trigger: '+escHtml(t.trigger_stage)+' · version '+escHtml(t.current_version)+'</small></div><div>'+(t.legal_review_required?'<span class="doc09-flag legal">Legal review</span>':'')+(t.requires_signature?'<span class="doc09-flag">Signature</span>':'')+(t.customer_facing?'<span class="doc09-flag customer">Customer-facing</span>':'')+'<button class="btn primary compact" data-doc09-create-global="'+escHtml(t.code)+'">Create Record</button><a class="btn secondary compact" href="'+escHtml(t.template_url)+'" target="_blank" rel="noopener">Open</a></div></div>').join('')+'</div></article>').join('');
+      [1,2,3,4,5,6,7,8,9].map(w=>'<article class="panel doc09-library-wave"><div class="panel-head"><div><p class="eyebrow">WAVE '+w+'</p><h3>'+escHtml(waveName(w))+'</h3></div><span class="badge">'+templates.filter(t=>t.wave===w).length+' templates</span></div><div class="doc09-library-table">'+templates.filter(t=>t.wave===w).map(t=>'<div class="doc09-library-row"><div><strong>'+escHtml(t.code)+' · '+escHtml(t.title)+'</strong><small>'+escHtml(t.scope_type)+' · trigger: '+escHtml(t.trigger_stage)+' · version '+escHtml(t.current_version)+'</small></div><div>'+(['draft','legal_review'].includes(t.release_status)?'<span class="doc09-flag legal">'+escHtml(t.release_status==='legal_review'?'Legal review':'Draft')+'</span>':(t.release_status==='approved'?'<span class="doc09-flag customer">Released</span>':''))+(t.requires_signature?'<span class="doc09-flag">Signature</span>':'')+(t.customer_facing?'<span class="doc09-flag customer">Customer-facing</span>':'')+'<button class="btn primary compact" data-doc09-create-global="'+escHtml(t.code)+'">Create Record</button><a class="btn secondary compact" href="'+escHtml(t.template_url)+'" target="_blank" rel="noopener">Open</a></div></div>').join('')+'</div></article>').join('');
     host.querySelectorAll('[data-doc09-create-global]').forEach(b=>b.onclick=()=>{
       const t=templates.find(x=>x.code===b.dataset.doc09CreateGlobal);
       if(t) createGlobalRecord(t);
