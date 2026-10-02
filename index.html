@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="workflow-v03.css">
 <link rel="stylesheet" href="document-preview-v04.css">
 <link rel="stylesheet" href="workflow-v05.css">
+<link rel="stylesheet" href="document-system-v09.css?v=20261002-document-system-v09">
 </head>
 <body>
 <div class="app-shell">
@@ -106,14 +107,14 @@
 <section id="dashboard" class="view active">
   <div class="hero-card">
     <div><p class="eyebrow">SHOP OVERVIEW</p><h2>Good afternoon.</h2><p>Track every vehicle from first inquiry through delivery and warranty.</p></div>
-    <div class="hero-pill">Job → Quote → Approval → Check-In → Work Order → QC → Delivery</div>
+    <div class="hero-pill">Job → Quote → Check-In + Photos → Customer Authorization → Work Order → QC → Invoice → Handover</div>
   </div>
   <div class="stats" id="stats"></div>
   <div class="pipeline" id="pipeline"></div>
   <div class="grid two">
     <article class="panel"><div class="panel-head"><h3>Needs attention</h3><button class="link-btn" data-go="jobs">View jobs</button></div><div id="attentionList"></div></article>
     <article class="panel"><div class="panel-head"><h3>Protection checkpoints</h3></div><div class="checklist">
-      <div>✓ Customer request & quote history</div><div>✓ Vehicle custody begins at Check-In</div><div>✓ Before-condition photos & walkaround</div><div>✓ Final scope authorization before work</div><div>✓ Change orders preserve original approval</div><div>✓ QC + final condition + delivery sign-off</div>
+      <div>✓ Customer request & quote history</div><div>✓ Vehicle custody begins at Check-In</div><div>✓ Before-condition photos & walkaround</div><div>✓ Customer authorization includes check-in condition photos</div><div>✓ Change orders preserve original approval</div><div>✓ QC + final condition + delivery sign-off</div>
     </div></article>
   </div>
 </section>
@@ -266,7 +267,7 @@
 </main>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="app.js?v=20260930-security-hardening-v24"></script>
+<script src="app.js?v=20261002-document-system-v09"></script>
 <script src="checkin-v02.js"></script>
 <script src="workflow-v03.js"></script>
 <script src="document-preview-v05.js"></script>
