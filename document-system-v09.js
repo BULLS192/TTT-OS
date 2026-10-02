@@ -147,7 +147,7 @@
     const payload={
       organization_id:org(),job_id:j.id,customer_id:j.customerId||null,vehicle_id:j.vehicleId||null,
       work_order_id:j.workOrderId||null,document_type:'job_document_register',title:t.title,
-      document_code:'JDR',document_number:number,document_status:'generated',
+      document_code:'JDR',document_number:number,document_status:'draft',
       template_version:t.current_version,template_url:t.template_url,generated_at:now(),
       snapshot:{jobId:j.id,documents:records.map(r=>({code:r.document_code,number:r.document_number,status:r.document_status,hash:r.content_hash}))},
       metadata:{system_native:true,wave:9}
@@ -165,7 +165,7 @@
     const payload={
       organization_id:org(),job_id:j.id,customer_id:j.customerId||null,vehicle_id:j.vehicleId||null,
       work_order_id:j.workOrderId||null,document_type:String(t.title).toLowerCase().replace(/[^a-z0-9]+/g,'_'),
-      title:t.title,document_code:code,document_number:number,document_status:'generated',
+      title:t.title,document_code:code,document_number:number,document_status:t.requires_signature?'pending_signature':'draft',
       template_version:t.current_version,template_url:t.template_url,generated_at:now(),
       snapshot:snapshot(j,t),metadata:{wave:t.wave,required:state.required,reason:state.reason,photo_ids:(j.checkIn?.photos||[]).map(p=>p.id)}
     };
@@ -303,7 +303,7 @@
   function recordStatusLabel(r,state){
     if(r?.finalized_at) return '<span class="doc09-status final">Finalized</span>';
     if(r?.signed_at) return '<span class="doc09-status final">Signed</span>';
-    if(r) return '<span class="doc09-status generated">'+escHtml(r.document_status||'Generated')+'</span>';
+    if(r) return '<span class="doc09-status generated">'+escHtml(r.document_status==='pending_signature'?'Pending signature':'Draft')+'</span>';
     if(state.required) return '<span class="doc09-status required">Required</span>';
     return '<span class="doc09-status optional">Available</span>';
   }
@@ -363,7 +363,7 @@
       try{ number=await nextNumber(t.code); }catch(e){ toast('Could not allocate document number'); return; }
       const payload={
         organization_id:org(),document_type:String(t.title).toLowerCase().replace(/[^a-z0-9]+/g,'_'),
-        title:t.title,document_code:t.code,document_number:number,document_status:'generated',
+        title:t.title,document_code:t.code,document_number:number,document_status:t.requires_signature?'pending_signature':'draft',
         template_version:t.current_version,template_url:t.template_url,generated_at:now(),
         notes:notes||null,
         snapshot:{capturedAt:now(),template:{code:t.code,title:t.title,version:t.current_version,url:t.template_url,wave:t.wave},entity:{type:t.scope_type,id:entityId||null},source:'TTT-OS'},
