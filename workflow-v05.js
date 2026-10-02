@@ -45,7 +45,7 @@
     j.audit.push({at,actor:window.TTTCloud?.profile?.person_id||window.TTTCloud?.userId||'system',action,...extra});
     // Persist the local compatibility cache; Supabase adapters remain authoritative.
     localStorage.setItem(DB_KEY,JSON.stringify(db));
-    window.dispatchEvent(new CustomEvent('ttt:job-operational-change',{detail:{jobId:j.id,action}}));
+    window.dispatchEvent(new CustomEvent('ttt:job-operational-change',{detail:{jobId:j.id,action,...extra}}));
   }
 
   function ensureExecution(j){
@@ -86,12 +86,49 @@
     </div>`;
   }
 
+  function conditionPhotoHTML(j){
+    const photos=j.checkIn?.photos||[];
+    const cards=photos.map((p,i)=>{
+      const label=p.area||p.category||p.fileName||('Condition photo '+(i+1));
+      const meta=[p.group,p.capturedAt?new Date(p.capturedAt).toLocaleString():null].filter(Boolean).join(' · ');
+      const image=p.storagePath
+        ? `<img data-job-media-img="${safe(p.storagePath)}" alt="${safe(label)}">`
+        : '<div style="height:115px;background:#eaf0f6;display:grid;place-items:center;font-size:10px;color:#748297">Stored image unavailable</div>';
+      return `<div class="auth-condition-photo">${image}<div><strong>${safe(label)}</strong><small>${safe(meta||p.fileName||'Check-In evidence')}</small></div></div>`;
+    }).join('');
+    return `<section class="auth-condition-review">
+      <h4>VEHICLE CONDITION PHOTOS</h4>
+      <p>The ${photos.length} photograph${photos.length===1?'':'s'} below are the stored check-in condition record that the customer is acknowledging before work begins.</p>
+      <div class="auth-condition-photo-grid">${cards||'<div class="docsys-gate">No stored check-in photos are available. Authorization is blocked until condition photos are captured.</div>'}</div>
+    </section>`;
+  }
+
+  function bindSignaturePad(){
+    const canvas=document.getElementById('v05FinalAuthSignature');if(!canvas||canvas.dataset.bound==='1')return;
+    canvas.dataset.bound='1';canvas.dataset.hasInk='0';
+    const ctx=canvas.getContext('2d');
+    ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';ctx.lineWidth=3;
+    let drawing=false;
+    const point=e=>{
+      const r=canvas.getBoundingClientRect();
+      return {x:(e.clientX-r.left)*(canvas.width/r.width),y:(e.clientY-r.top)*(canvas.height/r.height)};
+    };
+    canvas.addEventListener('pointerdown',e=>{drawing=true;canvas.setPointerCapture?.(e.pointerId);const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();});
+    canvas.addEventListener('pointermove',e=>{if(!drawing)return;const p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke();canvas.dataset.hasInk='1';e.preventDefault();});
+    const end=e=>{drawing=false;try{canvas.releasePointerCapture?.(e.pointerId);}catch{}};
+    canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('pointerleave',e=>{if(e.buttons===0)drawing=false;});
+    document.getElementById('v05ClearSignature')?.addEventListener('click',()=>{ctx.clearRect(0,0,canvas.width,canvas.height);canvas.dataset.hasInk='0';});
+  }
+
   function finalAuthHTML(j){
+    const photos=j.checkIn?.photos||[];
+    const termsVersion=window.TTTDocumentSystem?.currentTermsVersion?.()||'v0.1';
+    const termsUrl=window.TTTDocumentSystem?.template?.('TNC')?.template_url||'';
     if(j.finalAuthorization){
       const a=j.finalAuthorization;
       return `<article class="panel detail-section v05-card" id="v05FinalAuthorization">
         <div class="panel-head">
-          <div><p class="eyebrow">FINAL WORK AUTHORIZATION</p><h3>${safe(a.id||'Authorized')}</h3></div>
+          <div><p class="eyebrow">CUSTOMER AUTHORIZATION</p><h3>${safe(a.id||'Authorized')}</h3><p class="muted">Signed authorization includes the check-in condition photo record.</p></div>
           <span class="badge">Authorized</span>
         </div>
         ${totalStrip(j)}
@@ -99,10 +136,13 @@
           <dt>Authorized by</dt><dd>${safe(a.name||'—')}</dd>
           <dt>Authorized</dt><dd>${safe(a.at?new Date(a.at).toLocaleString():'—')}</dd>
           <dt>Method</dt><dd>${safe(a.method||'—')}</dd>
-          <dt>Terms</dt><dd>${safe(a.termsVersion||'0.5')}</dd>
+          <dt>Terms</dt><dd>${safe(a.termsVersion||termsVersion)}</dd>
+          <dt>Condition photos acknowledged</dt><dd>${safe(a.conditionPhotoCount??photos.length)} photo${(a.conditionPhotoCount??photos.length)===1?'':'s'}</dd>
           <dt>Inspection findings</dt><dd>${safe(a.inspectionFindings||'None noted')}</dd>
           <dt>Final scope notes</dt><dd>${safe(a.finalScopeNotes||'No additional notes')}</dd>
         </dl>
+        ${conditionPhotoHTML(j)}
+        <section class="doc-sign"><div><h4>CUSTOMER SIGNATURE</h4><p>${safe(a.name||'Customer')} · ${safe(a.at?new Date(a.at).toLocaleString():'')}</p></div><div class="doc-signature">${a.approvalMark?`<img src="${a.approvalMark}" alt="Customer signature"><small>Customer authorization signature</small>`:'<small>Signature record unavailable</small>'}</div></section>
       </article>`;
     }
 
@@ -111,13 +151,18 @@
     return `<article class="panel detail-section v05-card" id="v05FinalAuthorization">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">FINAL WORK AUTHORIZATION</p>
-          <h3>Confirm post-inspection scope</h3>
-          <p class="muted">The Work Order is created only after this authorization.</p>
+          <p class="eyebrow">CUSTOMER AUTHORIZATION</p>
+          <h3>Review condition, scope and authorize work</h3>
+          <p class="muted">The customer must review the stored check-in photographs and sign before the Work Order is created.</p>
         </div>
-        <span class="badge">Customer approval</span>
+        <span class="badge">Customer signature required</span>
       </div>
       ${totalStrip(j)}
+      ${conditionPhotoHTML(j)}
+      <label class="v05-check">
+        <input type="checkbox" id="v05ConditionPhotosCheck">
+        <span>I acknowledge that the ${photos.length} check-in photograph${photos.length===1?'':'s'} displayed above document the visible pre-work vehicle condition, including any recorded exceptions.</span>
+      </label>
       <div class="v05-form-grid">
         <label class="span2">Inspection findings
           <textarea id="v05InspectionFindings">${safe(j.checkIn?.conditionNotes||'')}</textarea>
@@ -131,16 +176,23 @@
         <label>Approval method
           <select id="v05FinalAuthMethod">
             <option>In-person digital authorization</option>
-            <option>Email confirmation</option>
-            <option>Printed signed copy</option>
+            <option>Printed signature captured digitally</option>
+            <option>Remote approval with digital signature</option>
           </select>
         </label>
       </div>
       <label class="v05-check">
         <input type="checkbox" id="v05FinalAuthCheck">
-        <span>Customer approves the inspected vehicle condition, final scope and current authorized amount. Any later material change requires a separate approved Change Order.</span>
+        <span>I authorize TTT to perform the final scope shown above for the current authorized amount. I acknowledge TTT Terms & Conditions ${safe(termsVersion)}${termsUrl?' referenced in the document register':''}. Any later material scope, price or schedule change requires a separate approved Change Order.</span>
       </label>
-      <div class="v05-actions"><button class="btn primary" id="v05AuthorizeBtn">Authorize & Create Work Order</button></div>
+      <div class="auth-signature-wrap">
+        <h4>CUSTOMER SIGNATURE</h4>
+        <div class="auth-signature-pad">
+          <canvas id="v05FinalAuthSignature" width="900" height="220" aria-label="Customer signature pad"></canvas>
+          <div class="auth-signature-tools"><small>Sign above using finger, stylus or mouse.</small><button class="btn secondary compact" type="button" id="v05ClearSignature">Clear</button></div>
+        </div>
+      </div>
+      <div class="v05-actions"><button class="btn primary" id="v05AuthorizeBtn" ${photos.length?'':'disabled'}>Sign, Authorize & Create Work Order</button></div>
     </article>`;
   }
 
@@ -220,28 +272,41 @@
   }
 
   function authorize(j){
-    if(j.finalAuthorization){ toast('Final authorization is already recorded'); return; }
+    if(j.finalAuthorization){ toast('Customer authorization is already recorded'); return; }
     if(!j.checkIn){ toast('Complete vehicle Check-In first'); return; }
-    const ok=document.getElementById('v05FinalAuthCheck')?.checked;
+    const photos=j.checkIn?.photos||[];
+    if(!photos.length){ toast('Capture and store check-in condition photos before customer authorization'); return; }
+    const conditionOk=document.getElementById('v05ConditionPhotosCheck')?.checked;
+    const scopeOk=document.getElementById('v05FinalAuthCheck')?.checked;
     const name=document.getElementById('v05FinalAuthName')?.value.trim();
-    if(!ok||!name){ toast('Customer authorization and signer name are required'); return; }
+    const canvas=document.getElementById('v05FinalAuthSignature');
+    const signed=canvas?.dataset.hasInk==='1';
+    if(!conditionOk){ toast('Customer must acknowledge the displayed condition photographs'); return; }
+    if(!scopeOk||!name){ toast('Customer scope authorization and signer name are required'); return; }
+    if(!signed){ toast('Customer signature is required'); return; }
 
+    const at=now();
     j.finalAuthorization={
       id:nextId('APR'),
       name,
-      at:now(),
-      method:document.getElementById('v05FinalAuthMethod')?.value||'In person',
-      termsVersion:'0.5',
+      at,
+      method:document.getElementById('v05FinalAuthMethod')?.value||'In-person digital authorization',
+      termsVersion:window.TTTDocumentSystem?.currentTermsVersion?.()||'v0.1',
       inspectionFindings:document.getElementById('v05InspectionFindings')?.value.trim()||'',
       finalScopeNotes:document.getElementById('v05FinalScopeNotes')?.value.trim()||'',
-      quotedTotal:originalTotal(j)
+      quotedTotal:originalTotal(j),
+      conditionPhotosAcknowledged:true,
+      conditionPhotoCount:photos.length,
+      conditionPhotoIds:photos.map(p=>p.id||p.storagePath||p.fileName).filter(Boolean),
+      conditionPhotosCapturedAt:j.checkIn?.capturedAt||null,
+      approvalMark:canvas.toDataURL('image/png')
     };
     j.workOrderId=j.workOrderId||nextWorkOrderId();
-    ensureExecution(j).startedAt=now();
+    ensureExecution(j).startedAt=at;
     j.status='In Progress';
-    mark(j,'final_authorization_and_work_order_created',{approvalId:j.finalAuthorization.id,workOrderId:j.workOrderId});
+    mark(j,'final_authorization_and_work_order_created',{approvalId:j.finalAuthorization.id,workOrderId:j.workOrderId,conditionPhotoCount:photos.length});
     render();
-    toast(j.workOrderId+' created');
+    toast(j.workOrderId+' created · signed authorization recorded');
   }
 
   function saveWork(j){
@@ -383,6 +448,9 @@
     }
 
     document.getElementById('v05AuthorizeBtn')?.addEventListener('click',()=>authorize(j));
+    bindSignaturePad();
+    window.TTTMedia?.hydrateSignedImages?.(document.getElementById('v05FinalAuthorization'));
+    window.TTTDocumentSystem?.injectJobPanel?.();
     document.getElementById('v05SaveWork')?.addEventListener('click',()=>{ if(saveWork(j)){ render(); toast('Work progress saved'); }});
     document.getElementById('v05SendQC')?.addEventListener('click',()=>{
       if(!saveWork(j)) return;
