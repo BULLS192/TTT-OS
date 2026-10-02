@@ -24,7 +24,7 @@
 
   async function waitReady(){
     for(let i=0;i<200;i++){
-      if(cloud()&&org()&&wf()?.state&&rules())return true;
+      if(cloud()&&org()&&wf()?.state?.templates?.length&&rules())return true;
       await new Promise(r=>setTimeout(r,100));
     }
     return false;
@@ -123,6 +123,7 @@
     if(error){console.error(error);toast(error.message||'Invoice generation failed');return null;}
     toast('Invoice '+data+' generated from approved scope');
     await wf().load({reconcile:true});
+    await load();
     installJobPanel();
     enhanceCompliance();
     return invoiceFor(jobId)||{id:data};
@@ -161,6 +162,7 @@
       if(out.error){toast(out.error.message||'Payment could not be recorded');return;}
       m.remove();toast('Payment recorded. Receipt control is being generated.');
       await wf().load({reconcile:true});
+      await load();
       installJobPanel();enhanceCompliance();
     };
   }
