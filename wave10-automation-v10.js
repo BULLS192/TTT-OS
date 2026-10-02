@@ -215,7 +215,7 @@
 
   async function approveException(id){
     const role=lower(window.TTTCloud?.profile?.role);
-    if(!['admin','administrator','owner'].includes(role)){toast('Admin approval is required for workflow overrides');return;}
+    if(!['owner_admin','admin','administrator','owner'].includes(role)){toast('Admin approval is required for workflow overrides');return;}
     const out=await cloud().from('workflow_exceptions').update({status:'approved',approved_by:uid(),approved_at:now(),updated_at:now(),updated_by:uid()})
       .eq('organization_id',org()).eq('id',id).eq('status','open').select('*').single();
     if(out.error){toast(out.error.message||'Exception approval failed');return;}
@@ -278,6 +278,11 @@
   }
 
   function deliveryV10(record,j){
+    const release=template(record.document_code)?.release_status||'approved';
+    if(['draft','legal_review'].includes(release)){
+      toast('This template is not released for customer delivery yet. Complete legal/template approval first.');
+      return;
+    }
     const c=record.customer_id?localCustomer(record.customer_id):j?.customerId?localCustomer(j.customerId):null;
     const to=c?.email||'';
     const subject='TTT '+record.title+' '+record.document_number;
