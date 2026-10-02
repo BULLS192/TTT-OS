@@ -314,7 +314,12 @@ async function requireAuthorizationDocument(e){
   if(state.authBypassJob===j.id){state.authBypassJob=null;return}
   if(finalized(j,'AUTH'))return;
   e.preventDefault();e.stopImmediatePropagation();
-  if(!j.checkIn){toast('Complete vehicle check-in before customer authorization');return}\n  const photos=j.checkIn.photos||[];\n  const needed=['Front','Rear','Driver Side / Left','Passenger Side / Right','Front Interior','Dashboard / Mileage'];\n  const areas=new Set(photos.map(p=>p.area));\n  const missing=needed.filter(x=>!areas.has(x));\n  if(missing.length){toast('Complete required check-in photos before authorization: '+missing.join(', '));return}
+  if(!j.checkIn){toast('Complete vehicle check-in before customer authorization');return}
+  const photos=j.checkIn.photos||[];
+  const needed=['Front','Rear','Driver Side / Left','Passenger Side / Right','Front Interior','Dashboard / Mileage'];
+  const areas=new Set(photos.map(p=>p.area));
+  const missing=needed.filter(x=>!areas.has(x));
+  if(missing.length){toast('Complete required check-in photos before authorization: '+missing.join(', '));return}
   let d=latest(j,'AUTH');try{if(!d)d=await createDocument('AUTH',j);await openDoc(d,j)}catch(err){console.error(err);toast('Customer Authorization could not be opened: '+(err.message||err))}
 }
 
