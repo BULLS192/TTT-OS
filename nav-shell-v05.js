@@ -227,7 +227,6 @@
       <button class="nav-item crm-shell-nav" type="button" data-view="crm" data-crm-tab="activity">Activities</button>
       <button class="nav-item tessa-shell-nav" type="button" data-view="tessa">Tessa Assistant</button>
     `;
-    group.classList.add('open');
     items.querySelector('.sales-customer-nav')?.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();if(typeof show==='function')show('customers');});
     items.querySelectorAll('[data-crm-tab]').forEach(btn=>btn.addEventListener('click',ev=>{
       ev.preventDefault();ev.stopPropagation();
@@ -323,6 +322,8 @@
     const title={dashboard:'CRM Overview',leads:'Leads',opportunities:'Opportunities',contacts:'Contacts',companies:'Companies',activity:'CRM Activities'}[tab]||'CRM';
     const h=document.getElementById('pageTitle');if(h)h.textContent=title;
   }
+
+  function collapseGroups(){document.querySelectorAll('.nav-group').forEach(group=>group.classList.remove('open'));}
 
   function cleanGroups(){
     document.querySelectorAll('.nav-group').forEach(group=>group.hidden=false);
@@ -476,7 +477,7 @@
   }
 
   function init(){
-    injectStyles();injectSearch();injectNewMenu();restoreNavigation();bindBaseNav();
+    injectStyles();injectSearch();injectNewMenu();restoreNavigation();collapseGroups();bindBaseNav();
     setTimeout(refreshShell,100);
     setTimeout(refreshShell,800);
     window.addEventListener('ttt:cloud-state-applied',()=>setTimeout(refreshShell,0));
