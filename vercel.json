@@ -3,6 +3,9 @@
   "buildCommand": "node tests/predeploy-gate-v01.cjs",
   "outputDirectory": ".",
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": {
+      "*": false,
+      "main": true
+    }
   }
 }
